@@ -11,6 +11,13 @@ import CustomerMaster from './pages/CustomerMaster'
 import VehicleMaster from './pages/VehicleMaster'
 import QuotationEntry from './pages/QuotationEntry'
 import QuotationDetails from './pages/QuotationDetails'
+import PurchaseOrderEntry from './pages/PurchaseOrderEntry'
+import PurchaseOrderDetails from './pages/PurchaseOrderDetails'
+import MaterialRequestEntry from './pages/MaterialRequestEntry'
+import PrintMaterialRequest from './pages/PrintMaterialRequest'
+import GateEntry from './pages/GateEntry'
+import GRNEntry from './pages/GRNEntry'
+import GRNEntryReport from './pages/GRNEntryReport'
 import {
   TaxLedgerMaster,
   DashboardPage,
@@ -29,7 +36,14 @@ const PAGES = {
   CustomerMaster:    <CustomerMaster />,
   VehicleMaster:     <VehicleMaster />,
   QuotationEntry:    <QuotationEntry />,
-  QuotationDetails:  <QuotationDetails />,
+  QuotationDetails:     <QuotationDetails />,
+  PurchaseOrderEntry:   <PurchaseOrderEntry />,
+  PurchaseOrderDetails: <PurchaseOrderDetails />,
+  MaterialRequestEntry: <MaterialRequestEntry />,
+  PrintMaterialRequest:  <PrintMaterialRequest />,
+  GateEntry:             <GateEntry />,
+  GRNEntry:              <GRNEntry />,
+  GRNEntryReport:        <GRNEntryReport />,
 }
 
 export default function App() {

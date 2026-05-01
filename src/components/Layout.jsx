@@ -37,8 +37,25 @@ const NAV = [
       { id: 'quotation-details', label: 'Quotation Details', page: 'QuotationDetails' },
     ],
   },
-  { id: 'purchase',       label: 'Purchase',         icon: ShoppingCart,   children: [] },
-  { id: 'stores',         label: 'Stores',           icon: Warehouse,      children: [] },
+  {
+    id: 'purchase', label: 'Purchase', icon: ShoppingCart,
+    children: [
+      { id: 'purchase-order',         label: 'Purchase Order',         page: 'PurchaseOrderEntry'   },
+      { id: 'purchase-order-details', label: 'Purchase Order Details', page: 'PurchaseOrderDetails' },
+      { id: 'purchase-request',       label: 'Purchase Request',       page: 'PurchaseOrderDetails' },
+      { id: 'print-purchase-request', label: 'Print Purchase Request', page: 'PurchaseOrderDetails' },
+    ],
+  },
+  {
+    id: 'stores', label: 'Stores', icon: Warehouse,
+    children: [
+      { id: 'material-request',       label: 'Material Request',       page: 'MaterialRequestEntry' },
+      { id: 'print-material-request', label: 'Print Material Request', page: 'PrintMaterialRequest' },
+      { id: 'gate-entry',             label: 'Gate Entry',             page: 'GateEntry'            },
+      { id: 'grn-entry',              label: 'GRN Entry',              page: 'GRNEntry'             },
+      { id: 'grn-entry-report',       label: 'GRN Entry Report',       page: 'GRNEntryReport'       },
+    ],
+  },
   { id: 'technical',      label: 'Technical',        icon: Settings,       children: [] },
 ]
 
