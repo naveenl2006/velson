@@ -9,7 +9,26 @@ const NAV = [
   { id: 'dashboard-top', label: 'Dashboard',     icon: LayoutDashboard, page: 'Dashboard' },
   { id: 'user-masters',  label: 'User Masters',  icon: UserCog,         children: [] },
   { id: 'users',         label: 'Users',          icon: Users,           children: [] },
-  { id: 'masters',       label: 'Masters',        icon: Database,        children: [] },
+  {
+    id: 'masters', label: 'Masters', icon: Database,
+    children: [
+      { id: 'company-master',          label: 'Company Master',                page: 'CompanyMaster'       },
+      { id: 'employee-master',         label: 'Employee Master',               page: 'EmployeeMaster'      },
+      { id: 'ledger-group-master',     label: 'Ledger Group Master',           page: 'LedgerGroupMaster'   },
+      { id: 'machine-master',          label: 'Machine Master',                page: 'MachineMaster'       },
+      { id: 'vehicle-service-master',  label: 'Vehicle Service Master',        page: 'VehicleServiceMaster'},
+      { id: 'contractor-master',       label: 'Contractor Master',             page: 'ContractorMaster'    },
+      { id: 'process-master',          label: 'Process Master',                page: 'ProcessMaster'       },
+      { id: 'part-usage-list',         label: 'Part Usage List Display',       page: 'PartUsageList'       },
+      { id: 'qc-check-method',         label: 'QC Check Method Master',        page: 'QCCheckMethod'       },
+      { id: 'qc-inspection-char',      label: 'QC Inspection Character Master',page: 'QCInspectionChar'    },
+      { id: 'qc-standard-master',      label: 'QC Standard Master',            page: 'QCStandardMaster'    },
+      { id: 'auto-po',                 label: 'Auto PO',                       page: 'AutoPO'              },
+      { id: 'system-info-master',      label: 'System Info Master',            page: 'SystemInfoMaster'    },
+      { id: 'db-copy',                 label: 'DB Copy',                       page: 'DBCopy'              },
+      { id: 'restore-db',              label: 'Restore DB',                    page: 'RestoreDB'           },
+    ],
+  },
   {
     id: 'item-masters', label: 'Item Masters', icon: Package,
     children: [

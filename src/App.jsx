@@ -18,10 +18,23 @@ import PrintMaterialRequest from './pages/PrintMaterialRequest'
 import GateEntry from './pages/GateEntry'
 import GRNEntry from './pages/GRNEntry'
 import GRNEntryReport from './pages/GRNEntryReport'
-import {
-  TaxLedgerMaster,
-  DashboardPage,
-} from './pages/OtherPages'
+import { TaxLedgerMaster, DashboardPage } from './pages/OtherPages'
+// ── New Master Pages ──
+import CompanyMaster from './pages/CompanyMaster'
+import EmployeeMaster from './pages/EmployeeMaster'
+import LedgerGroupMaster from './pages/LedgerGroupMaster'
+import MachineMaster from './pages/MachineMaster'
+import VehicleServiceMaster from './pages/VehicleServiceMaster'
+import ContractorMaster from './pages/ContractorMaster'
+import ProcessMaster from './pages/ProcessMaster'
+import PartUsageList from './pages/PartUsageList'
+import QCCheckMethod from './pages/QCCheckMethod'
+import QCInspectionChar from './pages/QCInspectionChar'
+import QCStandardMaster from './pages/QCStandardMaster'
+import AutoPO from './pages/AutoPO'
+import SystemInfoMaster from './pages/SystemInfoMaster'
+import DBCopy from './pages/DBCopy'
+import RestoreDB from './pages/RestoreDB'
 
 const PAGES = {
   Dashboard:      <DashboardPage />,
@@ -44,6 +57,22 @@ const PAGES = {
   GateEntry:             <GateEntry />,
   GRNEntry:              <GRNEntry />,
   GRNEntryReport:        <GRNEntryReport />,
+  // ── New Master Pages ──
+  CompanyMaster:       <CompanyMaster />,
+  EmployeeMaster:      <EmployeeMaster />,
+  LedgerGroupMaster:   <LedgerGroupMaster />,
+  MachineMaster:       <MachineMaster />,
+  VehicleServiceMaster:<VehicleServiceMaster />,
+  ContractorMaster:    <ContractorMaster />,
+  ProcessMaster:       <ProcessMaster />,
+  PartUsageList:       <PartUsageList />,
+  QCCheckMethod:       <QCCheckMethod />,
+  QCInspectionChar:    <QCInspectionChar />,
+  QCStandardMaster:    <QCStandardMaster />,
+  AutoPO:              <AutoPO />,
+  SystemInfoMaster:    <SystemInfoMaster />,
+  DBCopy:              <DBCopy />,
+  RestoreDB:           <RestoreDB />,
 }
 
 export default function App() {
