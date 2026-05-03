@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/velson/',
+  base: '/',
   plugins: [react()],
+  server: {
+    allowedHosts: 'all',
+  },
 })
   
