@@ -51,47 +51,47 @@ const Row = ({ children }) => <div className="grid grid-cols-2 gap-4">{children}
 
 // ── Dropdown data (matches real ERP values from screenshots) ─────
 const ITEM_GROUPS = [
-  'ASSEMBLY-10 TON WINCH-ASSEMBLE','ASSEMBLY-10 TON WINCH-CHILD PART','ASSEMBLY-10 TON WINCH-SUB ASSEMBLE',
-  'ASSEMBLY-GRIPPER-SUB ASSEMBLE','ASSEMBLY-P14 WATER PUMP-ASSEMBLE','ASSEMBLY-P14 WATER PUMP-CHILDPART',
-  'ASSEMBLY-P14 WATER PUMP-SUB ASSEMBLE','ASSEMBLY-P56 WATER PUMP-ASSEMBLE','ASSEMBLY-P56 WATER PUMP-CHILDPART',
-  'ASSEMBLY-P56 WATER PUMP-SUB ASSEMBLE','ASSEMBLY-P72 WATER PUMP-CHILDPART','ASSEMBLY-V15 WATER PUMP-ASSEMBLE',
-  'ASSEMBLY-V15 WATER PUMP-CHILDPART','ASSEMBLY-V15 WATER PUMP-SUB ASSEMBLE','ASSEMBLY-WATER SWIVEL ROTARY HEAD-CHILDPART',
-  'COMMON- COMMON','COMMON-BEARING-ARB','COMMON-BEARING-BTZ','COMMON-BEARING-COMMON','COMMON-BEARING-FAG',
-  'COMMON-BEARING-KOYO','COMMON-BEARING-NBC','COMMON-BEARING-NSK','COMMON-BEARING-NTN','COMMON-BEARING-OMT',
-  'COMMON-BEARING-SB','Raw Materials','Finished Goods','Bought Out Parts','Hand Tools','Fasteners','Consumables',
+  'ASSEMBLY-10 TON WINCH-ASSEMBLE', 'ASSEMBLY-10 TON WINCH-CHILD PART', 'ASSEMBLY-10 TON WINCH-SUB ASSEMBLE',
+  'ASSEMBLY-GRIPPER-SUB ASSEMBLE', 'ASSEMBLY-P14 WATER PUMP-ASSEMBLE', 'ASSEMBLY-P14 WATER PUMP-CHILDPART',
+  'ASSEMBLY-P14 WATER PUMP-SUB ASSEMBLE', 'ASSEMBLY-P56 WATER PUMP-ASSEMBLE', 'ASSEMBLY-P56 WATER PUMP-CHILDPART',
+  'ASSEMBLY-P56 WATER PUMP-SUB ASSEMBLE', 'ASSEMBLY-P72 WATER PUMP-CHILDPART', 'ASSEMBLY-V15 WATER PUMP-ASSEMBLE',
+  'ASSEMBLY-V15 WATER PUMP-CHILDPART', 'ASSEMBLY-V15 WATER PUMP-SUB ASSEMBLE', 'ASSEMBLY-WATER SWIVEL ROTARY HEAD-CHILDPART',
+  'COMMON- COMMON', 'COMMON-BEARING-ARB', 'COMMON-BEARING-BTZ', 'COMMON-BEARING-COMMON', 'COMMON-BEARING-FAG',
+  'COMMON-BEARING-KOYO', 'COMMON-BEARING-NBC', 'COMMON-BEARING-NSK', 'COMMON-BEARING-NTN', 'COMMON-BEARING-OMT',
+  'COMMON-BEARING-SB', 'Raw Materials', 'Finished Goods', 'Bought Out Parts', 'Hand Tools', 'Fasteners', 'Consumables',
 ]
 
 const MODELS = [
-  'AUTO JOB','COMMON','COMPRESSOR','Consumables','CORE DRILL','EQUALIZER BEAM','GEARBOX',
-  'GRADE CONTROL MACHINE','GRC','GRIPPER','HD 300','HDE','HMD','MDD','MICROBLAST','MINICORE','POWERPACK',
-  'MODEL A','MODEL B','MODEL C','MODEL D',
+  'AUTO JOB', 'COMMON', 'COMPRESSOR', 'Consumables', 'CORE DRILL', 'EQUALIZER BEAM', 'GEARBOX',
+  'GRADE CONTROL MACHINE', 'GRC', 'GRIPPER', 'HD 300', 'HDE', 'HMD', 'MDD', 'MICROBLAST', 'MINICORE', 'POWERPACK',
+  'MODEL A', 'MODEL B', 'MODEL C', 'MODEL D',
 ]
 
 const SUB_GROUPS = [
-  'Sub Group 1','Sub Group 2','Sub Group 3','Sub Group 4',
+  'Sub Group 1', 'Sub Group 2', 'Sub Group 3', 'Sub Group 4',
 ]
 
-const UOMS = ['NOS','KG','MTR','LTR','SET','PCS','BOX','ROLL','GM','TON']
+const UOMS = ['NOS', 'KG', 'MTR', 'LTR', 'SET', 'PCS', 'BOX', 'ROLL', 'GM', 'TON']
 
 const ITEM_TYPES = [
-  'Assembly FG','Asset','Child Part','Fastner','FG','Fixing Screw','Main Assembly FG',
-  'Office Maintainance','Printing & Stationary','Product','Raw Material - Domestic',
-  'Raw Material - Import','RM Electricals','RM Plant & Machinery','Staff Welfare','Sub Assembly FG',
+  'Assembly FG', 'Asset', 'Child Part', 'Fastner', 'FG', 'Fixing Screw', 'Main Assembly FG',
+  'Office Maintainance', 'Printing & Stationary', 'Product', 'Raw Material - Domestic',
+  'Raw Material - Import', 'RM Electricals', 'RM Plant & Machinery', 'Staff Welfare', 'Sub Assembly FG',
 ]
 
-const QC_TYPES = ['QUALITY','STORE']
+const QC_TYPES = ['QUALITY', 'STORE']
 
-const STORE_NAMES = ['Main Store','Raw Material Store','FG Store','Rejection Store','Tools Store','Sub Store']
+const STORE_NAMES = ['Main Store', 'Raw Material Store', 'FG Store', 'Rejection Store', 'Tools Store', 'Sub Store']
 
-const MATERIAL_GRADES = ['Grade A','Grade B','IS 2062','SS 304','SS 316','EN8','SS 202']
+const MATERIAL_GRADES = ['Grade A', 'Grade B', 'IS 2062', 'SS 304', 'SS 316', 'EN8', 'SS 202']
 
-const MATERIAL_TYPES = ['Flat','Round Bar','Pipe','Sheet','Channel','Angle','Hollow Section']
+const MATERIAL_TYPES = ['Flat', 'Round Bar', 'Pipe', 'Sheet', 'Channel', 'Angle', 'Hollow Section']
 
-const RAW_MATERIALS = ['MS Flat','SS Round Bar','Aluminum Sheet','MS Pipe','HR Sheet','CR Sheet','GI Sheet']
+const RAW_MATERIALS = ['MS Flat', 'SS Round Bar', 'Aluminum Sheet', 'MS Pipe', 'HR Sheet', 'CR Sheet', 'GI Sheet']
 
-const CURRENCIES = ['INR','USD','EUR','GBP','AED']
+const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED']
 
-const GST_RATES = ['0%','5%','12%','18%','28%']
+const GST_RATES = ['0%', '5%', '12%', '18%', '28%']
 
 // ── Default form state (keys match backend items table data object) ──
 const emptyForm = {
@@ -116,7 +116,7 @@ const emptyForm = {
   Status: 'Active',
 }
 
-const requiredFields = ['GroupName','IM_Part_No','IM_PartName','UnitName','ItemTypeName','QcTypeId']
+const requiredFields = ['GroupName', 'IM_Part_No', 'IM_PartName', 'UnitName', 'ItemTypeName', 'QcTypeId']
 
 export default function ItemMaster() {
   const [form, setForm] = useState(emptyForm)
@@ -125,7 +125,7 @@ export default function ItemMaster() {
 
   // Special handlers that set both ID and Name together
   const handleGroup = e => setForm(f => ({ ...f, GroupName: e.target.value, GroupId: '' }))
-  const handleUOM   = e => setForm(f => ({ ...f, UnitName: e.target.value, UnitId: '' }))
+  const handleUOM = e => setForm(f => ({ ...f, UnitName: e.target.value, UnitId: '' }))
   const handleItemType = e => setForm(f => ({ ...f, ItemTypeName: e.target.value, ItemTypeId: '' }))
   const handleStore = e => setForm(f => ({ ...f, StoreName: e.target.value, StoreId: '' }))
 
@@ -138,7 +138,7 @@ export default function ItemMaster() {
   }
 
   const completedCount = requiredFields.filter(k => form[k]).length
-  const completionPct  = Math.round((completedCount / requiredFields.length) * 100)
+  const completionPct = Math.round((completedCount / requiredFields.length) * 100)
 
   return (
     <div className="bg-[#f4f6f8] min-h-full">
@@ -237,7 +237,7 @@ export default function ItemMaster() {
             </div>
             <div>
               <Label>Status</Label>
-              <Select options={['Active','Inactive']} placeholder="" value={form.Status} onChange={u('Status')} />
+              <Select options={['Active', 'Inactive']} placeholder="" value={form.Status} onChange={u('Status')} />
             </div>
           </SectionCard>
 
@@ -358,10 +358,10 @@ export default function ItemMaster() {
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Actions</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: 'Create',      icon: 'M12 4v16m8-8H4',                       bg: 'bg-green-500 hover:bg-green-600',   action: handleCreate },
-                    { label: 'Clear',       icon: 'M6 18L18 6M6 6l12 12',                 bg: 'bg-rose-500 hover:bg-rose-600',     action: handleClear },
-                    { label: 'Display All', icon: 'M4 6h16M4 10h16M4 14h16M4 18h16',      bg: 'bg-[#0097A7] hover:bg-[#007a87]',  action: () => {} },
-                    { label: 'Search',      icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z', bg: 'bg-slate-700 hover:bg-slate-800', action: () => {} },
+                    { label: 'Create', icon: 'M12 4v16m8-8H4', bg: 'bg-green-500 hover:bg-green-600', action: handleCreate },
+                    { label: 'Clear', icon: 'M6 18L18 6M6 6l12 12', bg: 'bg-rose-500 hover:bg-rose-600', action: handleClear },
+                    { label: 'Display All', icon: 'M4 6h16M4 10h16M4 14h16M4 18h16', bg: 'bg-[#0097A7] hover:bg-[#007a87]', action: () => { } },
+                    { label: 'Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z', bg: 'bg-slate-700 hover:bg-slate-800', action: () => { } },
                   ].map(({ label, icon, bg, action }) => (
                     <button key={label} onClick={action}
                       className={`px-3 py-2.5 ${bg} active:scale-95 text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5`}

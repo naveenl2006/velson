@@ -1,140 +1,298 @@
-import { useState } from 'react'
-import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { 
+  X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, 
+  Settings, Database, Timer, Workflow 
+} from 'lucide-react'
 
-const PROCESS_TYPES=['Machining','Welding','Assembly','Inspection','Heat Treatment','Surface Finishing','Fabrication']
-const TEAMS=['Team A','Team B','Team C','Night Shift','Day Shift','QC Team']
-const MACHINES=['MCH001 - CNC LATHE','MCH002 - VERTICAL MILLING','MCH003 - RADIAL DRILL']
-const PAGE_SIZES=[4,10,25,50]
-const empty={PM_Process_Name:'',PM_Process_Name1:'',PM_Process_Order:'',ProcessTypeId:'',TeamId:'',Machine_id:'',PM_Days:0,PM_Hours:0,Minutes:0,Setting_Time:0,Cycle_Time:0,Handling_Time:0,Idle_Time:0}
-const SEED=[
-  {id:1,PM_Process_Name:'CNC Turning',PM_Process_Name1:'Turning',PM_Process_Order:1,ProcessTypeId:'Machining',TeamId:'Team A',Machine_id:'MCH001 - CNC LATHE',PM_Days:0,PM_Hours:2,Minutes:30,Setting_Time:15,Cycle_Time:120,Handling_Time:10,Idle_Time:5},
-  {id:2,PM_Process_Name:'Vertical Milling',PM_Process_Name1:'Milling',PM_Process_Order:2,ProcessTypeId:'Machining',TeamId:'Team B',Machine_id:'MCH002 - VERTICAL MILLING',PM_Days:0,PM_Hours:3,Minutes:0,Setting_Time:20,Cycle_Time:150,Handling_Time:15,Idle_Time:10},
-]
+// ── Shared UI primitives ──
+const Label = ({ children, required }) => (
+  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+    {required && <span className="text-red-500 mr-0.5">*</span>}
+    {children}
+  </label>
+)
 
-export default function ProcessMaster(){
-  const [rows,setRows]=useState(SEED)
-  const [form,setForm]=useState({...empty})
-  const [errors,setErrors]=useState({})
-  const [editId,setEditId]=useState(null)
-  const [search,setSearch]=useState('')
-  const [pageSize,setPageSize]=useState(4)
-  const [page,setPage]=useState(1)
-  const [detailRow,setDetailRow]=useState(null)
+const Input = ({ type = 'text', value, onChange, placeholder, className = "", readOnly = false }) => (
+  <input
+    type={type}
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    readOnly={readOnly}
+    className={`w-full px-4 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${readOnly ? 'bg-slate-50 cursor-not-allowed' : ''} ${className}`}
+  />
+)
 
-  const sf=(k,v)=>{setForm(f=>({...f,[k]:v}));setErrors(e=>({...e,[k]:''}));}
-  const validate=()=>{const e={};if(!form.PM_Process_Name.trim())e.PM_Process_Name='Required';setErrors(e);return!Object.keys(e).length}
-  const handleSave=()=>{
-    if(!validate())return
-    if(editId!==null){setRows(r=>r.map(x=>x.id===editId?{...form,id:editId}:x));setEditId(null);}
-    else{const id=Math.max(0,...rows.map(r=>r.id))+1;setRows(r=>[...r,{...form,id}]);}
-    setForm({...empty});setErrors({});setPage(1)
-  }
-  const handleEdit=r=>{setForm({...r});setErrors({});setEditId(r.id);window.scrollTo({top:0,behavior:'smooth'})}
-  const handleDelete=id=>{if(window.confirm('Delete?'))setRows(r=>r.filter(x=>x.id!==id))}
-  const handleClear=()=>{setForm({...empty});setErrors({});setEditId(null)}
-  const filtered=rows.filter(r=>[r.PM_Process_Name,r.ProcessTypeId,r.TeamId,r.Machine_id].some(v=>String(v||'').toLowerCase().includes(search.toLowerCase())))
-  const total=Math.max(1,Math.ceil(filtered.length/pageSize))
-  const paged=filtered.slice((page-1)*pageSize,page*pageSize)
-  const pNums=()=>{if(total<=7)return Array.from({length:total},(_,i)=>i+1);const ps=[1];if(page>3)ps.push('...');for(let i=Math.max(2,page-1);i<=Math.min(total-1,page+1);i++)ps.push(i);if(page<total-2)ps.push('...');ps.push(total);return ps}
-  const inp=(e)=>`w-full border rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 transition-colors bg-white ${e?'border-red-400 focus:ring-red-300':'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'}`
-  const lbl='text-[12.5px] font-semibold text-slate-600 whitespace-nowrap'
-  const NF=({label,fk})=>(
-    <div className="flex items-center gap-2">
-      <label className={`${lbl} w-28 shrink-0`}>{label} :</label>
-      <input type="number" min="0" value={form[fk]} onChange={e=>sf(fk,Number(e.target.value))} className={inp(false)}/>
+const Select = ({ options, placeholder, value, onChange, className = "" }) => (
+  <div className={`relative ${className}`}>
+    <select
+      value={value}
+      onChange={onChange}
+      className="w-full px-4 py-2 pr-10 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+    >
+      <option value="">{placeholder}</option>
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
     </div>
-  )
+  </div>
+)
 
-  return(
-    <div className="p-4 space-y-4 w-full min-w-0">
-      <div className="flex items-center gap-2 text-[12px] text-slate-400">
-        <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span><ChevronRight className="w-3 h-3"/>
-        <span className="hover:text-[#0097A7] cursor-pointer">Masters</span><ChevronRight className="w-3 h-3"/>
-        <span className="text-[#0097A7] font-semibold">Process Master</span>
-      </div>
-      <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-[--color-main] px-4 py-2.5"><h2 className="text-white text-center font-semibold text-[14px]">{editId!==null?'Edit':'Create'} — Process Master</h2></div>
-        <div className="p-4 space-y-5">
-          {/* Main Fields - 3 col */}
-          <div>
-            <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-100 pb-1">Process Information</p>
-            <div className="grid grid-cols-3 gap-x-6 gap-y-3">
-              <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}><span className="text-red-500">*</span>Process Name :</label><div className="flex-1"><input value={form.PM_Process_Name} onChange={e=>sf('PM_Process_Name',e.target.value)} className={inp(errors.PM_Process_Name)}/>{errors.PM_Process_Name&&<p className="text-[11px] text-red-500 mt-0.5">{errors.PM_Process_Name}</p>}</div></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}>Alt. Name :</label><input value={form.PM_Process_Name1} onChange={e=>sf('PM_Process_Name1',e.target.value)} className={inp(false)}/></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}>Order :</label><input type="number" min="1" value={form.PM_Process_Order} onChange={e=>sf('PM_Process_Order',e.target.value)} className={inp(false)}/></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}>Process Type :</label><select value={form.ProcessTypeId} onChange={e=>sf('ProcessTypeId',e.target.value)} className={inp(false)}><option value="">--- Select ---</option>{PROCESS_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}>Team :</label><select value={form.TeamId} onChange={e=>sf('TeamId',e.target.value)} className={inp(false)}><option value="">--- Select ---</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}>Machine :</label><select value={form.Machine_id} onChange={e=>sf('Machine_id',e.target.value)} className={inp(false)}><option value="">--- Select ---</option>{MACHINES.map(m=><option key={m}>{m}</option>)}</select></div>
+const PROCESS_TYPES = ['Machining', 'Welding', 'Assembly', 'Inspection', 'Heat Treatment', 'Surface Finishing', 'Fabrication']
+const TEAMS = ['Team Alpha', 'Team Beta', 'Night Shift', 'Day Shift', 'QC Unit']
+const MACHINES = ['MCH-001 Precision CNC', 'MCH-002 VMC Master', 'MCH-003 Radial Precision']
+
+const empty = { 
+  PM_Process_Name: '', PM_Process_Name1: '', PM_Process_Order: '', 
+  ProcessTypeId: '', TeamId: '', Machine_id: '', 
+  PM_Days: 0, PM_Hours: 0, Minutes: 0, Setting_Time: 0, 
+  Cycle_Time: 0, Handling_Time: 0, Idle_Time: 0 
+}
+
+export default function ProcessMaster() {
+  const [rows, setRows] = useState([])
+  const [form, setForm] = useState({ ...empty })
+  const [editId, setEditId] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem('velson_process_master') || '[]')
+    setRows(saved)
+  }, [])
+
+  const sf = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleSave = () => {
+    if (!form.PM_Process_Name) {
+      alert('Process Name is required.')
+      return
+    }
+    setIsSaving(true)
+    setTimeout(() => {
+      let updated
+      if (editId !== null) {
+        updated = rows.map(r => r.id === editId ? { ...form, id: editId } : r)
+      } else {
+        updated = [{ ...form, id: Date.now() }, ...rows]
+      }
+      localStorage.setItem('velson_process_master', JSON.stringify(updated))
+      setRows(updated)
+      setIsSaving(false)
+      alert(editId ? 'Process Updated.' : 'New Process Defined.')
+      handleClear()
+    }, 600)
+  }
+
+  const handleEdit = r => {
+    setForm({ ...r })
+    setEditId(r.id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleDelete = id => {
+    const next = rows.filter(r => r.id !== id)
+    setRows(next)
+    localStorage.setItem('velson_process_master', JSON.stringify(next))
+  }
+
+  const handleClear = () => {
+    setForm({ ...empty })
+    setEditId(null)
+  }
+
+  return (
+    <div className="bg-[#f4f6f8] min-h-full pb-10">
+      <div className="px-6 py-6">
+        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black tracking-tight">
+          <span>Dashboard</span> <ChevronRight size={12} /> <span>Production</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">Process Architecture Master</span>
+        </div>
+
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[900px]">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-8 py-5">
+            <div className="flex items-center gap-4">
+              <div className="w-4 h-4 bg-[#0097A7] rounded shadow-sm" />
+              <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-widest">Workflow Definition Console</h2>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleClear} className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded-2xl transition-all shadow-sm active:scale-95">
+                <RotateCcw size={16} /> Reset Form
+              </button>
+              <button onClick={() => window.history.back()} className="flex items-center gap-2 px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-black rounded-2xl transition-all shadow-sm">
+                <X size={18} strokeWidth={2.5} /> Close
+              </button>
             </div>
           </div>
-          {/* Time Parameters - 4 col */}
-          <div>
-            <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-100 pb-1">Time Parameters</p>
-            <div className="grid grid-cols-4 gap-x-6 gap-y-3">
-              <NF label="Days" fk="PM_Days"/>
-              <NF label="Hours" fk="PM_Hours"/>
-              <NF label="Minutes" fk="Minutes"/>
-              <NF label="Setting Time" fk="Setting_Time"/>
-              <NF label="Cycle Time" fk="Cycle_Time"/>
-              <NF label="Handling Time" fk="Handling_Time"/>
-              <NF label="Idle Time" fk="Idle_Time"/>
+
+          <div className="p-10 space-y-12">
+            {/* Architectural Definition */}
+            <div className="grid grid-cols-12 gap-12 bg-slate-50/50 p-10 rounded-[3rem] border border-slate-100 shadow-inner relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                 <Workflow size={150} />
+               </div>
+
+               <div className="col-span-8 space-y-8 relative z-10">
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className="w-10 h-10 bg-[#0097A7] text-white rounded-2xl flex items-center justify-center font-black">01</div>
+                    <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">Core Process Parameters</h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-8">
+                     <div className="space-y-4">
+                        <div className="space-y-1">
+                           <Label required>Canonical Name</Label>
+                           <Input placeholder="e.g. Precision CNC Turning" value={form.PM_Process_Name} onChange={e => sf('PM_Process_Name', e.target.value)} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="space-y-1">
+                              <Label>Alias Reference</Label>
+                              <Input placeholder="Internal Shortname" value={form.PM_Process_Name1} onChange={e => sf('PM_Process_Name1', e.target.value)} />
+                           </div>
+                           <div className="space-y-1">
+                              <Label>Sequence Order</Label>
+                              <Input type="number" placeholder="1" value={form.PM_Process_Order} onChange={e => sf('PM_Process_Order', e.target.value)} />
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="space-y-4">
+                        <div className="space-y-1">
+                           <Label>Process Classification</Label>
+                           <Select options={PROCESS_TYPES} placeholder="Identify Type" value={form.ProcessTypeId} onChange={e => sf('ProcessTypeId', e.target.value)} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="space-y-1">
+                              <Label>Operational Team</Label>
+                              <Select options={TEAMS} placeholder="Assigned Unit" value={form.TeamId} onChange={e => sf('TeamId', e.target.value)} />
+                           </div>
+                           <div className="space-y-1">
+                              <Label>Host Machine</Label>
+                              <Select options={MACHINES} placeholder="Hardware Hub" value={form.Machine_id} onChange={e => sf('Machine_id', e.target.value)} />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="col-span-4 bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#0097A7]/10 to-transparent pointer-events-none" />
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-white text-[11px] font-black uppercase tracking-[0.3em]">Runtime Estimations</h3>
+                    <Timer size={18} className="text-[#0097A7]" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                     {[
+                       { l: 'Base Days', k: 'PM_Days' },
+                       { l: 'Base Hours', k: 'PM_Hours' },
+                       { l: 'Mins', k: 'Minutes' },
+                       { l: 'Setting', k: 'Setting_Time' },
+                       { l: 'Cycle', k: 'Cycle_Time' },
+                       { l: 'Handling', k: 'Handling_Time' },
+                     ].map(t => (
+                        <div key={t.k} className="space-y-1">
+                           <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{t.l}</p>
+                           <input 
+                             type="number" 
+                             value={form[t.k]} 
+                             onChange={e => sf(t.k, e.target.value)}
+                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#0097A7] transition-all"
+                           />
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            </div>
+
+            {/* Action Matrix */}
+            <div className="flex items-center justify-between bg-slate-50 p-6 rounded-[2.5rem] border border-slate-200">
+               <div className="flex items-center gap-6">
+                  <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Status</p>
+                     <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-[12px] font-black text-slate-800">Operational</span>
+                     </div>
+                  </div>
+               </div>
+               <div className="flex gap-4">
+                  <button onClick={handleClear} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 text-[11px] font-black rounded-2xl transition-all shadow-sm active:scale-95 uppercase tracking-widest">
+                    Clear Inputs
+                  </button>
+                  <button 
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-12 py-3 bg-[#0097A7] hover:bg-[#007a87] text-white text-[11px] font-black rounded-2xl shadow-xl transition-all uppercase tracking-[0.2em] active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSaving ? <RotateCcw size={16} className="animate-spin" /> : <Save size={16} />}
+                    {isSaving ? 'Processing...' : editId ? 'Commit Changes' : 'Initialize Process'}
+                  </button>
+               </div>
+            </div>
+
+            {/* Registry Explorer */}
+            <div className="flex-1">
+               <div className="flex items-center justify-between mb-6 px-6">
+                 <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-[0.4em] flex items-center gap-3">
+                    <div className="w-2 h-6 bg-[#0097A7] rounded-sm" />
+                    Process Registry Ledger
+                 </h3>
+                 <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-4 py-1.5 rounded-full">{rows.length} Defined Architectures</span>
+               </div>
+
+               <div className="border border-slate-200 rounded-[3rem] overflow-hidden shadow-sm bg-white overflow-x-auto">
+                 <table className="w-full text-left border-collapse min-w-[1500px]">
+                   <thead className="bg-[#fcfdfe] text-[10px] uppercase text-slate-400 font-black border-b border-slate-200">
+                     <tr>
+                       <th className="px-8 py-5 border-r border-slate-100 w-20 text-center">#</th>
+                       <th className="px-8 py-5 border-r border-slate-100">Canonical Name</th>
+                       <th className="px-8 py-5 border-r border-slate-100 text-center w-24">Order</th>
+                       <th className="px-8 py-5 border-r border-slate-100">Classification</th>
+                       <th className="px-8 py-5 border-r border-slate-100">Assigned Unit</th>
+                       <th className="px-8 py-5 border-r border-slate-100">Hardware Hub</th>
+                       <th className="px-8 py-5 border-r border-slate-100 text-center w-32">Cycle Time</th>
+                       <th className="px-8 py-5 text-center w-32">Control</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-slate-50 text-[13px]">
+                     {rows.length === 0 ? (
+                       <tr>
+                         <td colSpan={8} className="py-24 text-center text-slate-200 italic">
+                            <Settings size={80} className="mx-auto mb-4 opacity-5" />
+                            Registry empty. Define a process to initialize matrix.
+                         </td>
+                       </tr>
+                     ) : (
+                       rows.map((row, idx) => (
+                         <tr key={row.id} className="hover:bg-[#0097A7]/5 transition-colors h-16 group">
+                           <td className="px-8 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 font-black text-slate-800 uppercase">{row.PM_Process_Name}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 text-center font-black text-[#0097A7]">{row.PM_Process_Order}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 font-bold text-slate-500 uppercase text-[11px] tracking-tight">{row.ProcessTypeId}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 font-medium text-slate-400">{row.TeamId}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 font-black text-[10px] text-slate-300 uppercase">{row.Machine_id}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 text-center font-black text-slate-700">{row.Cycle_Time}s</td>
+                           <td className="px-8 py-2 text-center">
+                             <div className="flex items-center justify-center gap-2">
+                                <button onClick={() => handleEdit(row)} className="p-2 text-slate-300 hover:text-[#0097A7] hover:bg-[#0097A7]/5 rounded-xl transition-all">
+                                   <Edit size={16} />
+                                </button>
+                                <button onClick={() => handleDelete(row.id)} className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                                   <Trash2 size={16} />
+                                </button>
+                             </div>
+                           </td>
+                         </tr>
+                       ))
+                     )}
+                   </tbody>
+                 </table>
+               </div>
             </div>
           </div>
-          <div className="flex gap-2 pt-2 justify-end border-t border-slate-100">
-            <button onClick={handleSave} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm"><Save className="w-4 h-4"/>{editId!==null?'Update':'Create'}</button>
-            <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm"><RotateCcw className="w-4 h-4"/>Clear</button>
-            <button onClick={()=>setPage(1)} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm"><List className="w-4 h-4"/>Display All</button>
-          </div>
         </div>
       </div>
-      <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-[--color-main] px-4 py-2.5"><h2 className="text-white text-center font-semibold text-[14px]">Process Master Details</h2></div>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <div className="flex items-center gap-2 text-[13px] text-slate-600">Search:<input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} className="border border-slate-300 rounded px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7] w-40"/></div>
-          <div className="flex items-center gap-2 text-[13px] text-slate-600">Show<select value={pageSize} onChange={e=>{setPageSize(Number(e.target.value));setPage(1)}} className="border border-slate-300 rounded px-2 py-1 text-[13px]">{PAGE_SIZES.map(s=><option key={s}>{s}</option>)}</select>entries</div>
-        </div>
-        <div className="overflow-x-auto w-full">
-          <table className="min-w-full text-[13px]">
-            <thead><tr className="bg-slate-50 border-b border-slate-200">{['S.No','Process Name','Alt. Name','Order','Type','Team','Machine','Edit','Delete','Details'].map(h=><th key={h} className="text-center px-3 py-2.5 font-semibold text-slate-600 text-[12px] uppercase tracking-wide whitespace-nowrap">{h}</th>)}</tr></thead>
-            <tbody>
-              {paged.length===0?<tr><td colSpan={10} className="text-center py-8 text-slate-400">No records found</td></tr>
-              :paged.map((r,idx)=>(
-                <tr key={r.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx%2===1?'bg-slate-50/50':''}`}>
-                  <td className="px-3 py-2 text-center">{(page-1)*pageSize+idx+1}</td>
-                  <td className="px-3 py-2 text-center font-medium">{r.PM_Process_Name}</td>
-                  <td className="px-3 py-2 text-center">{r.PM_Process_Name1}</td>
-                  <td className="px-3 py-2 text-center">{r.PM_Process_Order}</td>
-                  <td className="px-3 py-2 text-center">{r.ProcessTypeId}</td>
-                  <td className="px-3 py-2 text-center">{r.TeamId}</td>
-                  <td className="px-3 py-2 text-center">{r.Machine_id}</td>
-                  <td className="px-3 py-2 text-center"><button onClick={()=>handleEdit(r)} className="px-3 py-1.5 bg-[--color-main] hover:bg-[#3498db] text-white text-[12px] rounded transition-colors"><Edit className="w-4 h-4"/></button></td>
-                  <td className="px-3 py-2 text-center"><button onClick={()=>handleDelete(r.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors"><Trash2 className="w-4 h-4"/></button></td>
-                  <td className="px-3 py-2 text-center"><button onClick={()=>setDetailRow(r)} className="px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] rounded transition-colors"><Info className="w-4 h-4"/></button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
-          <span className="text-[12px] text-slate-500">Showing {filtered.length===0?0:(page-1)*pageSize+1} to {Math.min(page*pageSize,filtered.length)} of {filtered.length} entries</span>
-          <div className="flex items-center gap-1">
-            <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
-            {pNums().map((n,i)=>n==='...'?<span key={`e${i}`} className="px-2 text-slate-400 text-[12px]">…</span>:<button key={n} onClick={()=>setPage(n)} className={`w-8 h-8 text-[12px] rounded border transition-colors ${page===n?'bg-[#0097A7] text-white border-[#0097A7]':'border-slate-300 hover:bg-slate-100 text-slate-600'}`}>{n}</button>)}
-            <button onClick={()=>setPage(p=>Math.min(total,p+1))} disabled={page===total} className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
-          </div>
-        </div>
-      </div>
-      {detailRow&&<div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-6 py-4 flex items-center justify-between"><h2 className="text-white font-bold text-[15px]">Process Details</h2><button onClick={()=>setDetailRow(null)} className="text-white/80 hover:text-white"><X className="w-5 h-5"/></button></div>
-          <div className="p-5 grid grid-cols-2 gap-x-6 gap-y-1.5 max-h-[70vh] overflow-y-auto">
-            {[['Process Name',detailRow.PM_Process_Name],['Alt. Name',detailRow.PM_Process_Name1],['Order',detailRow.PM_Process_Order],['Type',detailRow.ProcessTypeId],['Team',detailRow.TeamId],['Machine',detailRow.Machine_id],['Days',detailRow.PM_Days],['Hours',detailRow.PM_Hours],['Minutes',detailRow.Minutes],['Setting Time',detailRow.Setting_Time],['Cycle Time',detailRow.Cycle_Time],['Handling Time',detailRow.Handling_Time],['Idle Time',detailRow.Idle_Time]].map(([l,v])=>(
-              <div key={l} className="flex flex-col py-1 border-b border-slate-100"><span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{l}</span><span className="text-[13px] text-slate-800 font-medium">{String(v??'—')}</span></div>
-            ))}
-          </div>
-          <div className="px-6 pb-5 flex justify-end"><button onClick={()=>setDetailRow(null)} className="px-5 py-2 text-sm font-semibold text-white bg-[#0097A7] hover:bg-[#007a87] rounded-lg transition-colors">Close</button></div>
-        </div>
-      </div>}
     </div>
   )
 }

@@ -2,9 +2,11 @@ import { useState } from 'react'
 import {
   LayoutDashboard, Users, UserCog, Database, Package,
   UserCircle, Wrench, FileText, ShoppingCart, Warehouse,
-  Settings, ChevronRight, ChevronDown, User,
+  Settings, ChevronRight, ChevronDown, User, Landmark,
+  LayoutGrid, ShieldAlert
 } from 'lucide-react'
-
+import { ClipboardList } from 'lucide-react'
+import { Truck } from 'lucide-react'
 const NAV = [
   { id: 'dashboard-top', label: 'Dashboard',     icon: LayoutDashboard, page: 'Dashboard' },
   { id: 'user-masters',  label: 'User Masters',  icon: UserCog,         children: [] },
@@ -75,7 +77,95 @@ const NAV = [
       { id: 'grn-entry-report',       label: 'GRN Entry Report',       page: 'GRNEntryReport'       },
     ],
   },
+  {
+    id: 'account', label: 'Account', icon: Landmark,
+    children: [
+      { id: 'receipt-entry', label: 'Receipt Entry', page: 'ReceiptEntry' },
+      { id: 'receipt-details', label: 'Receipt Details', page: 'ReceiptDetails' },
+      { id: 'voucher-entry', label: 'Voucher Entry', page: 'VoucherEntry' },
+      { id: 'day-report', label: 'Day Report', page: 'DayReport' },
+      { id: 'day-book', label: 'Day Book', page: 'DayBook' },
+      { id: 'ledger-balance', label: 'Ledger Balance', page: 'LedgerBalance' },
+      { id: 'monthly-ledger-balance', label: 'Monthly Ledger Balance', page: 'MonthlyLedgerBalance' },
+      { id: 'outstanding-receipt-report', label: 'Outstanding Receipt Reports', page: 'OutstandingReceiptReport' },
+      { id: 'payment-entry', label: 'Payment Entry', page: 'PaymentEntry' },
+      { id: 'payment-details', label: 'Payment Details', page: 'PaymentDetails' },
+      { id: 'journal-entry', label: 'Journal Entry', page: 'JournalEntry' },
+    ],
+  },
+  { 
+    id: 'bom', 
+    label: 'BOM', 
+    icon: FileText, 
+    children: [
+      { id: 'bom-upload', label: 'BOM Upload', page: 'BOMUpload' },
+      { id: 'customerwise-bom-report', label: 'Customerwise BOM Report', page: 'CustomerwiseBOMReport' },
+      { id: 'index-creation', label: 'Index Creation', page: 'IndexCreation' },
+      { id: 'index-creation-report', label: 'Index Creation Report', page: 'IndexCreationReport' },
+      { id: 'upload-bom', label: 'Upload BOM', page: 'UploadBOM' },
+      { id: 'main-index', label: 'Main Index', page: 'MainIndex' },
+      { id: 'main-index-report', label: 'Main Index Report', page: 'MainIndexReport' },
+      { id: 'view-model', label: 'View Model', page: 'ViewModel' },
+    ] 
+  },
+  { 
+    id: 'ccms', 
+    label: 'CCMS', 
+    icon: ClipboardList, 
+    children: [
+      { id: 'customer-complaint-entry', label: 'Customer Complaint Entry', page: 'CustomerComplaintEntry' },
+    ] 
+  },
+  { 
+    id: 'dc', 
+    label: 'DC', 
+    icon: Truck, 
+    children: [
+      { id: 'dc-entry', label: 'DC Entry', page: 'DCEntry' },
+    ] 
+  },
+  { 
+    id: 'maintainance', 
+    label: 'Maintainance', 
+    icon: Wrench, 
+    children: [
+      { id: 'machine-breakdown', label: 'Machine BreakDown', page: 'MachineBreakDown' },
+      { id: 'breakdown-clearence', label: 'BreakDown Clearence', page: 'BreakDownClearence' },
+      { id: 'breakdown-acceptance', label: 'BreakDown Acceptance', page: 'BreakDownAcceptance' },
+      { id: 'breakdown-approval-list', label: 'BreakDown Approval List', page: 'BreakDownApprovalList' },
+    ] 
+  },
+  { 
+    id: 'nc', 
+    label: 'NC', 
+    icon: ShieldAlert, 
+    children: [
+      { id: 'qc-rejection-details', label: 'QC Rejection Details', page: 'QCRejectionDetails' },
+      { id: 'nc-approval', label: 'NC Approval', page: 'NCApproval' },
+      { id: 'nc-job-created', label: 'NC Job Created', page: 'NCJobCreated' },
+      { id: 'nc-dc-entry', label: 'NC DC Entry', page: 'NCDCEntry' },
+      { id: 'nc-dc-details', label: 'NC DC Details', page: 'NCDCDetails' },
+    ] 
+  },
+  { 
+    id: 'production', 
+    label: 'Production', 
+    icon: LayoutGrid, 
+    children: [
+      { id: 'job-list', label: 'Job List', page: 'JobList' },
+      { id: 'barcode-details', label: 'Barcode Details', page: 'BarcodeDetails' },
+      { id: 'auto-job-entry', label: 'Auto Job Entry', page: 'AutoJobEntry' },
+      { id: 'service-job-entry-details', label: 'Service Job Entry Details', page: 'ServiceJobEntryDetails' },
+      { id: 'conformation-list', label: 'Conformation List', page: 'ConformationList' },
+      { id: 'conformation-entry-details', label: 'Conformation Entry Details', page: 'ConformationEntryDetails' },
+      { id: 'process-card', label: 'Process Card', page: 'ProcessCard' },
+      { id: 'raw-material-issue', label: 'Raw Material Issue', page: 'RawMaterialIssue' },
+      { id: 'raw-material-issued-details', label: 'Rawmaterial Issued Details', page: 'RawMaterialIssuedDetails' },
+      { id: 'prod-machine-breakdown', label: 'Machine BreakDown', page: 'MachineBreakDown' },
+    ] 
+  },
   { id: 'technical',      label: 'Technical',        icon: Settings,       children: [] },
+
 ]
 
 export default function Layout({ currentPage, onNavigate, children }) {

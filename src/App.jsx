@@ -35,6 +35,84 @@ import AutoPO from './pages/AutoPO'
 import SystemInfoMaster from './pages/SystemInfoMaster'
 import DBCopy from './pages/DBCopy'
 import RestoreDB from './pages/RestoreDB'
+import ReceiptEntry from './pages/ReceiptEntry'
+import ReceiptDetails from './pages/ReceiptDetails'
+import VoucherEntry from './pages/VoucherEntry'
+import DayReport from './pages/DayReport'
+import DayBook from './pages/DayBook'
+import LedgerBalance from './pages/LedgerBalance'
+import MonthlyLedgerBalance from './pages/MonthlyLedgerBalance'
+import OutstandingReceiptReport from './pages/OutstandingReceiptReport'
+import PaymentEntry from './pages/PaymentEntry'
+import PaymentDetails from './pages/PaymentDetails'
+import JournalEntry from './pages/JournalEntry'
+import BOMUpload from './pages/BOMUpload'
+import CustomerwiseBOMReport from './pages/CustomerwiseBOMReport'
+import IndexCreation from './pages/IndexCreation'
+import IndexCreationReport from './pages/IndexCreationReport'
+import UploadBOM from './pages/UploadBOM'
+import MainIndex from './pages/MainIndex'
+import MainIndexReport from './pages/MainIndexReport'
+import ViewModel from './pages/ViewModel'
+import CustomerComplaintEntry from './pages/CustomerComplaintEntry'
+import DCEntry from './pages/DCEntry'
+import MachineBreakDown from './pages/MachineBreakDown'
+import BreakDownClearence from './pages/BreakDownClearence'
+import BreakDownAcceptance from './pages/BreakDownAcceptance'
+import BreakDownApprovalList from './pages/BreakDownApprovalList'
+import QCRejectionDetails from './pages/QCRejectionDetails'
+import NCApproval from './pages/NCApproval'
+import NCJobCreated from './pages/NCJobCreated'
+import NCDCEntry from './pages/NCDCEntry'
+import NCDCDetails from './pages/NCDCDetails'
+import JobList from './pages/JobList'
+import BarcodeDetails from './pages/BarcodeDetails'
+import AutoJobEntry from './pages/AutoJobEntry'
+import ServiceJobEntryDetails from './pages/ServiceJobEntryDetails'
+import ConformationList from './pages/ConformationList'
+import ConformationEntryDetails from './pages/ConformationEntryDetails'
+import ProcessCard from './pages/ProcessCard'
+import RawMaterialIssue from './pages/RawMaterialIssue'
+import RawMaterialIssuedDetails from './pages/RawMaterialIssuedDetails'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const PAGES = {
   Dashboard:      <DashboardPage />,
@@ -73,6 +151,84 @@ const PAGES = {
   SystemInfoMaster:    <SystemInfoMaster />,
   DBCopy:              <DBCopy />,
   RestoreDB:           <RestoreDB />,
+  ReceiptEntry:        <ReceiptEntry />,
+  ReceiptDetails:      <ReceiptDetails />,
+  VoucherEntry:        <VoucherEntry />,
+  DayReport:           <DayReport />,
+  DayBook:             <DayBook />,
+  LedgerBalance:       <LedgerBalance />,
+  MonthlyLedgerBalance: <MonthlyLedgerBalance />,
+  OutstandingReceiptReport: <OutstandingReceiptReport />,
+  PaymentEntry:         <PaymentEntry />,
+  PaymentDetails:       <PaymentDetails />,
+  JournalEntry:         <JournalEntry />,
+  BOMUpload:            <BOMUpload />,
+  CustomerwiseBOMReport: <CustomerwiseBOMReport />,
+  IndexCreation:         <IndexCreation />,
+  IndexCreationReport:   <IndexCreationReport />,
+  UploadBOM:             <UploadBOM />,
+  MainIndex:             <MainIndex />,
+  MainIndexReport:       <MainIndexReport />,
+  ViewModel:             <ViewModel />,
+  CustomerComplaintEntry: <CustomerComplaintEntry />,
+  DCEntry:               <DCEntry />,
+  MachineBreakDown:      <MachineBreakDown />,
+  BreakDownClearence:    <BreakDownClearence />,
+  BreakDownAcceptance:   <BreakDownAcceptance />,
+  BreakDownApprovalList: <BreakDownApprovalList />,
+  QCRejectionDetails:    <QCRejectionDetails />,
+  NCApproval:            <NCApproval />,
+  NCJobCreated:          <NCJobCreated />,
+  NCDCEntry:             <NCDCEntry />,
+  NCDCDetails:           <NCDCDetails />,
+  JobList:               <JobList />,
+  BarcodeDetails:        <BarcodeDetails />,
+  AutoJobEntry:          <AutoJobEntry />,
+  ServiceJobEntryDetails: <ServiceJobEntryDetails />,
+  ConformationList:      <ConformationList />,
+  ConformationEntryDetails: <ConformationEntryDetails />,
+  ProcessCard:           <ProcessCard />,
+  RawMaterialIssue:      <RawMaterialIssue />,
+  RawMaterialIssuedDetails: <RawMaterialIssuedDetails />,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 export default function App() {
