@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ChevronRight, Search, Printer, X, FileText, Download, FileSpreadsheet, FileJson, Filter, Settings } from 'lucide-react'
+import { ChevronRight, Search, Printer, X, FileText, Download, FileSpreadsheet, FileJson, Filter, Settings, RotateCcw, Database, TrendingUp, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -15,16 +15,16 @@ const Input = ({ placeholder, value, onChange, type = 'text', className = "" }) 
     placeholder={placeholder}
     value={value}
     onChange={onChange}
-    className={`px-3 py-[7px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
+    className={`px-4 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
   />
 )
 
-const Select = ({ options, placeholder, value, onChange }) => (
-  <div className="relative">
+const Select = ({ options, placeholder, value, onChange, className = "" }) => (
+  <div className={`relative ${className}`}>
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-[7px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+      className="w-full px-4 py-2 pr-10 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
     >
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -52,9 +52,9 @@ export default function DayBook() {
   const [isDetailReport, setIsDetailReport] = useState(true)
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
+  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
-    // Combine data from various Account modules
     const r = JSON.parse(localStorage.getItem('velson_receipts') || '[]')
     const p = JSON.parse(localStorage.getItem('velson_payments') || '[]')
     const v = JSON.parse(localStorage.getItem('velson_vouchers') || '[]')
@@ -67,157 +67,203 @@ export default function DayBook() {
       ...j.map(i => ({ id: i.id, date: i.voucherDate, voucherType: 'JOURNAL', voucherNo: i.voucherNo, ledger: 'Multiple Ledgers', debit: i.rows.filter(r => r.type === 'DR').reduce((a, b) => a + parseFloat(b.payment || 0), 0).toString(), credit: i.rows.filter(r => r.type === 'CR').reduce((a, b) => a + parseFloat(b.receipt || 0), 0).toString(), narration: 'Journal Entry' }))
     ]
 
-    if (combined.length === 0) {
-      setData(SEED_DATA)
-      setFilteredData(SEED_DATA)
-    } else {
-      setData(combined)
-      setFilteredData(combined)
-    }
+    const finalData = combined.length === 0 ? SEED_DATA : combined
+    setData(finalData)
+    setFilteredData(finalData)
   }, [])
 
   const handleSearch = () => {
-    const start = new Date(fromDate)
-    const end = new Date(toDate)
-    const result = data.filter(r => {
-      const d = new Date(r.date)
-      return d >= start && d <= end
-    })
-    setFilteredData(result)
+    setSearching(true)
+    setTimeout(() => {
+      const start = new Date(fromDate)
+      const end = new Date(toDate)
+      const result = data.filter(r => {
+        const d = new Date(r.date)
+        return d >= start && d <= end
+      })
+      setFilteredData(result)
+      setSearching(false)
+    }, 600)
   }
-
-  const handleExport = (type) => alert(`Exporting ${filteredData.length} records as ${type}...`)
 
   const totalDebit = filteredData.reduce((acc, r) => acc + parseFloat(r.debit || 0), 0)
   const totalCredit = filteredData.reduce((acc, r) => acc + parseFloat(r.credit || 0), 0)
   const closingBalance = parseFloat(openingBalance) + totalCredit - totalDebit
 
   return (
-    <div className="bg-[#f4f6f8] min-h-full pb-10">
+    <div className="bg-[#f4f6f8] min-h-full pb-32">
       <div className="px-6 py-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5">
-          <span className="hover:text-[#0097A7] cursor-pointer transition-colors">Dashboard</span>
-          <ChevronRight className="w-3 h-3" />
-          <span className="hover:text-[#0097A7] cursor-pointer transition-colors">Account</span>
-          <ChevronRight className="w-3 h-3" />
-          <span className="text-[#0097A7] font-semibold">Day Book</span>
+        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black tracking-tight">
+          <span>Dashboard</span> <ChevronRight size={12} /> <span>Account</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">Daily Transaction Ledger</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[700px] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2.5">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-700 rounded-sm" />
-              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">Day Book</h2>
-            </div>
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[900px]">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-10 py-6">
             <div className="flex items-center gap-4">
-              <button onClick={() => window.print()} className="flex items-center gap-1.5 text-slate-500 hover:text-[#0097A7] text-[12px] font-bold transition-colors">
-                <Printer size={16} /> PrintData
+              <div className="w-5 h-5 bg-slate-900 rounded shadow-sm" />
+              <h2 className="text-[16px] font-black text-slate-800 uppercase tracking-[0.2em]">Live Master Daybook</h2>
+            </div>
+            <div className="flex gap-4">
+              <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-black rounded-2xl hover:bg-slate-50 transition-all shadow-sm">
+                <Printer size={18} className="text-[#0097A7]" /> Export Print
               </button>
-              <button onClick={() => alert('Closing...')} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-[12px] font-bold transition-colors">
-                <X size={18} strokeWidth={2.5} /> Close
+              <button onClick={() => window.history.back()} className="flex items-center gap-2 px-6 py-2.5 bg-rose-500 hover:bg-rose-600 text-white text-[12px] font-black rounded-2xl transition-all shadow-md">
+                <X size={20} strokeWidth={2.5} /> Close
               </button>
             </div>
           </div>
 
-          <div className="p-5">
-            {/* Filter Section */}
-            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 mb-6 space-y-4">
-              <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-                <div className="flex items-center gap-3">
-                  <Label>From Date</Label>
-                  <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-40" />
-                </div>
-                <div className="flex items-center gap-3">
-                  <Label>To Date</Label>
-                  <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-40" />
-                </div>
-                <button onClick={handleSearch} className="flex items-center gap-2 px-6 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-bold rounded shadow-sm transition-all active:scale-95">
-                  <Search size={16} /> Search
-                </button>
-                <div className="flex items-center gap-3 ml-auto">
-                  <Label>Opening Balance</Label>
-                  <Input value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="w-32 text-right font-bold" />
-                </div>
-              </div>
+          <div className="p-10 space-y-12">
+            {/* Control Suite */}
+            <div className="bg-slate-50/50 p-10 rounded-[3.5rem] border border-slate-100 shadow-inner space-y-10 relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                 <FileText size={180} />
+               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-8">
-                  <div className="flex items-center gap-3 min-w-[250px]">
-                    <Label>Company</Label>
-                    <div className="flex-1">
-                      <Select options={['VELSON', 'OTHER COMPANY']} value={company} onChange={e => setCompany(e.target.value)} />
-                    </div>
+               <div className="grid grid-cols-12 gap-10 relative z-10">
+                  <div className="col-span-4 flex items-center gap-6">
+                     <div className="flex-1 space-y-1.5">
+                        <Label>Cycle Start</Label>
+                        <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+                     </div>
+                     <div className="flex-1 space-y-1.5">
+                        <Label>Cycle End</Label>
+                        <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+                     </div>
                   </div>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input 
-                      type="checkbox" 
-                      checked={isDetailReport} 
-                      onChange={e => setIsDetailReport(e.target.checked)} 
-                      className="w-4 h-4 accent-[#0097A7] rounded" 
-                    />
-                    <span className="text-[12px] font-semibold text-slate-600 group-hover:text-[#0097A7] transition-colors">Detail Daybook Reports</span>
+
+                  <div className="col-span-3 space-y-1.5">
+                     <Label>Operational Unit</Label>
+                     <Select options={['VELSON HQ', 'BRANCH ALPHA', 'MANUFACTURING DIV']} value={company} onChange={e => setCompany(e.target.value)} />
+                  </div>
+
+                  <div className="col-span-2 space-y-1.5">
+                     <Label>Buffer Balance</Label>
+                     <Input value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="text-right font-black text-[#0097A7]" />
+                  </div>
+
+                  <div className="col-span-3 flex items-end">
+                     <button 
+                      onClick={handleSearch}
+                      disabled={searching}
+                      className="w-full h-[42px] bg-slate-900 hover:bg-black text-white text-[12px] font-black rounded-2xl shadow-xl transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest flex items-center justify-center gap-3"
+                     >
+                       {searching ? <RotateCcw size={18} className="animate-spin" /> : <Search size={18} />}
+                       Filter Daybook
+                     </button>
+                  </div>
+               </div>
+
+               <div className="flex items-center justify-between pt-4 border-t border-slate-100 relative z-10">
+                  <label className="flex items-center gap-4 cursor-pointer group">
+                     <div className="relative">
+                        <input 
+                          type="checkbox" 
+                          checked={isDetailReport} 
+                          onChange={e => setIsDetailReport(e.target.checked)} 
+                          className="peer sr-only" 
+                        />
+                        <div className="w-10 h-5 bg-slate-200 rounded-full transition-all peer-checked:bg-[#0097A7]" />
+                        <div className="absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-all peer-checked:translate-x-5" />
+                     </div>
+                     <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-[#0097A7] transition-colors">Granular Narration Stream</span>
                   </label>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <button onClick={() => handleExport('Excel')} className="flex items-center gap-1.5 text-slate-400 hover:text-green-600 text-[11px] font-bold uppercase transition-colors">
-                    <FileSpreadsheet size={16} /> Excel
-                  </button>
-                  <button onClick={() => handleExport('PDF')} className="flex items-center gap-1.5 text-slate-400 hover:text-rose-600 text-[11px] font-bold uppercase transition-colors">
-                    <FileJson size={16} /> PDF
-                  </button>
-                </div>
-              </div>
+
+                  <div className="flex items-center gap-6">
+                    {[{ icon: <FileSpreadsheet size={16} />, l: 'EXCEL' }, { icon: <FileJson size={16} />, l: 'PDF.REPORT' }].map(tool => (
+                      <button key={tool.l} className="flex items-center gap-2 text-slate-300 hover:text-slate-600 text-[10px] font-black uppercase tracking-widest transition-all italic">
+                        {tool.icon} {tool.l}
+                      </button>
+                    ))}
+                  </div>
+               </div>
             </div>
 
-            {/* Content Table */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse min-w-[1000px]">
-                <thead className="bg-[#fcfdfe] text-[10.5px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3 border-r border-slate-200 w-12 text-center">S.No</th>
-                    <th className="px-4 py-3 border-r border-slate-200 w-28">Date</th>
-                    <th className="px-4 py-3 border-r border-slate-200 w-32">Type</th>
-                    <th className="px-4 py-3 border-r border-slate-200 w-32">Vou No</th>
-                    <th className="px-4 py-3 border-r border-slate-200">Particulars (Ledger)</th>
-                    <th className="px-4 py-3 border-r border-slate-200 text-right w-32">Debit (Out)</th>
-                    <th className="px-4 py-3 border-r border-slate-200 text-right w-32">Credit (In)</th>
-                    <th className="px-4 py-3 text-slate-400 italic">Narration</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-[12px]">
-                  <tr className="bg-slate-50/50 font-bold">
-                    <td colSpan={6} className="px-4 py-2 border-r border-slate-200 text-right uppercase text-slate-400 text-[10px]">Opening Balance</td>
-                    <td className="px-4 py-2 border-r border-slate-200 text-right text-[#0097A7]">{parseFloat(openingBalance).toFixed(2)}</td>
-                    <td className="px-4 py-2" />
-                  </tr>
-                  {filteredData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors h-10">
-                      <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-400">{idx + 1}</td>
-                      <td className="px-4 py-2 border-r border-slate-200">{row.date}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 uppercase font-bold text-slate-600">{row.voucherType}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 font-bold text-[#0097A7]">{row.voucherNo}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 font-bold">{row.ledger}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 text-right font-black text-rose-600">{parseFloat(row.debit || 0).toFixed(2)}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 text-right font-black text-green-600">{parseFloat(row.credit || 0).toFixed(2)}</td>
-                      <td className="px-4 py-2 text-slate-500 italic truncate max-w-[200px]">{row.narration}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-slate-800 text-white font-bold">
-                  <tr>
-                    <td colSpan={5} className="px-4 py-3 text-right uppercase tracking-wider text-[10px] text-white/50">Totals & Closing</td>
-                    <td className="px-4 py-3 text-right text-rose-400 text-[14px]">{totalDebit.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-green-400 text-[14px]">{totalCredit.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right bg-[#0097A7]">
-                       <span className="text-white/50 text-[10px] mr-2 uppercase">Closing:</span>
-                       <span className="text-[15px]">{closingBalance.toFixed(2)}</span>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+            {/* Matrix Result Area */}
+            <div className="flex-1">
+               <div className="border border-slate-200 rounded-[3.5rem] overflow-hidden shadow-sm bg-white overflow-x-auto">
+                 <table className="w-full text-left border-collapse min-w-[1400px]">
+                   <thead className="bg-[#fcfdfe] text-[10px] uppercase text-slate-400 font-black border-b border-slate-200">
+                     <tr>
+                       <th className="px-8 py-6 border-r border-slate-100 w-16 text-center">#</th>
+                       <th className="px-8 py-6 border-r border-slate-100 w-32">Value Date</th>
+                       <th className="px-8 py-6 border-r border-slate-100 w-32">Protocol</th>
+                       <th className="px-8 py-6 border-r border-slate-100 w-32">Doc Ref</th>
+                       <th className="px-8 py-6 border-r border-slate-100">Ledger Entity Hub</th>
+                       <th className="px-8 py-6 border-r border-slate-100 text-right w-40">Debit (DR)</th>
+                       <th className="px-8 py-6 border-r border-slate-100 text-right w-40">Credit (CR)</th>
+                       <th className="px-8 py-6 text-slate-400 italic">Audit Narrative</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-slate-50 text-[14px]">
+                     <tr className="bg-slate-50/30">
+                        <td colSpan={6} className="px-8 py-4 border-r border-slate-50 text-right font-black uppercase text-[10px] text-slate-400 tracking-widest italic">Temporal Opening Balance</td>
+                        <td className="px-8 py-4 border-r border-slate-50 text-right font-black text-[#0097A7]">{parseFloat(openingBalance).toFixed(2)}</td>
+                        <td className="px-8 py-4" />
+                     </tr>
+                     {filteredData.length === 0 ? (
+                       <tr>
+                         <td colSpan={8} className="py-24 text-center text-slate-200 italic font-black uppercase tracking-widest opacity-30">
+                            Daybook Stream Empty for Selected Interval
+                         </td>
+                       </tr>
+                     ) : (
+                       filteredData.map((row, idx) => (
+                         <tr key={idx} className="hover:bg-slate-50 transition-colors h-16 group">
+                           <td className="px-8 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 font-black text-slate-400 text-[11px]">{row.date}</td>
+                           <td className="px-8 py-2 border-r border-slate-50">
+                              <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-widest">{row.voucherType}</span>
+                           </td>
+                           <td className="px-8 py-2 border-r border-slate-50 font-black text-[#0097A7]">{row.voucherNo}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 font-black text-slate-800 uppercase tracking-tighter">{row.ledger}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 text-right font-black text-rose-600 tracking-tighter">{parseFloat(row.debit || 0).toFixed(2)}</td>
+                           <td className="px-8 py-2 border-r border-slate-50 text-right font-black text-green-600 tracking-tighter">{parseFloat(row.credit || 0).toFixed(2)}</td>
+                           <td className="px-8 py-2 text-slate-400 italic text-[12px] truncate max-w-xs">{row.narration}</td>
+                         </tr>
+                       ))
+                     )}
+                   </tbody>
+                 </table>
+               </div>
+            </div>
+
+            {/* Dark Analytical Footer */}
+            <div className="mt-12 bg-slate-900 rounded-[3.5rem] p-12 flex items-center justify-between shadow-2xl relative overflow-hidden border border-slate-800">
+               <div className="absolute inset-0 bg-gradient-to-r from-[#0097A7]/5 to-transparent pointer-events-none" />
+               <div className="flex items-center gap-24 relative z-10">
+                  <div className="flex flex-col">
+                    <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.5em] mb-4 italic">Period Utilization</p>
+                    <div className="flex items-center gap-12">
+                       <div>
+                          <div className="flex items-center gap-2 text-rose-500 mb-1">
+                             <ArrowUpRight size={14} />
+                             <p className="text-[10px] font-black uppercase">Debit Sum</p>
+                          </div>
+                          <p className="text-[28px] font-black text-white leading-none tracking-tighter">{totalDebit.toFixed(2)}</p>
+                       </div>
+                       <div className="w-[1px] h-10 bg-white/10" />
+                       <div>
+                          <div className="flex items-center gap-2 text-green-500 mb-1">
+                             <ArrowDownRight size={14} />
+                             <p className="text-[10px] font-black uppercase">Credit Sum</p>
+                          </div>
+                          <p className="text-[28px] font-black text-white leading-none tracking-tighter">{totalCredit.toFixed(2)}</p>
+                       </div>
+                    </div>
+                  </div>
+                  <div className="w-[1px] h-20 bg-white/10" />
+                  <div className="flex flex-col">
+                    <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.5em] mb-4 italic">Net Liquidity Closing</p>
+                    <p className="text-[48px] font-black text-[#0097A7] leading-none tracking-tighter italic">
+                       {closingBalance.toFixed(2)}
+                    </p>
+                  </div>
+               </div>
+               <div className="text-right relative z-10 opacity-30 flex flex-col items-end gap-3">
+                  <TrendingUp size={48} className="text-white" />
+                  <span className="text-white text-[11px] font-black uppercase tracking-[0.4em] italic text-right leading-tight">Digital Daybook Stream<br/>Matrix Integrity Verified</span>
+               </div>
             </div>
           </div>
         </div>

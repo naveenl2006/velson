@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { 
   ChevronRight, Search, Download, FileSpreadsheet, FileJson, 
-  Filter, Settings, X, RotateCcw
+  Filter, Settings, X, RotateCcw, TrendingUp, Calendar, ArrowUpRight, ArrowDownRight, PieChart
 } from 'lucide-react'
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
     {children}
   </label>
 )
@@ -16,7 +16,7 @@ const Input = ({ value, onChange, type = 'text', className = "" }) => (
     type={type}
     value={value}
     onChange={onChange}
-    className={`px-3 py-[7px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
+    className={`px-4 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
   />
 )
 
@@ -46,120 +46,145 @@ export default function DayReport() {
     }, 600)
   }
 
-  const handleExport = (t) => alert(`Exporting day report as ${t}...`)
-
   const totalCredit = reportData.reduce((acc, r) => acc + parseFloat(r.credit), 0)
   const totalDebit = reportData.reduce((acc, r) => acc + parseFloat(r.debit), 0)
+  const totalAdjBal = reportData.reduce((acc, r) => acc + parseFloat(r.adjBal), 0)
 
   return (
-    <div className="bg-[#f4f6f8] min-h-full pb-10">
+    <div className="bg-[#f4f6f8] min-h-full pb-32">
       <div className="px-6 py-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5">
-          <span className="hover:text-[#0097A7] cursor-pointer transition-colors">Dashboard</span>
-          <ChevronRight className="w-3 h-3" />
-          <span className="hover:text-[#0097A7] cursor-pointer transition-colors">Account</span>
-          <ChevronRight className="w-3 h-3" />
-          <span className="text-[#0097A7] font-semibold uppercase tracking-tight">Day Report</span>
+        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black tracking-tight">
+          <span>Dashboard</span> <ChevronRight size={12} /> <span>Account</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">Daily Liquidity Report</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[800px]">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2.5">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-700 rounded-sm" />
-              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">Day Report Summary</h2>
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[900px]">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-10 py-6">
+            <div className="flex items-center gap-4">
+              <div className="w-5 h-5 bg-teal-600 rounded shadow-sm" />
+              <h2 className="text-[16px] font-black text-slate-800 uppercase tracking-[0.2em]">Live Temporal Liquidity Matrix</h2>
             </div>
-            <button onClick={() => alert('Closing...')} className="text-slate-400 hover:text-red-600 transition-colors">
-              <X size={18} strokeWidth={2.5} />
-            </button>
+            <div className="flex gap-4">
+              <button onClick={() => window.history.back()} className="flex items-center gap-2 px-6 py-2.5 bg-rose-500 hover:bg-rose-600 text-white text-[12px] font-black rounded-2xl transition-all shadow-md">
+                <X size={20} strokeWidth={2.5} /> Close Tracker
+              </button>
+            </div>
           </div>
 
-          <div className="p-5 flex-1 flex flex-col">
-            {/* Filter Bar */}
-            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 mb-6 flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <Label>From Date</Label>
-                <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
-              </div>
-              <div className="flex items-center gap-3">
-                <Label>To Date</Label>
-                <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
-              </div>
-              <button 
-                onClick={handleSearch}
-                className="flex items-center gap-2 px-6 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-bold rounded shadow-sm transition-all active:scale-95"
-              >
-                {searching ? <RotateCcw size={16} className="animate-spin" /> : <Search size={16} />}
-                Search
-              </button>
-              
-              {/* Toolbar */}
-              <div className="ml-auto flex items-center gap-4">
-                <div className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-md">
-                   <span className="text-[11px] font-bold text-slate-500 uppercase mr-2">LS</span>
-                   <input className="w-8 bg-transparent text-center text-sm font-bold border-b border-slate-300 focus:outline-none" value={reportData.length} readOnly />
-                </div>
-                <div className="flex items-center gap-1 border-l border-slate-200 pl-4">
-                   {[
-                     { icon: <Download size={14} />, label: 'Dos' },
-                     { icon: <FileSpreadsheet size={14} />, label: 'Excel' },
-                     { icon: <FileJson size={14} />, label: 'Pdf' },
-                   ].map(tool => (
-                     <button key={tool.label} onClick={() => handleExport(tool.label)} className="flex items-center gap-1 px-2 py-1 text-slate-400 hover:text-[#0097A7] transition-colors group">
-                       {tool.icon}
-                       <span className="text-[11px] font-bold uppercase group-hover:text-slate-600">{tool.label}</span>
-                     </button>
-                   ))}
-                </div>
-              </div>
+          <div className="p-10 space-y-12">
+            {/* Control Suite */}
+            <div className="bg-slate-50/50 p-10 rounded-[3.5rem] border border-slate-100 shadow-inner flex items-center justify-between relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                 <PieChart size={180} />
+               </div>
+
+               <div className="flex items-center gap-12 relative z-10">
+                  <div className="flex items-center gap-6">
+                     <div className="space-y-1.5">
+                        <Label>Archive Start</Label>
+                        <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+                     </div>
+                     <div className="space-y-1.5">
+                        <Label>Archive End</Label>
+                        <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+                     </div>
+                  </div>
+                  <button 
+                    onClick={handleSearch}
+                    disabled={searching}
+                    className="px-12 h-[42px] bg-slate-900 hover:bg-black text-white text-[12px] font-black rounded-2xl shadow-xl transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest flex items-center justify-center gap-3"
+                  >
+                    {searching ? <RotateCcw size={18} className="animate-spin" /> : <Search size={18} />}
+                    Refresh Report
+                  </button>
+               </div>
+
+               <div className="flex items-center gap-6 relative z-10">
+                  <div className="flex items-center gap-2 bg-white px-5 py-2 rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Index Depth</span>
+                    <span className="text-[14px] font-black text-slate-800">{reportData.length} Temporal Points</span>
+                  </div>
+                  <div className="flex items-center gap-4 border-l border-slate-200 pl-8">
+                    {[{ icon: <Download size={16} />, l: 'EXCEL' }, { icon: <FileJson size={16} />, l: 'JSON' }].map(tool => (
+                      <button key={tool.l} className="flex items-center gap-2 text-slate-300 hover:text-teal-600 text-[10px] font-black uppercase tracking-widest transition-all italic">
+                        {tool.icon} {tool.l}
+                      </button>
+                    ))}
+                  </div>
+               </div>
             </div>
 
-            {/* Main Table */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm flex-1">
-              <table className="w-full text-left border-collapse min-w-[1200px]">
-                <thead className="bg-[#fcfdfe] text-[10.5px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3 border-r border-slate-200 w-12 text-center">Ord</th>
-                    <th className="px-4 py-3 border-r border-slate-200 w-12 text-center">SNo</th>
-                    <th className="px-4 py-3 border-r border-slate-200 w-32">Date</th>
-                    <th className="px-4 py-3 border-r border-slate-200 text-right w-32 bg-green-50/30">Credit Amt</th>
-                    <th className="px-4 py-3 border-r border-slate-200 text-right w-32 bg-rose-50/30">Debit Amt</th>
-                    <th className="px-4 py-3 border-r border-slate-200 text-right w-32 font-black text-slate-800">Cash Bal</th>
-                    <th className="px-4 py-3 border-r border-slate-200 text-right w-32 text-slate-400">Adj. Credit</th>
-                    <th className="px-4 py-3 border-r border-slate-200 text-right w-32 text-slate-400">Adj. Debit</th>
-                    <th className="px-4 py-3 text-right bg-slate-50 font-black text-[#0097A7]">Adj Balance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-[13px]">
-                  {reportData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors h-11">
-                      <td className="px-4 py-2 border-r border-slate-200 text-center font-bold text-slate-400">{row.ord1}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-400">{row.sno}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 font-medium">{row.date}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 text-right font-bold text-green-600 bg-green-50/10">{row.credit}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 text-right font-bold text-rose-600 bg-rose-50/10">{row.debit}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 text-right font-black text-slate-700">{row.cashBal}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 text-right text-slate-500 font-semibold">{row.adjCredit}</td>
-                      <td className="px-4 py-2 border-r border-slate-200 text-right text-slate-500 font-semibold">{row.adjDebit}</td>
-                      <td className="px-4 py-2 text-right font-black text-[#0097A7] bg-slate-50/50">{row.adjBal}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-slate-800 text-white font-bold">
-                  <tr>
-                    <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-wider text-[10px] text-white/50">Totals Period Cumulative</td>
-                    <td className="px-4 py-3 text-right text-green-400 text-[15px]">{totalCredit.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-rose-400 text-[15px]">{totalDebit.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-white text-[16px]">{(totalCredit - totalDebit).toFixed(2)}</td>
-                    <td colSpan={2} className="px-4 py-2 border-r border-white/10" />
-                    <td className="px-4 py-3 text-right bg-[#0097A7] text-[16px]">
-                       <span className="text-white/50 text-[10px] mr-3 uppercase">Net Balance:</span>
+            {/* Matrix Data Layer */}
+            <div className="flex-1">
+               <div className="border border-slate-200 rounded-[3.5rem] overflow-hidden shadow-sm bg-white overflow-x-auto">
+                 <table className="w-full text-left border-collapse min-w-[1400px]">
+                   <thead className="bg-[#fcfdfe] text-[10px] uppercase text-slate-400 font-black border-b border-slate-200">
+                     <tr>
+                       <th className="px-8 py-6 border-r border-slate-100 w-16 text-center">Ord</th>
+                       <th className="px-8 py-6 border-r border-slate-100 w-16 text-center">SNo</th>
+                       <th className="px-8 py-6 border-r border-slate-100 w-32 text-center">Value Date</th>
+                       <th className="px-8 py-6 border-r border-slate-100 text-right w-36 bg-green-50/30">Credit Intake</th>
+                       <th className="px-8 py-6 border-r border-slate-100 text-right w-36 bg-rose-50/30">Debit Outflow</th>
+                       <th className="px-10 py-6 border-r border-slate-100 text-right w-44 font-black text-slate-800">Cash Balance</th>
+                       <th className="px-8 py-6 border-r border-slate-100 text-right w-36 text-slate-300">Adj. Credit</th>
+                       <th className="px-8 py-6 border-r border-slate-100 text-right w-36 text-slate-300">Adj. Debit</th>
+                       <th className="px-10 py-6 text-right w-52 bg-slate-50/50 font-black text-[#0097A7]">Adjusted Ledger Bal</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-slate-50 text-[14px]">
+                     {reportData.map((row, idx) => (
+                       <tr key={idx} className="hover:bg-slate-50 transition-colors h-16 group">
+                         <td className="px-8 py-2 border-r border-slate-50 text-center text-slate-300 font-black">{row.ord1}</td>
+                         <td className="px-8 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{row.sno}</td>
+                         <td className="px-8 py-2 border-r border-slate-50 text-center font-black text-slate-400 text-[11px] uppercase">{row.date}</td>
+                         <td className="px-8 py-2 border-r border-slate-50 text-right font-black text-green-600 bg-green-50/10 tracking-tighter">{row.credit}</td>
+                         <td className="px-8 py-2 border-r border-slate-50 text-right font-black text-rose-600 bg-rose-50/10 tracking-tighter">{row.debit}</td>
+                         <td className="px-10 py-2 border-r border-slate-50 text-right font-black text-slate-800 tracking-tight">{row.cashBal}</td>
+                         <td className="px-8 py-2 border-r border-slate-50 text-right text-slate-300 font-bold">{row.adjCredit}</td>
+                         <td className="px-8 py-2 border-r border-slate-50 text-right text-slate-300 font-bold">{row.adjDebit}</td>
+                         <td className="px-10 py-2 text-right font-black text-[#0097A7] bg-slate-50/30 tracking-tight text-lg italic">{row.adjBal}</td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+            </div>
+
+            {/* Dark Analytical Footer */}
+            <div className="mt-12 bg-slate-900 rounded-[3.5rem] p-12 flex items-center justify-between shadow-2xl relative overflow-hidden border border-slate-800">
+               <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-transparent pointer-events-none" />
+               <div className="flex items-center gap-24 relative z-10">
+                  <div className="flex flex-col">
+                    <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.5em] mb-4 italic">Aggregate Performance</p>
+                    <div className="flex items-center gap-12">
+                       <div>
+                          <div className="flex items-center gap-2 text-green-500 mb-1">
+                             <ArrowDownRight size={14} />
+                             <p className="text-[10px] font-black uppercase">Total Intake</p>
+                          </div>
+                          <p className="text-[28px] font-black text-white leading-none tracking-tighter">{totalCredit.toFixed(2)}</p>
+                       </div>
+                       <div className="w-[1px] h-10 bg-white/10" />
+                       <div>
+                          <div className="flex items-center gap-2 text-rose-500 mb-1">
+                             <ArrowUpRight size={14} />
+                             <p className="text-[10px] font-black uppercase">Total Outflow</p>
+                          </div>
+                          <p className="text-[28px] font-black text-white leading-none tracking-tighter">{totalDebit.toFixed(2)}</p>
+                       </div>
+                    </div>
+                  </div>
+                  <div className="w-[1px] h-20 bg-white/10" />
+                  <div className="flex flex-col">
+                    <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.5em] mb-4 italic">Net Equilibrium Bal</p>
+                    <p className="text-[48px] font-black text-teal-400 leading-none tracking-tighter italic">
                        {(totalCredit - totalDebit).toFixed(2)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                    </p>
+                  </div>
+               </div>
+               <div className="text-right relative z-10 opacity-30 flex flex-col items-end gap-3">
+                  <TrendingUp size={48} className="text-white" />
+                  <span className="text-white text-[11px] font-black uppercase tracking-[0.4em] italic text-right leading-tight">Liquidity Matrix Analysis<br/>Ver 4.0 Omni-Core</span>
+               </div>
             </div>
           </div>
         </div>
