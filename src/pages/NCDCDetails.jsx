@@ -6,17 +6,18 @@ import {
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
     {children}
   </label>
 )
 
-const Input = ({ type = 'text', value, onChange, className = "" }) => (
+const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) => (
   <input
     type={type}
     value={value}
     onChange={onChange}
-    className={`px-3 py-[7px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
+    placeholder={placeholder}
+    className={`px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}
   />
 )
 
@@ -78,7 +79,7 @@ export default function NCDCDetails() {
           </div>
 
           <div className="p-6 flex-1 flex flex-col">
-            <div className="flex items-center gap-8 mb-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-inner">
+            <div className="flex flex-wrap items-center gap-8 mb-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-inner">
                <div className="flex items-center gap-3">
                  <Label>Range Start</Label>
                  <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-40" />
@@ -89,7 +90,7 @@ export default function NCDCDetails() {
                </div>
                <button 
                  onClick={handleSearch}
-                 className="flex items-center gap-2 px-10 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[13px] font-bold rounded-lg shadow-md transition-all active:scale-95"
+                 className="flex items-center justify-center gap-2 px-10 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-[13px] font-black rounded-xl shadow-lg transition-all active:scale-95"
                >
                  {searching ? <RotateCcw size={16} className="animate-spin" /> : <Search size={16} />}
                  Filter NC Records

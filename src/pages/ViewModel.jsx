@@ -1,24 +1,35 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Search, FileText, X, Layers, Printer, FileDown, RotateCcw, Box } from 'lucide-react'
-
 // ── Shared UI primitives ──
-const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+const Label = ({ children, required }) => (
+  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+    {required && <span className="text-red-500 mr-1">*</span>}
     {children}
   </label>
 )
 
+const Input = ({ placeholder, value, onChange, type = 'text', className = "", ...props }) => (
+  <input
+    type={type}
+    placeholder={placeholder}
+    value={value}
+    onChange={onChange}
+    className={`w-full px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}
+    {...props}
+  />
+)
+
 const Select = ({ options, placeholder, value, onChange, className = "" }) => (
-  <div className={`relative ${className}`}>
+  <div className={`relative group ${className}`}>
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-[7px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+      className="w-full px-4 py-2 pr-10 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer shadow-sm"
     >
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
-    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center group-hover:text-[#0097A7] transition-colors">
       <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
@@ -134,22 +145,32 @@ export default function ViewModel() {
               </div>
 
               {/* Right Column: Visualization Panel */}
-              <div className="col-span-4 h-full">
-                 <div className="bg-slate-900 rounded-3xl p-8 shadow-2xl relative overflow-hidden h-[280px] flex flex-col items-center justify-center border border-slate-800 group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#0097A7]/20 to-transparent pointer-events-none" />
-                    <Box size={64} strokeWidth={1} className="text-[#0097A7] mb-6 group-hover:scale-110 transition-transform opacity-50" />
-                    <div className="text-center z-10">
-                      <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Structure Integrity</p>
-                      <p className="text-white text-[15px] font-bold tracking-tight">
+              <div className="col-span-12 lg:col-span-4 h-full">
+                 <div className="bg-slate-900 rounded-[2rem] p-10 shadow-2xl relative overflow-hidden h-[280px] flex flex-col items-center justify-center border border-slate-800 group">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#0097A722,transparent)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,#0097A711,transparent)]" />
+                    
+                    <div className="relative mb-6">
+                       <div className="absolute inset-0 bg-[#0097A7] blur-[30px] opacity-20 animate-pulse" />
+                       <Box size={70} strokeWidth={1} className="text-[#0097A7] relative z-10 group-hover:scale-110 transition-transform duration-700 opacity-80" />
+                    </div>
+                    
+                    <div className="text-center z-10 space-y-2">
+                      <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.4em]">Structure Integrity</p>
+                      <p className="text-white text-[16px] font-bold tracking-tight px-4 leading-snug">
                         {form.modelNo || 'STANDBY - WAITING INPUT'}
                       </p>
                     </div>
+
                     {structure.length > 0 && (
-                      <div className="absolute bottom-6 left-0 right-0 px-8 flex justify-between items-center z-10">
-                         <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden mr-4">
-                           <div className="h-full bg-[#0097A7] w-3/4" />
+                      <div className="absolute bottom-8 left-0 right-0 px-10 flex flex-col gap-3 z-10">
+                         <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden shadow-inner">
+                           <div className="h-full bg-gradient-to-r from-[#0097A7] to-cyan-400 w-3/4 rounded-full" />
                          </div>
-                         <span className="text-[10px] font-black text-[#0097A7]">75% ANALYZED</span>
+                         <div className="flex justify-between items-center px-1">
+                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Analysis Engine</span>
+                            <span className="text-[10px] font-black text-[#0097A7]">75% ANALYZED</span>
+                         </div>
                       </div>
                     )}
                  </div>
@@ -170,38 +191,41 @@ export default function ViewModel() {
                   )}
                </div>
 
-               <div className={`flex-1 border-2 border-dashed rounded-3xl overflow-hidden transition-all duration-500 min-h-[350px] ${structure.length > 0 ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-100 bg-slate-50/50'}`}>
+               <div className={`flex-1 border border-slate-200 rounded-[2rem] overflow-hidden transition-all duration-500 min-h-[400px] shadow-lg ${structure.length > 0 ? 'bg-white' : 'bg-slate-50/50 border-dashed border-2'}`}>
                   {structure.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-300 py-24">
-                       <Layers size={80} strokeWidth={0.5} className="opacity-10 mb-6" />
-                       <p className="text-[13px] font-black uppercase tracking-[0.4em] opacity-40">Visualization Offline</p>
-                       <p className="text-[11px] italic mt-2 opacity-50">Compile model parameters to initialize explorer</p>
+                    <div className="h-full flex flex-col items-center justify-center text-slate-300 py-32">
+                       <div className="relative mb-8">
+                          <div className="absolute inset-0 bg-[#0097A7] blur-[40px] opacity-10" />
+                          <Layers size={100} strokeWidth={0.5} className="opacity-10 relative z-10" />
+                       </div>
+                       <p className="text-[14px] font-black uppercase tracking-[0.5em] opacity-40">Visualization Offline</p>
+                       <p className="text-[11px] font-medium mt-3 opacity-50 uppercase tracking-widest">Compile model parameters to initialize explorer</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
-                        <thead className="bg-[#fcfdfe] text-[9.5px] uppercase text-slate-400 font-black border-b border-slate-200">
+                        <thead className="bg-[#fcfdfe] text-[10px] uppercase text-slate-500 font-black border-b border-slate-200">
                           <tr>
-                            <th className="px-6 py-5 border-r border-slate-100 w-20 text-center">Layer</th>
-                            <th className="px-6 py-5 border-r border-slate-100">Component Specification</th>
-                            <th className="px-6 py-5 border-r border-slate-100 text-center w-32">Req. Qty</th>
-                            <th className="px-6 py-5 text-center w-40">Inventory Status</th>
+                            <th className="px-8 py-5 border-r border-slate-200/60 w-24 text-center">Layer</th>
+                            <th className="px-8 py-5 border-r border-slate-200/60">Component Specification</th>
+                            <th className="px-8 py-5 border-r border-slate-200/60 text-center w-36">Req. Qty</th>
+                            <th className="px-8 py-5 text-center w-48 bg-slate-50/30">Inventory Status</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-100 text-[13px]">
                           {structure.map((item) => (
                             <tr key={item.id} className="hover:bg-slate-50/80 transition-colors h-16 group">
-                              <td className="px-6 py-2 border-r border-slate-50 text-center">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-black ${item.level === 'L1' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                              <td className="px-8 py-2 border-r border-slate-200/60 text-center">
+                                <span className={`inline-block px-3 py-1 rounded-lg text-[10px] font-black shadow-sm ${item.level === 'L1' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}>
                                   {item.level}
                                 </span>
                               </td>
-                              <td className="px-6 py-2 border-r border-slate-50 font-bold text-slate-700 uppercase text-[11.5px] tracking-tight">{item.component}</td>
-                              <td className="px-6 py-2 border-r border-slate-50 text-center font-black text-[16px] text-slate-400">{item.qty}</td>
-                              <td className="px-6 py-2 text-center">
-                                <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                                  item.status === 'In Stock' ? 'bg-green-100 text-green-700' : 
-                                  item.status === 'Shortage' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                              <td className="px-8 py-2 border-r border-slate-200/60 font-bold text-slate-700 uppercase tracking-tight group-hover:text-[#0097A7] transition-colors">{item.component}</td>
+                              <td className="px-8 py-2 border-r border-slate-200/60 text-center font-black text-[18px] text-slate-400 group-hover:text-slate-800 transition-colors">{item.qty}</td>
+                              <td className="px-8 py-2 text-center bg-slate-50/10">
+                                <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-sm border ${
+                                  item.status === 'In Stock' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                  item.status === 'Shortage' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-amber-50 text-amber-600 border-amber-100'
                                 }`}>
                                   {item.status}
                                 </span>

@@ -5,31 +5,32 @@ import {
 
 // ── Shared UI primitives (Consistent with design system) ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
     {children}
   </label>
 )
 
-const Input = ({ type = 'text', value, onChange, className = "" }) => (
+const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) => (
   <input
     type={type}
     value={value}
     onChange={onChange}
-    className={`px-3 py-[6px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
+    placeholder={placeholder}
+    className={`px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}
   />
 )
 
 const Select = ({ options, placeholder, value, onChange, className = "" }) => (
-  <div className={`relative ${className}`}>
+  <div className={`relative group ${className}`}>
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-[6px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+      className="w-full px-4 py-2 pr-10 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer shadow-sm"
     >
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
-    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center group-hover:text-[#0097A7] transition-colors">
       <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
@@ -67,40 +68,40 @@ export default function NCJobCreated() {
 
           <div className="p-5 flex-1 flex flex-col">
             {/* Filter Section */}
-            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 mb-6">
-              <div className="flex items-center gap-x-12 gap-y-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <Label>From Date :</Label>
-                  <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-40" />
-                </div>
-                <div className="flex items-center gap-3">
-                  <Label>To Date :</Label>
-                  <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-40" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-2 px-6 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg border border-slate-300 transition-all shadow-sm active:scale-95 group">
-                    <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse" />
-                    <Search size={16} className="text-[#0097A7] group-hover:scale-110 transition-transform" />
-                    Search
-                  </button>
-                  <button className="flex items-center gap-2 px-6 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg border border-slate-300 transition-all shadow-sm active:scale-95 group ml-2">
-                    <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse" />
-                    <FileText size={16} className="text-[#0097A7] group-hover:scale-110 transition-transform" />
-                    Created Route Card
-                  </button>
-                </div>
-              </div>
+            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 mb-8 shadow-inner">
+               <div className="grid grid-cols-12 gap-8 items-end">
+                  <div className="col-span-12 lg:col-span-4 flex items-end gap-4">
+                     <div className="flex-1">
+                        <Label>From Date :</Label>
+                        <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+                     </div>
+                     <div className="flex-1">
+                        <Label>To Date :</Label>
+                        <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+                     </div>
+                  </div>
 
-              <div className="flex items-center gap-12">
-                <div className="flex items-center gap-4 w-[280px]">
-                  <div className="px-4 py-1.5 bg-slate-100 border border-slate-200 text-[11px] font-black text-slate-600 uppercase rounded">Priority</div>
-                  <Input className="flex-1" />
-                </div>
-                <div className="flex items-center gap-4 w-[400px]">
-                  <div className="px-4 py-1.5 bg-slate-100 border border-slate-200 text-[11px] font-black text-slate-600 uppercase rounded">Model</div>
-                  <Select options={['Model 1', 'Model 2']} placeholder="---Select Model---" className="flex-1" />
-                </div>
-              </div>
+                  <div className="col-span-12 lg:col-span-8 flex flex-wrap items-end gap-4">
+                     <div className="flex-1 min-w-[200px]">
+                        <Label>Priority</Label>
+                        <Input placeholder="Enter Priority..." />
+                     </div>
+                     <div className="flex-1 min-w-[300px]">
+                        <Label>Model</Label>
+                        <Select options={['Model 1', 'Model 2']} placeholder="---Select Model---" />
+                     </div>
+                     <div className="flex items-center gap-3">
+                        <button className="flex items-center justify-center gap-2 px-8 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-[12px] font-black rounded-xl border border-slate-200 transition-all shadow-sm active:scale-95 group">
+                          <Search size={16} className="text-[#0097A7] group-hover:scale-110 transition-transform" />
+                          Search
+                        </button>
+                        <button className="flex items-center justify-center gap-2 px-8 py-2.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-black rounded-xl transition-all shadow-lg active:scale-95 group">
+                          <FileText size={16} className="group-hover:scale-110 transition-transform" />
+                          Created Route Card
+                        </button>
+                     </div>
+                  </div>
+               </div>
             </div>
 
             {/* Table */}

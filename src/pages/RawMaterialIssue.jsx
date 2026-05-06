@@ -5,7 +5,7 @@ import {
 
 // ── Shared UI primitives (Consistent with design system) ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
     {children}
   </label>
 )
@@ -16,21 +16,21 @@ const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) 
     value={value}
     onChange={onChange}
     placeholder={placeholder}
-    className={`px-3 py-[6px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
+    className={`px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}
   />
 )
 
 const Select = ({ options, placeholder, value, onChange, className = "" }) => (
-  <div className={`relative ${className}`}>
+  <div className={`relative group ${className}`}>
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-[6px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+      className="w-full px-4 py-2 pr-10 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer shadow-sm"
     >
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
-    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center group-hover:text-[#0097A7] transition-colors">
       <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
@@ -38,11 +38,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   </div>
 )
 
-const BoxLabel = ({ children }) => (
-  <div className="bg-[#B0BEC5]/30 border border-slate-300 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase flex items-center justify-center min-w-[120px] rounded-l-lg">
-    {children}
-  </div>
-)
+// Removed redundant BoxLabel
 
 export default function RawMaterialIssue() {
   const [form, setForm] = useState({
@@ -82,58 +78,59 @@ export default function RawMaterialIssue() {
           </div>
 
           <div className="p-5 flex-1 flex flex-col">
-            {/* Top Layout */}
-            <div className="grid grid-cols-12 gap-8 mb-8">
-               {/* Form Grid */}
-               <div className="col-span-9 space-y-4">
-                  <div className="grid grid-cols-3 gap-6">
-                     <div className="flex items-center">
-                        <BoxLabel>JOB Number :</BoxLabel>
-                        <Input className="flex-1 rounded-l-none" value={form.jobNumber} onChange={u('jobNumber')} />
-                     </div>
-                     <div className="flex items-center">
-                        <BoxLabel>Plan Qty :</BoxLabel>
-                        <Input className="flex-1 rounded-l-none" value={form.planQty} onChange={u('planQty')} />
-                     </div>
-                     <div className="flex items-center">
-                        <BoxLabel>Barcode :</BoxLabel>
-                        <Input className="flex-1 rounded-l-none" value={form.barcode} onChange={u('barcode')} />
-                     </div>
-                  </div>
+            {/* Form Section */}
+            <div className="bg-slate-50/50 p-8 rounded-3xl border border-slate-100 mb-10 shadow-inner">
+              <div className="grid grid-cols-12 gap-10">
+                 {/* Form Fields */}
+                 <div className="col-span-12 lg:col-span-9">
+                    <div className="grid grid-cols-12 gap-6 items-end">
+                       <div className="col-span-4">
+                          <Label>JOB Number :</Label>
+                          <Input value={form.jobNumber} onChange={u('jobNumber')} placeholder="Enter Job No..." className="w-full" />
+                       </div>
+                       <div className="col-span-4">
+                          <Label>Plan Qty :</Label>
+                          <Input value={form.planQty} onChange={u('planQty')} placeholder="Enter Qty..." className="w-full" />
+                       </div>
+                       <div className="col-span-4">
+                          <Label>Barcode :</Label>
+                          <Input value={form.barcode} onChange={u('barcode')} placeholder="Scan Barcode..." className="w-full" />
+                       </div>
+                       
+                       <div className="col-span-4">
+                          <Label>Vehicle Type :</Label>
+                          <Input value={form.vehicleType} onChange={u('vehicleType')} placeholder="Enter Vehicle Type..." className="w-full" />
+                       </div>
+                       <div className="col-span-4">
+                          <Label>Plan Date :</Label>
+                          <Input type="date" value={form.planDate} onChange={u('planDate')} className="w-full" />
+                       </div>
+                       <div className="col-span-4">
+                          <Label>Required Date :</Label>
+                          <Input type="date" value={form.requiredDate} onChange={u('requiredDate')} className="w-full" />
+                       </div>
 
-                  <div className="grid grid-cols-3 gap-6">
-                     <div className="flex items-center">
-                        <BoxLabel>Vehicle Type :</BoxLabel>
-                        <Input className="flex-1 rounded-l-none" value={form.vehicleType} onChange={u('vehicleType')} />
-                     </div>
-                     <div className="flex items-center">
-                        <BoxLabel>Plan Date :</BoxLabel>
-                        <Input className="flex-1 rounded-l-none" value={form.planDate} onChange={u('planDate')} />
-                     </div>
-                     <div className="flex items-center">
-                        <BoxLabel>Required Date :</BoxLabel>
-                        <Input className="flex-1 rounded-l-none" value={form.requiredDate} onChange={u('requiredDate')} />
-                     </div>
-                  </div>
+                       <div className="col-span-8">
+                          <Label>Part No :</Label>
+                          <Select options={['PART-001', 'PART-002']} placeholder="---Select Part No---" value={form.partNo} onChange={u('partNo')} />
+                       </div>
+                       <div className="col-span-4">
+                          <button className="w-full flex items-center justify-center gap-2 px-12 py-2.5 bg-[#2196F3] hover:bg-[#1976D2] text-white text-[12px] font-black rounded-xl transition-all shadow-lg active:scale-95 uppercase tracking-widest">
+                             Submit
+                          </button>
+                       </div>
+                    </div>
+                 </div>
 
-                  <div className="flex items-center gap-4">
-                     <div className="flex items-center flex-1">
-                        <BoxLabel>Part No :</BoxLabel>
-                        <Select options={['PART-001', 'PART-002']} className="flex-1 rounded-l-none" value={form.partNo} onChange={u('partNo')} />
-                     </div>
-                     <button className="flex items-center justify-center gap-2 px-12 py-2 bg-[#2196F3] hover:bg-[#1976D2] text-white text-[12px] font-black rounded-lg transition-all shadow-md active:scale-95 uppercase tracking-widest">
-                        Submit
-                     </button>
-                  </div>
-               </div>
-
-               {/* Part Image Preview */}
-               <div className="col-span-3 flex flex-col border-l border-slate-100 pl-8">
-                  <Label>Part Image</Label>
-                  <div className="mt-2 h-28 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-300 relative overflow-hidden group">
-                     <Camera size={32} strokeWidth={1} className="group-hover:scale-110 transition-transform opacity-30" />
-                  </div>
-               </div>
+                 {/* Asset Preview */}
+                 <div className="col-span-12 lg:col-span-3 border-l border-slate-200/50 pl-10 flex flex-col">
+                    <Label>Part Image</Label>
+                    <div className="mt-2 flex-1 min-h-[160px] bg-white border border-slate-200 rounded-3xl flex flex-col items-center justify-center text-slate-200 relative overflow-hidden group shadow-sm">
+                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#0097A708,transparent)]" />
+                       <Camera size={40} strokeWidth={1} className="group-hover:scale-110 transition-transform opacity-10 relative z-10" />
+                    </div>
+                 </div>
+              </div>
             </div>
 
             {/* Content Area (Split Table and Drawing Lists) */}

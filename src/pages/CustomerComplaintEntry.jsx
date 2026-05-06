@@ -1,36 +1,37 @@
 import { useState, useEffect } from 'react'
-import { ChevronRight, Save, X, Camera, Send, CheckCircle2, User, Phone, MapPin, ClipboardList, RotateCcw, Search, Trash2, Mail, Map } from 'lucide-react'
+import { ChevronRight, Save, X, Camera, Send, CheckCircle2, User, Phone, MapPin, ClipboardList, RotateCcw, Search, Trash2, Mail, Map, Plus } from 'lucide-react'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
-    {required && <span className="text-red-500 mr-0.5">*</span>}
+  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+    {required && <span className="text-red-500 mr-1">*</span>}
     {children}
   </label>
 )
 
-const Input = ({ placeholder, value, onChange, type = 'text', readOnly = false, className = "" }) => (
+const Input = ({ placeholder, value, onChange, type = 'text', readOnly = false, className = "", ...props }) => (
   <input
     type={type}
     placeholder={placeholder}
     value={value}
     onChange={onChange}
     readOnly={readOnly}
-    className={`w-full px-3 py-[7px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 ${readOnly ? 'bg-slate-50 cursor-not-allowed' : 'hover:border-slate-300'} ${className}`}
+    className={`w-full px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 ${readOnly ? 'bg-slate-50 cursor-not-allowed border-dashed' : 'hover:border-slate-300'} shadow-sm ${className}`}
+    {...props}
   />
 )
 
 const Select = ({ options, placeholder, value, onChange, className = "" }) => (
-  <div className={`relative ${className}`}>
+  <div className={`relative group ${className}`}>
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-[7px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+      className="w-full px-4 py-2 pr-10 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer shadow-sm"
     >
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
-    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center group-hover:text-[#0097A7] transition-colors">
       <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
@@ -44,7 +45,7 @@ const TextArea = ({ placeholder, value, onChange, className = "" }) => (
     value={value}
     onChange={onChange}
     rows={4}
-    className={`w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 resize-none ${className}`}
+    className={`w-full px-4 py-3 text-[13px] border border-slate-200 rounded-xl bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 resize-none shadow-sm ${className}`}
   />
 )
 

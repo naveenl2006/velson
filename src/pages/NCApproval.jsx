@@ -5,17 +5,18 @@ import {
 
 // ── Shared UI primitives (Consistent with design system) ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
     {children}
   </label>
 )
 
-const Input = ({ type = 'text', value, onChange, className = "" }) => (
+const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) => (
   <input
     type={type}
     value={value}
     onChange={onChange}
-    className={`px-3 py-[6px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
+    placeholder={placeholder}
+    className={`px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}
   />
 )
 
@@ -28,8 +29,8 @@ const MOCK_DATA = [
 ]
 
 export default function NCApproval() {
-  const [fromDate, setFromDate] = useState('2026-04-15')
-  const [toDate, setToDate] = useState('2026-04-15')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   return (
     <div className="bg-[#f4f6f8] min-h-full">
@@ -57,8 +58,8 @@ export default function NCApproval() {
 
           <div className="p-5 flex-1 flex flex-col">
             {/* Filter & Action Bar */}
-            <div className="flex items-center justify-between mb-6 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
-              <div className="flex items-center gap-8">
+            <div className="flex flex-wrap items-center justify-between gap-6 mb-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-inner">
+              <div className="flex flex-wrap items-center gap-8">
                 <div className="flex items-center gap-3">
                   <Label>From Date :</Label>
                   <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-40" />
@@ -67,19 +68,18 @@ export default function NCApproval() {
                   <Label>To Date :</Label>
                   <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-40" />
                 </div>
-                <button className="flex items-center gap-2 px-6 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg border border-slate-300 transition-all shadow-sm active:scale-95 group">
-                  <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse" />
+                <button className="flex items-center justify-center gap-2 px-8 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-[12px] font-black rounded-xl border border-slate-200 transition-all shadow-sm active:scale-95 group">
                   <Search size={16} className="text-[#0097A7] group-hover:scale-110 transition-transform" />
                   Search
                 </button>
               </div>
 
-              <div className="flex items-center gap-6">
-                <button className="flex items-center gap-2 px-4 py-1.5 text-blue-600 hover:bg-blue-50 text-[12px] font-bold uppercase transition-all rounded-lg group">
+              <div className="flex items-center gap-4 border-l border-slate-200 pl-6">
+                <button className="flex items-center gap-2 px-6 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[12px] font-black uppercase rounded-xl transition-all group">
                   <CheckCircle2 size={18} className="group-hover:scale-110 transition-transform" />
                   Approve
                 </button>
-                <button className="flex items-center gap-2 px-4 py-1.5 text-rose-600 hover:bg-rose-50 text-[12px] font-bold uppercase transition-all rounded-lg group">
+                <button className="flex items-center gap-2 px-6 py-2.5 bg-rose-50 text-rose-700 hover:bg-rose-100 text-[12px] font-black uppercase rounded-xl transition-all group">
                   <XCircle size={18} className="group-hover:scale-110 transition-transform" />
                   Reject
                 </button>

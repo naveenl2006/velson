@@ -5,7 +5,7 @@ import {
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
     {children}
   </label>
 )
@@ -16,21 +16,21 @@ const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) 
     value={value}
     onChange={onChange}
     placeholder={placeholder}
-    className={`px-4 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
+    className={`px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}
   />
 )
 
 const Select = ({ options, placeholder, value, onChange, className = "" }) => (
-  <div className={`relative ${className}`}>
+  <div className={`relative group ${className}`}>
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-4 py-2 pr-10 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+      className="w-full px-4 py-2 pr-10 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer shadow-sm"
     >
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
-    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center group-hover:text-[#0097A7] transition-colors">
       <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
@@ -90,43 +90,43 @@ export default function JobList() {
 
           <div className="p-10 flex-1 flex flex-col space-y-12">
             {/* Control Suite */}
-            <div className="grid grid-cols-12 gap-12 bg-slate-50/50 p-10 rounded-[3.5rem] border border-slate-100 shadow-inner">
-               <div className="col-span-8 flex flex-col gap-6">
-                  <div className="flex items-center gap-8">
-                     <div className="flex-1 space-y-1">
+            <div className="grid grid-cols-12 gap-8 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100 shadow-inner">
+               <div className="col-span-12 lg:col-span-9 flex flex-col gap-6">
+                  <div className="grid grid-cols-12 gap-6 items-end">
+                     <div className="col-span-7">
                         <Label>Search Vector</Label>
-                        <Input placeholder="Query Job ID / Configuration / Part No..." />
+                        <Input placeholder="Query Job ID / Configuration / Part No..." className="w-full" />
                      </div>
-                     <div className="w-64 space-y-1">
+                     <div className="col-span-5">
                         <Label>Operational Stage</Label>
                         <Select options={['All Sequences', 'Fabrication Alpha', 'Machining Beta', 'Final Assembly']} value="All Sequences" />
                      </div>
                   </div>
-                  <div className="flex items-center gap-8">
-                     <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-end gap-6">
+                     <div className="flex flex-col gap-1.5">
                         <Label>Interval Start</Label>
                         <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-44" />
                      </div>
-                     <div className="flex items-center gap-4">
+                     <div className="flex flex-col gap-1.5">
                         <Label>Interval End</Label>
                         <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-44" />
                      </div>
                      <button 
                        onClick={handleSearch}
-                       className="flex items-center gap-3 px-12 py-3 bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-black rounded-2xl shadow-xl transition-all active:scale-95 uppercase tracking-widest"
+                       className="flex items-center justify-center gap-3 px-8 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-[12px] font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest min-w-[200px]"
                      >
-                       {searching ? <RotateCcw size={20} className="animate-spin" /> : <Search size={20} />}
+                       {searching ? <RotateCcw size={18} className="animate-spin" /> : <Search size={18} />}
                        Filter Matrix
                      </button>
                   </div>
                </div>
 
-               <div className="col-span-4 flex flex-col pl-12 border-l border-slate-200/50">
+               <div className="col-span-12 lg:col-span-3 flex flex-col pl-8 border-l border-slate-200/50">
                   <Label>Asset Preview</Label>
-                  <div className="mt-2 flex-1 bg-white border border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-200 relative overflow-hidden group shadow-sm">
-                    <Camera size={48} strokeWidth={1} className="group-hover:scale-110 transition-transform opacity-10" />
-                    <div className="absolute inset-0 bg-gradient-to-tr from-slate-500/5 to-transparent pointer-events-none" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-4 opacity-20 italic">No Visual Blueprint</p>
+                  <div className="mt-2 flex-1 bg-white border border-slate-200 rounded-3xl flex flex-col items-center justify-center text-slate-200 relative overflow-hidden group shadow-sm min-h-[140px]">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#0097A708,transparent)]" />
+                    <Camera size={40} strokeWidth={1} className="group-hover:scale-110 transition-transform opacity-10 relative z-10" />
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] mt-3 opacity-20 italic relative z-10">No Visual Blueprint</p>
                   </div>
                </div>
             </div>
