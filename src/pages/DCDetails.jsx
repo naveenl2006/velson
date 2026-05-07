@@ -21,7 +21,7 @@ const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) 
   />
 )
 
-export default function QuotationDetails() {
+export default function DCDetails() {
   const [fromDate, setFromDate] = useState('2026-04-15')
   const [toDate, setToDate] = useState('2026-04-15')
 
@@ -34,7 +34,7 @@ export default function QuotationDetails() {
           <ChevronRight className="w-3 h-3" />
           <span className="hover:text-[#0097A7] cursor-pointer transition-colors uppercase tracking-widest">Sales</span>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-[#0097A7] font-semibold uppercase tracking-widest">Quotation Details</span>
+          <span className="text-[#0097A7] font-semibold uppercase tracking-widest">DC Details</span>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[850px]">
@@ -42,7 +42,7 @@ export default function QuotationDetails() {
           <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5">
             <div className="flex items-center gap-2">
               <div className="w-3.5 h-3.5 bg-red-700 rounded-sm" />
-              <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">Quotation Details</h2>
+              <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">DC Details</h2>
             </div>
             
             <div className="flex items-center gap-2">
@@ -81,15 +81,21 @@ export default function QuotationDetails() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <button className="flex items-center justify-center gap-2 px-8 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg transition-all shadow-md active:scale-95 group">
+              <div className="flex items-center gap-4">
+                <button className="flex items-center justify-center gap-2 px-8 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg transition-all shadow-md active:scale-95 group h-[84px] w-32">
                   <div className="w-2.5 h-2.5 bg-red-500 rounded-full group-hover:animate-pulse" />
                   Search
                 </button>
-                <button className="flex items-center justify-center gap-2 px-8 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg transition-all shadow-sm active:scale-95">
-                  <Printer size={16} className="text-blue-600" />
-                  Print Bill
-                </button>
+                <div className="flex flex-col gap-3">
+                  <button className="flex items-center justify-center gap-2 px-6 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg transition-all shadow-sm active:scale-95">
+                    <Printer size={16} className="text-blue-600" />
+                    Print Bill
+                  </button>
+                  <button className="flex items-center justify-center gap-2 px-6 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg transition-all shadow-sm active:scale-95">
+                    <Printer size={16} className="text-emerald-600" />
+                    Print Bill 1
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -108,14 +114,13 @@ export default function QuotationDetails() {
 
             {/* Table */}
             <div className="flex-1 border border-slate-200 rounded-lg overflow-hidden overflow-x-auto shadow-sm">
-              <table className="w-full text-left border-collapse min-w-[1400px] bg-white">
+              <table className="w-full text-left border-collapse min-w-[1200px] bg-white">
                 <thead className="bg-[#cbd5e1]/30 text-[11px] uppercase text-slate-600 font-bold border-b border-slate-300">
                   <tr>
                     {[
                       { label: 'ID', w: 'w-24' },
                       { label: 'Bill No', w: 'w-32' },
                       { label: 'Bill Date', w: 'w-36' },
-                      { label: 'BILL MODE', w: 'w-32' },
                       { label: 'Supplier', w: 'w-64' },
                       { label: 'Bill Amt', w: 'w-32' },
                       { label: 'CREATED_BY', w: 'w-40' },
@@ -128,7 +133,7 @@ export default function QuotationDetails() {
                 <tbody className="divide-y divide-slate-100 text-[12px]">
                   {[...Array(15)].map((_, i) => (
                     <tr key={i} className="h-10 hover:bg-[#f0f9fa]/40 transition-colors group">
-                      {[...Array(8)].map((_, j) => <td key={j} className="border-r border-slate-100 last:border-r-0"></td>)}
+                      {[...Array(7)].map((_, j) => <td key={j} className="border-r border-slate-100 last:border-r-0"></td>)}
                     </tr>
                   ))}
                 </tbody>
@@ -139,7 +144,7 @@ export default function QuotationDetails() {
             <div className="mt-4 flex items-center justify-between px-2">
               <div className="flex items-center gap-1.5 opacity-30 group hover:opacity-100 transition-opacity cursor-default">
                 <FileBarChart size={14} className="text-[#0097A7]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">Quotation Audit & Estimation Analysis Console</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">Delivery Challan Audit & Fulfillment Analysis Console</span>
               </div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                 Records: <span className="text-[#0097A7]">0</span>

@@ -74,6 +74,52 @@ import ConformationEntryDetails from './pages/ConformationEntryDetails'
 import ProcessCard from './pages/ProcessCard'
 import RawMaterialIssue from './pages/RawMaterialIssue'
 import RawMaterialIssuedDetails from './pages/RawMaterialIssuedDetails'
+import MaterialRequestRejectionList from './pages/MaterialRequestRejectionList'
+import InwardReports from './pages/InwardReports'
+import OutwardDetails from './pages/OutwardDetails'
+import MinStock from './pages/MinStock'
+import MaterialIssuedDetails from './pages/MaterialIssuedDetails'
+import CompletedJobList from './pages/CompletedJobList'
+import PurchaseOrderReport from './pages/PurchaseOrderReport'
+import PurchaseOrderOverallReport from './pages/PurchaseOrderOverallReport'
+import CurrentStock from './pages/CurrentStock'
+import QCCompletedList from './pages/QCCompletedList'
+import MaterialIssueCorrection from './pages/MaterialIssueCorrection'
+import StockDetails from './pages/StockDetails'
+import QCEntryReport from './pages/QCEntryReport'
+import CreditSales from './pages/CreditSales'
+import SalesDetails from './pages/SalesDetails'
+import QuotationSales from './pages/QuotationSales'
+import DCSales from './pages/DCSales'
+
+import DCDetails from './pages/DCDetails'
+import ServiceBillEntry from './pages/ServiceBillEntry'
+import ServiceBillDetails from './pages/ServiceBillDetails'
+import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
+import TempServiceBillDetails from './pages/TempServiceBillDetails'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -190,6 +236,52 @@ const PAGES = {
   ProcessCard:           <ProcessCard />,
   RawMaterialIssue:      <RawMaterialIssue />,
   RawMaterialIssuedDetails: <RawMaterialIssuedDetails />,
+  MaterialRequestRejectionList: <MaterialRequestRejectionList />,
+  InwardReports: <InwardReports />,
+  OutwardDetails: <OutwardDetails />,
+  MinStock: <MinStock />,
+  MaterialIssuedDetails: <MaterialIssuedDetails />,
+  CompletedJobList: <CompletedJobList />,
+  PurchaseOrderReport: <PurchaseOrderReport />,
+  PurchaseOrderOverallReport: <PurchaseOrderOverallReport />,
+  CurrentStock: <CurrentStock />,
+  QCCompletedList: <QCCompletedList />,
+  MaterialIssueCorrection: <MaterialIssueCorrection />,
+  StockDetails: <StockDetails />,
+  QCEntryReport: <QCEntryReport />,
+  CreditSales: <CreditSales />,
+  SalesDetails: <SalesDetails />,
+  QuotationSales: <QuotationSales />,
+  DCSales: <DCSales />,
+
+  DCDetails: <DCDetails />,
+  ServiceBillEntry: <ServiceBillEntry />,
+  ServiceBillDetails: <ServiceBillDetails />,
+  ServiceLabourBillDetails: <ServiceLabourBillDetails />,
+  TempServiceBillDetails: <TempServiceBillDetails />,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

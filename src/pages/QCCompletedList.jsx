@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  ChevronRight, X, Search, FileBarChart, Play, Edit2, Trash2, Printer, 
+  ChevronRight, X, Search, FileBarChart, Play, Printer, 
   FileSpreadsheet, FileText, Filter, Settings, Download
 } from 'lucide-react'
 
@@ -21,9 +21,9 @@ const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) 
   />
 )
 
-export default function QuotationDetails() {
-  const [fromDate, setFromDate] = useState('2026-04-15')
-  const [toDate, setToDate] = useState('2026-04-15')
+export default function QCCompletedList() {
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   return (
     <div className="bg-[#f4f6f8] min-h-full">
@@ -32,25 +32,25 @@ export default function QuotationDetails() {
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5">
           <span className="hover:text-[#0097A7] cursor-pointer transition-colors">Dashboard</span>
           <ChevronRight className="w-3 h-3" />
-          <span className="hover:text-[#0097A7] cursor-pointer transition-colors uppercase tracking-widest">Sales</span>
+          <span className="hover:text-[#0097A7] cursor-pointer transition-colors uppercase">Report</span>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-[#0097A7] font-semibold uppercase tracking-widest">Quotation Details</span>
+          <span className="text-[#0097A7] font-semibold uppercase">QC Completed List</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[850px]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[800px]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5">
             <div className="flex items-center gap-2">
               <div className="w-3.5 h-3.5 bg-red-700 rounded-sm" />
-              <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">Quotation Details</h2>
+              <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">QC Completed List</h2>
             </div>
             
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-[11px] font-bold rounded-md transition-all shadow-sm group">
-                <Edit2 size={14} className="text-[#0097A7] group-hover:scale-110 transition-transform" /> Edit
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[11px] font-bold rounded-md transition-all">
+                <FileSpreadsheet size={14} /> Excel Search
               </button>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-rose-50 text-rose-600 text-[11px] font-bold rounded-md transition-all shadow-sm group">
-                <Trash2 size={14} className="group-hover:scale-110 transition-transform" /> Delete
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold rounded-md transition-all">
+                <Printer size={14} /> PrintData
               </button>
               <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-[11px] font-bold rounded-md transition-all shadow-sm">
                 <div className="w-4 h-4 bg-slate-400 rounded-full flex items-center justify-center">
@@ -64,31 +64,22 @@ export default function QuotationDetails() {
           <div className="p-5 flex-1 flex flex-col">
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center gap-8 mb-6 bg-slate-50/50 p-5 rounded-xl border border-slate-100">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3">
-                    <Label>From Date :</Label>
-                    <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-44" />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Label>To Date :</Label>
-                    <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-44" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Label>Ledger :</Label>
-                  <Input className="w-[392px]" />
-                </div>
+              <div className="flex items-center gap-3">
+                <Label>From Date :</Label>
+                <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-44" />
               </div>
-
-              <div className="flex flex-col gap-3">
-                <button className="flex items-center justify-center gap-2 px-8 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg transition-all shadow-md active:scale-95 group">
-                  <div className="w-2.5 h-2.5 bg-red-500 rounded-full group-hover:animate-pulse" />
+              <div className="flex items-center gap-3">
+                <Label>To Date :</Label>
+                <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-44" />
+              </div>
+              <div className="flex items-center gap-4">
+                <button className="flex items-center justify-center gap-2 px-6 py-2 bg-white hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg border border-slate-200 transition-all shadow-sm active:scale-95 group">
+                  <div className="w-2 h-2 bg-red-500 rounded-full group-hover:animate-pulse" />
                   Search
                 </button>
-                <button className="flex items-center justify-center gap-2 px-8 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg transition-all shadow-sm active:scale-95">
-                  <Printer size={16} className="text-blue-600" />
-                  Print Bill
+                <button className="flex items-center justify-center gap-2 px-6 py-2 bg-white hover:bg-slate-50 text-slate-700 text-[12px] font-bold rounded-lg border border-slate-200 transition-all shadow-sm active:scale-95 group">
+                  <div className="w-2 h-2 bg-red-500 rounded-full group-hover:animate-pulse" />
+                  Search All
                 </button>
               </div>
             </div>
@@ -108,18 +99,24 @@ export default function QuotationDetails() {
 
             {/* Table */}
             <div className="flex-1 border border-slate-200 rounded-lg overflow-hidden overflow-x-auto shadow-sm">
-              <table className="w-full text-left border-collapse min-w-[1400px] bg-white">
+              <table className="w-full text-left border-collapse min-w-[2000px] bg-white">
                 <thead className="bg-[#cbd5e1]/30 text-[11px] uppercase text-slate-600 font-bold border-b border-slate-300">
                   <tr>
+                    <th className="px-2 py-3 border-r border-slate-300 w-10 text-center"></th>
                     {[
-                      { label: 'ID', w: 'w-24' },
-                      { label: 'Bill No', w: 'w-32' },
-                      { label: 'Bill Date', w: 'w-36' },
-                      { label: 'BILL MODE', w: 'w-32' },
-                      { label: 'Supplier', w: 'w-64' },
-                      { label: 'Bill Amt', w: 'w-32' },
-                      { label: 'CREATED_BY', w: 'w-40' },
-                      { label: 'CREATED_DATE', w: 'w-40' }
+                      { label: 'Job_No', w: 'w-24' },
+                      { label: 'Vehicle_Type_Name', w: 'w-48' },
+                      { label: 'Product_name', w: 'w-64' },
+                      { label: 'Qty', w: 'w-24' },
+                      { label: 'Plan_Date', w: 'w-36' },
+                      { label: 'Target_Date', w: 'w-36' },
+                      { label: 'Created_Date', w: 'w-36' },
+                      { label: 'Created_by', w: 'w-40' },
+                      { label: 'Closed_Date', w: 'w-36' },
+                      { label: 'Closed_By', w: 'w-40' },
+                      { label: 'Apprival_Rejection_Person', w: 'w-64' },
+                      { label: 'Rejection_Reason', w: 'w-64' },
+                      { label: 'Apprival_Rejection_Date', w: 'w-48' }
                     ].map((h, i) => (
                       <th key={i} className={`px-3 py-3 border-r border-slate-300 whitespace-nowrap ${h.w}`}>{h.label}</th>
                     ))}
@@ -128,7 +125,10 @@ export default function QuotationDetails() {
                 <tbody className="divide-y divide-slate-100 text-[12px]">
                   {[...Array(15)].map((_, i) => (
                     <tr key={i} className="h-10 hover:bg-[#f0f9fa]/40 transition-colors group">
-                      {[...Array(8)].map((_, j) => <td key={j} className="border-r border-slate-100 last:border-r-0"></td>)}
+                      <td className="px-2 py-2.5 border-r border-slate-200 bg-slate-50/50 flex items-center justify-center">
+                        <Play size={10} className="text-[#0097A7] fill-[#0097A7] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </td>
+                      {[...Array(13)].map((_, j) => <td key={j} className="border-r border-slate-100 last:border-r-0"></td>)}
                     </tr>
                   ))}
                 </tbody>
@@ -139,7 +139,7 @@ export default function QuotationDetails() {
             <div className="mt-4 flex items-center justify-between px-2">
               <div className="flex items-center gap-1.5 opacity-30 group hover:opacity-100 transition-opacity cursor-default">
                 <FileBarChart size={14} className="text-[#0097A7]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">Quotation Audit & Estimation Analysis Console</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">Quality Control Fulfillment Registry Console</span>
               </div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                 Records: <span className="text-[#0097A7]">0</span>

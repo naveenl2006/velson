@@ -165,6 +165,67 @@ const NAV = [
     ] 
   },
   { id: 'technical',      label: 'Technical',        icon: Settings,       children: [] },
+  {
+    id: 'sales',
+    label: 'Sales',
+    icon: LayoutGrid,
+    children: [
+
+      { id: 'credit-sales', label: 'Credit Sales', page: 'CreditSales' },
+      { id: 'sales-details', label: 'Sales Details', page: 'SalesDetails' },
+      { id: 'quotation-sales', label: 'Quotation Sales', page: 'QuotationSales' },
+      { id: 'quotation-details', label: 'Quotation Details', page: 'QuotationDetails' },
+      { id: 'dc-sales', label: 'DC Sales', page: 'DCSales' },
+      { id: 'dc-details', label: 'DC Details', page: 'DCDetails' },
+      { id: 'service-bill-entry', label: 'Service Bill Entry', page: 'ServiceBillEntry' },
+      { id: 'service-bill-details', label: 'Service Bill Details', page: 'ServiceBillDetails' },
+      { id: 'service-labour-bill-details', label: 'Service Labour Bill Details', page: 'ServiceLabourBillDetails' },
+      { id: 'temp-service-bill-details', label: 'Temp Service Bill Details', page: 'TempServiceBillDetails' },
+    ]
+
+
+
+
+
+
+
+
+
+  },
+  {
+    id: 'report',
+
+    label: 'Report',
+    icon: FileText,
+    children: [
+      { id: 'mat-req-rej-list', label: 'Material Request Rejection List', page: 'MaterialRequestRejectionList' },
+      { id: 'inward-reports', label: 'Inward Reports', page: 'InwardReports' },
+      { id: 'outward-details', label: 'Outward Details', page: 'OutwardDetails' },
+      { id: 'min-stock', label: 'Min Stock', page: 'MinStock' },
+      { id: 'mat-issued-details', label: 'Material Issued Details', page: 'MaterialIssuedDetails' },
+      { id: 'completed-job-list', label: 'Completed Job List', page: 'CompletedJobList' },
+      { id: 'purchase-order-report', label: 'Purchase Order Report', page: 'PurchaseOrderReport' },
+      { id: 'purchase-order-overall-report', label: 'Purchase Order Overall Report', page: 'PurchaseOrderOverallReport' },
+      { id: 'current-stock', label: 'Current Stock', page: 'CurrentStock' },
+      { id: 'qc-completed-list', label: 'QC Completed List', page: 'QCCompletedList' },
+      { id: 'mat-issue-correction', label: 'Material Issue Correction', page: 'MaterialIssueCorrection' },
+      { id: 'stock-details', label: 'Stock Details', page: 'StockDetails' },
+      { id: 'qc-entry-report', label: 'QC Entry Report', page: 'QCEntryReport' },
+    ]
+
+
+
+
+
+
+
+
+
+
+
+
+  },
+
 
 ]
 
