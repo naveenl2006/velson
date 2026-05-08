@@ -171,17 +171,17 @@ const NAV = [
     icon: LayoutGrid,
     children: [
 
-      { id: 'credit-sales', label: 'Credit Sales', page: 'CreditSales' },
+      { id: 'credit-sales', label: 'Sales', page: 'CreditSales' },
       { id: 'sales-details', label: 'Sales Details', page: 'SalesDetails' },
       { id: 'quotation-sales', label: 'Quotation Sales', page: 'QuotationSales' },
       { id: 'quotation-details', label: 'Quotation Details', page: 'QuotationDetails' },
       { id: 'dc-sales', label: 'DC Sales', page: 'DCSales' },
-      { id: 'dc-details', label: 'DC Details', page: 'DCDetails' },
+      { id: 'dc-details', label: 'DC Sales Details', page: 'DCDetails' },
       { id: 'service-bill-entry', label: 'Service Bill Entry', page: 'ServiceBillEntry' },
       { id: 'service-bill-details', label: 'Service Bill Details', page: 'ServiceBillDetails' },
-      { id: 'service-labour-bill-details', label: 'Service Labour Bill Details', page: 'ServiceLabourBillDetails' },
-      { id: 'temp-service-bill-details', label: 'Temp Service Bill Details', page: 'TempServiceBillDetails' },
-    ]
+      { id: 'service-labour-bill-details', label: 'Service Labour Details', page: 'ServiceLabourBillDetails' },
+      { id: 'temp-service-bill-details', label: 'Temp Ser Bill Details', page: 'TempServiceBillDetails' },
+    ] 
 
 
 
