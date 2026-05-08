@@ -81,24 +81,29 @@ export default function MinStock() {
 
               {/* Tool Icons Bar */}
               <div className="flex items-center gap-5 border-l border-slate-200 pl-6 text-slate-500">
-                <div className="flex items-center gap-1.5 cursor-pointer hover:text-[#0097A7] transition-colors">
+                <div className="flex items-center gap-1.5 cursor-pointer hover:text-[#0097A7] transition-colors pr-2">
                   <span className="text-[11px] font-bold">LS</span>
                   <span className="text-[12px] font-black text-[#0097A7]">1</span>
                 </div>
-                <button className="hover:text-[#0097A7] transition-colors" title="Dos">
+                <button className="flex items-center gap-1.5 hover:text-[#0097A7] transition-colors group" title="Dos">
                   <Download size={16} />
+                  <span className="text-[11px] font-bold text-slate-500 group-hover:text-[#0097A7]">Dos</span>
                 </button>
-                <button className="hover:text-emerald-600 transition-colors" title="Excel">
+                <button className="flex items-center gap-1.5 hover:text-emerald-600 transition-colors group" title="Excel">
                   <FileSpreadsheet size={16} />
+                  <span className="text-[11px] font-bold text-slate-500 group-hover:text-emerald-600">Excel</span>
                 </button>
-                <button className="hover:text-rose-600 transition-colors" title="Pdf">
+                <button className="flex items-center gap-1.5 hover:text-rose-600 transition-colors group" title="Pdf">
                   <FileText size={16} />
+                  <span className="text-[11px] font-bold text-slate-500 group-hover:text-rose-600">Pdf</span>
                 </button>
-                <button className="hover:text-[#0097A7] transition-colors" title="Filter">
+                <button className="flex items-center gap-1.5 hover:text-[#0097A7] transition-colors group" title="Filter">
                   <Filter size={16} />
+                  <span className="text-[11px] font-bold text-slate-500 group-hover:text-[#0097A7]">Filter</span>
                 </button>
-                <button className="hover:text-[#0097A7] transition-colors" title="Setting">
+                <button className="flex items-center gap-1.5 hover:text-[#0097A7] transition-colors group" title="Setting">
                   <Settings size={16} />
+                  <span className="text-[11px] font-bold text-slate-500 group-hover:text-[#0097A7]">Setting</span>
                 </button>
               </div>
             </div>

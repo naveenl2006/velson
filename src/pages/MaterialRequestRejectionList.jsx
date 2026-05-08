@@ -1,24 +1,6 @@
-import { useState } from 'react'
 import {
-  ChevronRight, X, Search, FileBarChart, Calendar, Play
+  ChevronRight, X, FileBarChart, Play
 } from 'lucide-react'
-
-// ── Shared UI primitives ──
-const Label = ({ children }) => (
-  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
-    {children}
-  </label>
-)
-
-const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) => (
-  <input
-    type={type}
-    value={value}
-    onChange={onChange}
-    placeholder={placeholder}
-    className={`px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}
-  />
-)
 
 const MOCK_DATA = [
   {
@@ -42,9 +24,6 @@ const MOCK_DATA = [
 ]
 
 export default function MaterialRequestRejectionList() {
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
-
   return (
     <div className="bg-[#f4f6f8] min-h-full">
       <div className="px-6 py-6">
@@ -73,22 +52,6 @@ export default function MaterialRequestRejectionList() {
           </div>
 
           <div className="p-5 flex-1 flex flex-col">
-            {/* Filter Bar */}
-            <div className="flex flex-wrap items-center gap-8 mb-6 bg-slate-50/50 p-5 rounded-xl border border-slate-100">
-              <div className="flex items-center gap-3">
-                <Label>From Date :</Label>
-                <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-44" />
-              </div>
-              <div className="flex items-center gap-3">
-                <Label>To Date :</Label>
-                <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-44" />
-              </div>
-              <button className="flex items-center justify-center gap-2 px-8 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg transition-all shadow-md active:scale-95">
-                <Search size={16} />
-                Search
-              </button>
-            </div>
-
             {/* Table */}
             <div className="flex-1 border border-slate-200 rounded-lg overflow-hidden overflow-x-auto shadow-sm">
               <table className="w-full text-left border-collapse min-w-[1900px] bg-white">
