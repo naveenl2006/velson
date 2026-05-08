@@ -96,31 +96,31 @@ export default function ViewModel() {
               {/* Left Column: Intelligence Filters */}
               <div className="col-span-8 space-y-5 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-inner">
                 <div className="grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-3 text-right"><Label>Customer Entity :</Label></div>
+                  <div className="col-span-3 text-right"><Label>Customer Name :</Label></div>
                   <div className="col-span-6"><Select options={['Customer A', 'Customer B', 'Customer C']} placeholder="Select Customer Account" value={form.customerName} onChange={u('customerName')} /></div>
                   <div className="col-span-3">
-                    <button className="flex items-center justify-center gap-2 w-full px-4 py-[9px] bg-white hover:bg-slate-50 text-[#0097A7] text-[10px] font-black rounded-xl border border-slate-200 transition-all shadow-sm active:scale-95 uppercase tracking-widest">
-                      <FileDown size={14} /> Full PDF
+                    <button className="flex items-center justify-center gap-2 w-full px-4 py-[9px] bg-[#dcfce7] hover:bg-[#bbf7d0] text-emerald-800 text-[10px] font-black rounded-lg border border-emerald-200 transition-all shadow-sm active:scale-95 uppercase tracking-widest">
+                      <Search size={14} /> All Assembly PDF
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-3 text-right"><Label>Reference Code :</Label></div>
-                  <div className="col-span-6"><Input placeholder="C-0000" value={form.customerCode} onChange={u('customerCode')} /></div>
+                  <div className="col-span-3 text-right"><Label>Booking Customer Code :</Label></div>
+                  <div className="col-span-6"><Select options={['CODE-001', 'CODE-002']} placeholder="Select Code" value={form.customerCode} onChange={u('customerCode')} /></div>
                   <div className="col-span-3">
                     <button 
                       onClick={handleFetchHierarchy}
-                      className="flex items-center justify-center gap-2 w-full px-4 py-[9px] bg-[#0097A7] hover:bg-[#007a87] text-white text-[10px] font-black rounded-xl transition-all shadow-md active:scale-95 uppercase tracking-widest"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-[9px] bg-[#dcfce7] hover:bg-[#bbf7d0] text-emerald-800 text-[10px] font-black rounded-lg border border-emerald-200 transition-all shadow-sm active:scale-95 uppercase tracking-widest"
                     >
                       {loading ? <RotateCcw size={14} className="animate-spin" /> : <Search size={14} />}
-                      Fetch Model
+                      Single Assembly
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-3 text-right"><Label>Active Model :</Label></div>
+                  <div className="col-span-3 text-right"><Label>Model No :</Label></div>
                   <div className="col-span-6"><Select options={['MOD-V10-2026', 'MOD-V7-2026', 'MOD-X500']} placeholder="Choose Manufacturing Model" value={form.modelNo} onChange={u('modelNo')} /></div>
                   <div className="col-span-3 pl-3 flex items-center gap-2">
                     <input 
@@ -130,16 +130,17 @@ export default function ViewModel() {
                       onChange={e => setForm(f => ({...f, stockNill: e.target.checked}))}
                       className="w-4.5 h-4.5 accent-[#0097A7] rounded-lg cursor-pointer" 
                     />
-                    <label htmlFor="stockNill" className="text-[10px] font-black text-slate-500 uppercase cursor-pointer hover:text-[#0097A7] tracking-tighter">Exclude Nill Stock</label>
+                    <label htmlFor="stockNill" className="text-[10px] font-black text-slate-500 uppercase cursor-pointer hover:text-[#0097A7] tracking-tighter">Stock Nill Item</label>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-3 text-right"><Label>Specific Assembly :</Label></div>
+                  <div className="col-span-3 text-right"><Label>Assembly Part No :</Label></div>
                   <div className="col-span-6"><Select options={['ASSY-HYD-001', 'ASSY-ELE-002']} placeholder="Filter by Sub-Assembly" value={form.partNo} onChange={u('partNo')} /></div>
                   <div className="col-span-3 flex items-center gap-3 pl-3">
-                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none">Dataset<br/>Depth</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Count :</span>
                     <span className="text-[20px] font-black text-[#0097A7] leading-none">{structure.length}</span>
+                    <div className="w-16 h-8 bg-slate-100 rounded border border-slate-200" />
                   </div>
                 </div>
               </div>

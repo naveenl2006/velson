@@ -43,7 +43,11 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 export default function MainIndexReport() {
   const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0])
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
-  const [customerFilter, setCustomerFilter] = useState('')
+  const [customerName, setCustomerName] = useState('')
+  const [bookingCode, setBookingCode] = useState('')
+  const [vehicleCount, setVehicleCount] = useState('')
+  const [serialJobNo, setSerialJobNo] = useState('')
+  const [modelNo, setModelNo] = useState('')
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searching, setSearching] = useState(false)
@@ -62,8 +66,10 @@ export default function MainIndexReport() {
       const result = data.filter(r => {
         const d = new Date(r.date)
         const dateMatch = d >= start && d <= end
-        const customerMatch = customerFilter ? r.customerName === customerFilter : true
-        return dateMatch && customerMatch
+        const customerMatch = customerName ? r.customerName === customerName : true
+        const jobMatch = serialJobNo ? r.serialJobNo === serialJobNo : true
+        const modelMatch = modelNo ? r.vehicleModelNo === modelNo : true
+        return dateMatch && customerMatch && jobMatch && modelMatch
       })
       setFilteredData(result)
       setSearching(false)
@@ -90,9 +96,19 @@ export default function MainIndexReport() {
               <div className="w-3 h-3 bg-red-700 rounded-sm" />
               <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">Main Index Analytics</h2>
             </div>
-            <div className="flex items-center gap-4">
-              <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded shadow-sm">
-                <Printer size={15} /> Print
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded shadow-sm hover:bg-slate-50">
+                <Eye size={14} /> Job View
+              </button>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded shadow-sm hover:bg-slate-50">
+                <Printer size={14} /> View
+              </button>
+              <label className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded shadow-sm cursor-pointer">
+                <input type="radio" checked readOnly className="accent-[#0097A7] w-3 h-3" />
+                <span className="text-[10px] font-bold text-slate-500 uppercase">New PDF</span>
+              </label>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-bold rounded shadow-sm hover:bg-rose-100">
+                <Trash2 size={14} /> Delete
               </button>
               <button onClick={() => window.history.back()} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-black rounded transition-all shadow-sm">
                 <X size={18} strokeWidth={2.5} /> Close
@@ -101,35 +117,52 @@ export default function MainIndexReport() {
           </div>
 
           <div className="p-6">
-            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 mb-8 space-y-6">
-              <div className="flex items-center gap-8">
-                <div className="flex items-center gap-3">
-                  <Label>Start</Label>
-                  <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-40" />
+            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 mb-8 space-y-4">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Label>From Date :</Label>
+                  <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-36 shadow-sm" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <Label>End</Label>
-                  <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-40" />
+                <div className="flex items-center gap-2">
+                  <Label>To Date :</Label>
+                  <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-36 shadow-sm" />
                 </div>
-                <button 
-                  onClick={handleSearch}
-                  className="flex items-center gap-2 px-8 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-bold rounded-lg shadow-md transition-all active:scale-95"
-                >
-                  {searching ? <RotateCcw size={16} className="animate-spin" /> : <Search size={16} />}
-                  Analyze Data
-                </button>
+                <div className="flex gap-2 ml-4">
+                  <button onClick={handleSearch} className="flex items-center gap-1.5 px-6 py-1.5 bg-[#0097A7] text-white text-[12px] font-bold rounded border border-[#0097A7] shadow-sm hover:bg-[#007a87] transition-all">
+                    <Search size={14} /> Search
+                  </button>
+                  <button onClick={handleSearch} className="flex items-center gap-1.5 px-6 py-1.5 bg-white text-slate-700 text-[12px] font-bold rounded border border-slate-200 shadow-sm hover:bg-slate-50 transition-all">
+                    <Search size={14} /> Search Details
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-12 gap-8 items-center">
-                <div className="col-span-8">
-                   <Label>Filter by Customer</Label>
-                   <Select options={['Customer A', 'Customer B', 'Customer C']} placeholder="--- All Active Customers ---" value={customerFilter} onChange={e => setCustomerFilter(e.target.value)} />
+              <div className="grid grid-cols-12 gap-6 items-center">
+                <div className="col-span-8 space-y-4">
+                  <div className="grid grid-cols-12 items-center gap-4">
+                    <div className="col-span-3 text-right"><Label>Customer Name :</Label></div>
+                    <div className="col-span-9"><Select options={['Customer A', 'Customer B', 'Customer C']} placeholder="--- All Customers ---" value={customerName} onChange={e => setCustomerName(e.target.value)} /></div>
+                  </div>
+                  <div className="grid grid-cols-12 items-center gap-4">
+                    <div className="col-span-3 text-right"><Label>Booking Customer Code :</Label></div>
+                    <div className="col-span-4"><Input placeholder="Search Code..." value={bookingCode} onChange={e => setBookingCode(e.target.value)} /></div>
+                    <div className="col-span-2 text-right"><Label>Vehicle Count :</Label></div>
+                    <div className="col-span-3"><Select options={['1', '2', '3', '4', '5']} placeholder="--" value={vehicleCount} onChange={e => setVehicleCount(e.target.value)} /></div>
+                  </div>
+                  <div className="grid grid-cols-12 items-center gap-4">
+                    <div className="col-span-3 text-right"><Label required>Serial Job No :</Label></div>
+                    <div className="col-span-9"><Select options={['JOB-001', 'JOB-002']} placeholder="Select Job" value={serialJobNo} onChange={e => setSerialJobNo(e.target.value)} /></div>
+                  </div>
+                  <div className="grid grid-cols-12 items-center gap-4">
+                    <div className="col-span-3 text-right"><Label>Model No :</Label></div>
+                    <div className="col-span-9"><Select options={['MOD-X', 'MOD-Y']} placeholder="Select Model" value={modelNo} onChange={e => setModelNo(e.target.value)} /></div>
+                  </div>
                 </div>
-                <div className="col-span-4 flex justify-end items-end h-full">
-                   <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm">
-                      <ImageIcon size={20} className="text-[#0097A7]" />
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preview Mode Enabled</span>
-                   </div>
+                <div className="col-span-4 flex flex-col items-center justify-center border-l border-slate-100 pl-8 h-full">
+                  <div className="w-24 h-24 bg-white border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-200 hover:border-[#0097A7] hover:text-[#0097A7] transition-all cursor-pointer group">
+                    <ImageIcon size={40} className="group-hover:scale-110 transition-transform" />
+                  </div>
+                  <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-widest leading-none">Model Image</p>
                 </div>
               </div>
             </div>
@@ -154,17 +187,20 @@ export default function MainIndexReport() {
 
             <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
               <table className="w-full text-left border-collapse min-w-[1500px]">
-                <thead className="bg-[#fcfdfe] text-[9.5px] uppercase text-slate-400 font-black border-b border-slate-200">
+                <thead className="bg-[#fcfdfe] text-[9px] uppercase text-slate-400 font-black border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-4 border-r border-slate-100 w-16 text-center">S.No</th>
-                    <th className="px-4 py-4 border-r border-slate-100">Index ID</th>
-                    <th className="px-4 py-4 border-r border-slate-100">Customer Name</th>
-                    <th className="px-4 py-4 border-r border-slate-100">Model</th>
-                    <th className="px-4 py-4 border-r border-slate-100">Job No</th>
-                    <th className="px-4 py-4 border-r border-slate-100">Arrival</th>
-                    <th className="px-4 py-4 border-r border-slate-100">Comm.</th>
-                    <th className="px-4 py-4 border-r border-slate-100 text-center">Qty</th>
-                    <th className="px-4 py-4 text-center w-20">Action</th>
+                    <th className="px-4 py-4 border-r border-slate-100 text-center">ID</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Date</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Customer_Name</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Booking_Code</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Serial_No</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Model_Name</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Model_No</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Vehicle_Arrival_Date</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Compressor_Arrival_Date</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Work_Commsing_Date</th>
+                    <th className="px-4 py-4 border-r border-slate-100">Work_Completed_Date</th>
+                    <th className="px-4 py-4 text-center">Work_Del</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 text-[12px]">
@@ -176,20 +212,19 @@ export default function MainIndexReport() {
                     </tr>
                   ) : (
                     filteredData.map((row, idx) => (
-                      <tr key={row.id} className="hover:bg-[#0097A7]/5 transition-colors h-14 group">
-                        <td className="px-4 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
-                        <td className="px-4 py-2 border-r border-slate-50 font-black text-[#0097A7] uppercase">{row.no}</td>
-                        <td className="px-4 py-2 border-r border-slate-50 font-bold text-slate-700">{row.customerName}</td>
-                        <td className="px-4 py-2 border-r border-slate-50 font-medium text-slate-600">{row.vehicleModelNo}</td>
-                        <td className="px-4 py-2 border-r border-slate-50 font-black text-slate-400">{row.serialJobNo}</td>
-                        <td className="px-4 py-2 border-r border-slate-50">{row.vehicleArrivalDate || '-'}</td>
-                        <td className="px-4 py-2 border-r border-slate-50">{row.workCommsingDate || '-'}</td>
-                        <td className="px-4 py-2 border-r border-slate-50 text-center font-black text-slate-800">{row.vehicleQty}</td>
-                        <td className="px-4 py-2 text-center">
-                          <button onClick={() => handleDelete(row.id)} className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
+                      <tr key={row.id} className="hover:bg-[#0097A7]/5 transition-colors h-14 group border-b border-slate-50 last:border-0">
+                        <td className="px-4 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{row.id || idx + 1}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 text-slate-500">{row.date}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 font-bold text-[#0097A7] uppercase">{row.customerName}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 font-medium text-slate-600 uppercase">{row.customerCode || '25-26/0000'}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 font-bold text-slate-800">{row.vehicleSerialNo || '-'}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 font-semibold text-slate-700">{row.vehicleModelNo}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 font-medium text-[11px] text-slate-400 italic">{row.bomModelNo || 'GH700-...'}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 text-slate-500">{row.vehicleArrivalDate || '-'}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 text-slate-500">{row.compressorArrivalDate || '-'}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 text-slate-500">{row.workCommsingDate || '-'}</td>
+                        <td className="px-4 py-2 border-r border-slate-50 text-slate-500">{row.workCompleteDate || '-'}</td>
+                        <td className="px-4 py-2 text-center text-slate-500">{row.workDeliveryDate || '-'}</td>
                       </tr>
                     ))
                   )}

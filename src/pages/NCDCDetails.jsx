@@ -1,187 +1,169 @@
 import { useState, useEffect } from 'react'
 import { 
   ChevronRight, Search, Printer, X, Trash2, Download, 
-  FileSpreadsheet, FileJson, Filter, Settings, ShieldAlert, RotateCcw 
+  FileSpreadsheet, FileText, Filter, Settings, ShieldAlert, RotateCcw 
 } from 'lucide-react'
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+  <label className="block text-[11px] font-bold text-slate-500 mb-0 uppercase tracking-wider whitespace-nowrap">
     {children}
   </label>
 )
 
-const Input = ({ type = 'text', value, onChange, placeholder, className = "" }) => (
-  <input
-    type={type}
-    value={value}
-    onChange={onChange}
-    placeholder={placeholder}
-    className={`px-4 py-2 text-[13px] border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/20 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}
-  />
+const Select = ({ options, value, onChange, className = "" }) => (
+  <div className={`relative ${className}`}>
+    <select
+      value={value}
+      onChange={onChange}
+      className="w-full px-2 py-0.5 text-[12px] border border-slate-300 rounded bg-white text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-[#0097A7] transition-all cursor-pointer font-bold"
+    >
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+    <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center">
+      <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  </div>
+)
+
+const HeaderButton = ({ children, onClick, className = "", color = "slate" }) => {
+  const colors = {
+    slate: "text-slate-600 hover:bg-slate-50",
+    rose: "text-rose-600 hover:bg-rose-50",
+    teal: "text-[#0097A7] hover:bg-[#f0f9fa]"
+  }
+  return (
+    <button onClick={onClick} className={`flex items-center gap-1 px-3 py-1 border border-slate-200 bg-white text-[11px] font-bold rounded shadow-sm transition-all active:scale-95 ${colors[color]} ${className}`}>
+      {children}
+    </button>
+  )
+}
+
+const FilterButton = ({ children, onClick, className = "", icon = null }) => (
+  <button onClick={onClick} className={`flex items-center gap-1.5 px-3 py-1 bg-[#f8fafc] border border-slate-300 hover:border-[#0097A7] text-slate-700 text-[11px] font-bold rounded shadow-sm transition-all active:scale-95 whitespace-nowrap ${className}`}>
+    {icon === 'dot' && <div className="w-2.5 h-2.5 bg-red-600 rounded-full" />}
+    {icon === 'printer' && <Printer size={14} className="text-slate-400" />}
+    {children}
+  </button>
 )
 
 export default function NCDCDetails() {
-  const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0])
-  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
+  const [fromDate, setFromDate] = useState('15-Apr-2026')
+  const [toDate, setToDate] = useState('15-Apr-2026')
   const [data, setData] = useState([])
-  const [filteredData, setFilteredData] = useState([])
-  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('velson_nc_dc_entries') || '[]')
     setData(saved)
-    setFilteredData(saved)
   }, [])
 
-  const handleSearch = () => {
-    setSearching(true)
-    setTimeout(() => {
-      const start = new Date(fromDate)
-      const end = new Date(toDate)
-      const result = data.filter(r => {
-        const d = new Date(r.date)
-        return d >= start && d <= end
-      })
-      setFilteredData(result)
-      setSearching(false)
-    }, 600)
-  }
-
-  const handleDelete = (id) => {
-    const next = data.filter(r => r.id !== id)
-    setData(next)
-    setFilteredData(next)
-    localStorage.setItem('velson_nc_dc_entries', JSON.stringify(next))
-  }
+  const dates = ['15-Apr-2026', '16-Apr-2026', '17-Apr-2026']
 
   return (
-    <div className="bg-[#f4f6f8] min-h-full pb-10">
-      <div className="px-6 py-6">
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black tracking-tight">
-          <span>Dashboard</span> <ChevronRight size={12} /> <span>NC</span> <ChevronRight size={12} /> <span className="text-rose-500">NC DC Details Report</span>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[750px] flex flex-col">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+    <div className="bg-[#f1f5f9] min-h-screen">
+      <div className="p-4">
+        <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden flex flex-col min-h-[90vh]">
+          {/* Main Header */}
+          <div className="flex items-center justify-between border-b border-slate-300 bg-[#f8fafc] px-3 py-1.5">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="text-rose-600" size={18} />
-              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">Non-Conformance DC Analytics</h2>
+              <div className="w-3 h-3 bg-red-700 rounded-sm" />
+              <h2 className="text-[12px] font-bold text-slate-800 uppercase tracking-tight">NC DC Details</h2>
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded shadow-sm">
-                <Printer size={15} /> Print Summary
-              </button>
-              <button onClick={() => window.history.back()} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-black rounded transition-all shadow-sm">
-                <X size={18} strokeWidth={2.5} /> Close
-              </button>
+            
+            <div className="flex items-center gap-1.5">
+              <HeaderButton color="rose"><Trash2 size={14} className="text-rose-600" /> Delete</HeaderButton>
+              <div className="w-[1px] h-4 bg-slate-300 mx-1" />
+              <HeaderButton><Printer size={14} /> Print Image</HeaderButton>
+              <HeaderButton onClick={() => window.history.back()} color="rose"><X size={16} strokeWidth={3} /> Close</HeaderButton>
             </div>
           </div>
 
-          <div className="p-6 flex-1 flex flex-col">
-            <div className="flex flex-wrap items-center gap-8 mb-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-inner">
-               <div className="flex items-center gap-3">
-                 <Label>Range Start</Label>
-                 <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-40" />
-               </div>
-               <div className="flex items-center gap-3">
-                 <Label>Range End</Label>
-                 <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-40" />
-               </div>
-               <button 
-                 onClick={handleSearch}
-                 className="flex items-center justify-center gap-2 px-10 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-[13px] font-black rounded-xl shadow-lg transition-all active:scale-95"
-               >
-                 {searching ? <RotateCcw size={16} className="animate-spin" /> : <Search size={16} />}
-                 Filter NC Records
-               </button>
+          {/* Filters & Reports Bar */}
+          <div className="flex items-center gap-4 bg-white border-b border-slate-200 px-4 py-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Label>From Date :</Label>
+              <Select options={dates} value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-32" />
             </div>
+            <div className="flex items-center gap-2">
+              <Label>To Date :</Label>
+              <Select options={dates} value={toDate} onChange={e => setToDate(e.target.value)} className="w-32" />
+            </div>
+            
+            <div className="w-[1px] h-6 bg-slate-200 mx-1" />
+            
+            <FilterButton icon="dot">Search</FilterButton>
+            <FilterButton icon="dot">NC DC Details</FilterButton>
+            
+            <div className="w-[1px] h-6 bg-slate-200 mx-1" />
+            
+            <FilterButton icon="printer">PDF M1</FilterButton>
+            <FilterButton icon="printer">PDF M2</FilterButton>
+            <FilterButton icon="printer">PDF M3</FilterButton>
 
-            <div className="flex items-center justify-between mb-4 px-2">
-               <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
-                  <div className="w-1.5 h-4 bg-rose-600 rounded-full" />
-                  NC DC Activity Ledger
-               </h3>
-               <div className="flex items-center gap-2">
-                  {[
-                    { icon: <Download size={14} />, l: 'CSV' },
-                    { icon: <FileSpreadsheet size={14} />, l: 'XLS' },
-                    { icon: <FileJson size={14} />, l: 'PDF' },
-                  ].map(tool => (
-                    <button key={tool.l} className="flex items-center gap-1.5 px-3 py-1.5 text-slate-400 hover:text-rose-600 text-[10px] font-black uppercase transition-all">
-                      {tool.icon} {tool.l}
-                    </button>
-                  ))}
+            <div className="ml-auto flex items-center gap-4 text-slate-500">
+               <div className="flex items-center gap-1 text-[11px] font-bold">
+                  <span>LS</span>
+                  <input type="text" value="1" readOnly className="w-8 px-1 py-0.5 border border-slate-300 rounded text-center text-[#0097A7] font-black" />
+               </div>
+               <div className="flex items-center gap-3">
+                  <button className="hover:text-slate-800 flex items-center gap-0.5 text-[11px] font-bold transition-colors"><Printer size={14} className="text-slate-400" /> Dos</button>
+                  <button className="hover:text-emerald-600 flex items-center gap-0.5 text-[11px] font-bold transition-colors"><FileSpreadsheet size={14} className="text-emerald-500" /> Excel</button>
+                  <button className="hover:text-rose-600 flex items-center gap-0.5 text-[11px] font-bold transition-colors"><FileText size={14} className="text-rose-500" /> Pdf</button>
+                  <button className="hover:text-[#0097A7] flex items-center gap-0.5 text-[11px] font-bold transition-colors"><Filter size={14} /> Filter</button>
+                  <button className="hover:text-[#0097A7] flex items-center gap-0.5 text-[11px] font-bold transition-colors"><Settings size={14} /> Setting</button>
                </div>
             </div>
+          </div>
 
-            <div className="flex-1 border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1500px]">
-                <thead className="bg-[#fcfdfe] text-[9.5px] uppercase text-slate-400 font-black border-b border-slate-200">
-                  <tr>
-                    <th className="px-5 py-4 border-r border-slate-100 w-16 text-center">#</th>
-                    <th className="px-5 py-4 border-r border-slate-100">NC DC ID</th>
-                    <th className="px-5 py-4 border-r border-slate-100">Customer Entity</th>
-                    <th className="px-5 py-4 border-r border-slate-100">Category</th>
-                    <th className="px-5 py-4 border-r border-slate-100 text-center w-32">Total Items</th>
-                    <th className="px-5 py-4 border-r border-slate-100 text-right w-40">Valuation</th>
-                    <th className="px-5 py-4 border-r border-slate-100 text-center">Logistics</th>
-                    <th className="px-5 py-4 text-center w-20">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 text-[12.5px]">
-                  {filteredData.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-24 text-center text-slate-300 italic">
-                        No non-conformance records found for the active scope.
-                      </td>
+          {/* Data Table */}
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-left border-collapse min-w-[1500px]">
+              <thead className="bg-[#f8fafc] text-[10px] uppercase text-slate-500 font-bold border-b border-slate-300 sticky top-0 z-10">
+                <tr className="divide-x divide-slate-300">
+                  <th className="px-2 py-1.5 w-12 text-center">S.No</th>
+                  <th className="px-3 py-1.5">DC No</th>
+                  <th className="px-3 py-1.5">DC Date</th>
+                  <th className="px-3 py-1.5">DC Type</th>
+                  <th className="px-3 py-1.5">Customer Name</th>
+                  <th className="px-3 py-1.5">Contact Person</th>
+                  <th className="px-3 py-1.5">Contact No</th>
+                  <th className="px-3 py-1.5 text-right">Total Qty</th>
+                  <th className="px-3 py-1.5 text-right">Total Amount</th>
+                  <th className="px-3 py-1.5">Vehicle No</th>
+                  <th className="px-3 py-1.5">Driver Name</th>
+                  <th className="px-3 py-1.5">Despatch Through</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {data.length === 0 ? (
+                  [...Array(15)].map((_, i) => (
+                    <tr key={i} className="h-8 hover:bg-slate-50 divide-x divide-slate-200 group">
+                      <td className="px-2 py-1 text-center text-slate-200 font-bold">{i + 1}</td>
+                      {[...Array(11)].map((_, j) => <td key={j} className="px-3 py-1"></td>)}
                     </tr>
-                  ) : (
-                    filteredData.map((row, idx) => (
-                      <tr key={row.id} className="hover:bg-rose-50/30 transition-colors h-14 group">
-                        <td className="px-5 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 font-black text-rose-600">{row.dcNo}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-700">{row.customerName}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 uppercase text-[10px] font-black text-slate-400">{row.dcType}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 text-center font-black text-slate-800">{row.items.length} Units</td>
-                        <td className="px-5 py-2 border-r border-slate-50 text-right font-black text-slate-600">{row.totalAmount}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 text-center">
-                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{row.desThrough || 'Manual'}</span>
-                        </td>
-                        <td className="px-5 py-2 text-center">
-                          <button onClick={() => handleDelete(row.id)} className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Premium Aggregate Footer */}
-            <div className="mt-8 bg-slate-900 rounded-3xl p-8 flex items-center justify-between shadow-2xl border border-slate-800">
-               <div className="flex items-center gap-16">
-                 <div>
-                   <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.4em] mb-2">Dataset Volume</p>
-                   <p className="text-[28px] font-black text-white leading-none">{filteredData.length}</p>
-                 </div>
-                 <div className="w-[1px] h-10 bg-white/10" />
-                 <div>
-                   <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.4em] mb-2">Total NC Value</p>
-                   <p className="text-[28px] font-black text-rose-500 leading-none">
-                     INR {filteredData.reduce((acc, r) => acc + parseFloat(r.totalAmount || 0), 0).toFixed(2)}
-                   </p>
-                 </div>
-               </div>
-               <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-white/20 text-[10px] font-black uppercase tracking-widest italic leading-none">Internal Audit Enabled</p>
-                  </div>
-                  <ShieldAlert className="text-rose-600/30" size={32} />
-               </div>
-            </div>
+                  ))
+                ) : (
+                  data.map((row, idx) => (
+                    <tr key={row.id} className="h-8 hover:bg-[#f0f9fa]/40 transition-colors divide-x divide-slate-200 group text-[12px]">
+                      <td className="px-2 py-1 text-center text-slate-300 font-bold">{idx + 1}</td>
+                      <td className="px-3 py-1 font-bold text-rose-600">{row.dcNo}</td>
+                      <td className="px-3 py-1 text-slate-400">{row.date}</td>
+                      <td className="px-3 py-1 font-black text-slate-400 uppercase text-[10px]">{row.dcType}</td>
+                      <td className="px-3 py-1 font-bold text-slate-700">{row.customerName}</td>
+                      <td className="px-3 py-1">{row.contPerson}</td>
+                      <td className="px-3 py-1">{row.contactNo}</td>
+                      <td className="px-3 py-1 text-right font-bold">{row.totalQty}</td>
+                      <td className="px-3 py-1 text-right font-black text-slate-600">{row.totalAmount}</td>
+                      <td className="px-3 py-1">{row.vehicleNo}</td>
+                      <td className="px-3 py-1">{row.driverName}</td>
+                      <td className="px-3 py-1 text-slate-400 uppercase text-[10px]">{row.desThrough}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

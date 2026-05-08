@@ -151,10 +151,10 @@ export default function MainIndex() {
                 </div>
 
                 <div className="grid grid-cols-12 items-center gap-4">
-                   <div className="col-span-3"><Label>Customer Code</Label></div>
-                   <div className="col-span-4"><Input placeholder="C-000" value={form.customerCode} onChange={u('customerCode')} /></div>
-                   <div className="col-span-2 text-right"><Label>Veh. Count</Label></div>
-                   <div className="col-span-3"><Input placeholder="0" value={form.vehicleCount} onChange={u('vehicleCount')} /></div>
+                   <div className="col-span-3"><Label>Customer Code :</Label></div>
+                   <div className="col-span-4"><Select options={['C-100', 'C-200', 'C-300']} placeholder="Select Code" value={form.customerCode} onChange={u('customerCode')} /></div>
+                   <div className="col-span-2 text-right"><Label>Vehicle Count :</Label></div>
+                   <div className="col-span-3"><Select options={['1', '2', '3', '4', '5']} placeholder="0" value={form.vehicleCount} onChange={u('vehicleCount')} /></div>
                 </div>
 
                 <div className="grid grid-cols-12 items-center gap-4">
@@ -168,9 +168,9 @@ export default function MainIndex() {
                 </div>
 
                 <div className="grid grid-cols-12 items-center gap-4">
-                   <div className="col-span-3"><Label>Vehicle Serial</Label></div>
+                   <div className="col-span-3"><Label>Vehicle Serial No :</Label></div>
                    <div className="col-span-4"><Input placeholder="SN-0000" value={form.vehicleSerialNo} onChange={u('vehicleSerialNo')} /></div>
-                   <div className="col-span-2 text-right"><Label>Quantity</Label></div>
+                   <div className="col-span-2 text-right"><Label>No.of Vehicle Qty :</Label></div>
                    <div className="col-span-3"><Input type="number" placeholder="1" value={form.vehicleQty} onChange={u('vehicleQty')} /></div>
                 </div>
 
@@ -184,28 +184,28 @@ export default function MainIndex() {
               <div className="col-span-6 space-y-4">
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
                   {[
-                    { label: 'Vehicle Arrival', key: 'vehicleArrivalDate' },
-                    { label: 'Compressor Arrival', key: 'compressorArrivalDate' },
-                    { label: 'Work Complete', key: 'workCompleteDate' },
-                    { label: 'Work Commissioning', key: 'workCommsingDate' },
-                    { label: 'Work Delivery', key: 'workDeliveryDate' },
+                    { label: 'Vehicle Arrival Date :', key: 'vehicleArrivalDate' },
+                    { label: 'Compressor Arrival Date :', key: 'compressorArrivalDate' },
+                    { label: 'Work Complete Date :', key: 'workCompleteDate' },
+                    { label: 'Work Commsing Date :', key: 'workCommsingDate' },
+                    { label: 'Work Delivery Date :', key: 'workDeliveryDate' },
                   ].map(item => (
                     <div key={item.key} className="grid grid-cols-12 items-center gap-4">
                       <div className="col-span-5 text-right"><Label>{item.label}</Label></div>
-                      <div className="col-span-7"><Input type="date" value={form[item.key]} onChange={u(item.key)} /></div>
+                      <div className="col-span-7"><Select options={['15-Apr-2026', '16-Apr-2026', '17-Apr-2026']} placeholder="dd-mm-yyyy" value={form[item.key]} onChange={u(item.key)} /></div>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex items-center justify-end gap-4 pt-4">
-                   <button 
-                     onClick={handleLoadParts}
-                     disabled={isLoading}
-                     className="flex items-center gap-2 px-8 py-3 bg-[#FFB300] hover:bg-[#FFA000] text-white text-[13px] font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50"
-                   >
-                     {isLoading ? <RotateCcw size={16} className="animate-spin" /> : <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />}
-                     Load BOM Components
-                   </button>
+                    <button 
+                      onClick={handleLoadParts}
+                      disabled={isLoading}
+                      className="flex items-center gap-2 px-8 py-3 bg-[#FFB300] hover:bg-[#FFA000] text-white text-[13px] font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50"
+                    >
+                      {isLoading ? <RotateCcw size={16} className="animate-spin" /> : <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />}
+                      Load Child Part
+                    </button>
                    <button onClick={handleSave} className="flex items-center gap-2 px-12 py-3 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-bold rounded-xl transition-all shadow-lg active:scale-95">
                      <Save size={18} /> Save Entry
                    </button>
@@ -214,7 +214,7 @@ export default function MainIndex() {
                 <div className="flex items-center justify-end gap-3 mt-4 pr-2">
                    <label className="flex items-center gap-2 cursor-pointer group">
                       <input type="radio" checked readOnly className="accent-[#0097A7] w-4 h-4" />
-                      <span className="text-[11px] font-black text-[#0097A7] uppercase tracking-widest group-hover:text-[#00BCD4]">Standard BOM Protocol</span>
+                      <span className="text-[11px] font-black text-[#0097A7] uppercase tracking-widest group-hover:text-[#00BCD4]">BOM</span>
                    </label>
                 </div>
               </div>

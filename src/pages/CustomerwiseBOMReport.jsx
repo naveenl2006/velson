@@ -21,12 +21,13 @@ const Input = ({ placeholder, value, onChange, type = 'text', className = "" }) 
   />
 )
 
-const Select = ({ options, placeholder, value, onChange, className = "" }) => (
-  <div className={`relative ${className}`}>
+const Select = ({ options, placeholder, value, onChange, className = "", disabled = false }) => (
+  <div className={`relative ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-[7px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+      disabled={disabled}
+      className={`w-full px-3 py-[7px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -43,6 +44,9 @@ export default function CustomerwiseBOMReport() {
   const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0])
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
   const [customer, setCustomer] = useState('')
+  const [serialNo, setSerialNo] = useState('')
+  const [assemblyPartNo, setAssemblyPartNo] = useState('')
+  const [isAll, setIsAll] = useState(false)
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searching, setSearching] = useState(false)
@@ -62,7 +66,9 @@ export default function CustomerwiseBOMReport() {
         const d = new Date(r.date)
         const dateMatch = d >= start && d <= end
         const custMatch = customer ? r.customerName === customer : true
-        return dateMatch && custMatch
+        const serialMatch = serialNo ? r.serialJobNo === serialNo : true
+        const assemblyMatch = isAll ? true : (assemblyPartNo ? r.assemblyPartNo === assemblyPartNo : true)
+        return dateMatch && custMatch && serialMatch && assemblyMatch
       })
       setFilteredData(result)
       setSearching(false)
@@ -115,15 +121,47 @@ export default function CustomerwiseBOMReport() {
 
                 <div className="space-y-4">
                   <div className="grid grid-cols-12 gap-4 items-center">
-                    <div className="col-span-2"><Label>Customer</Label></div>
+                    <div className="col-span-2"><Label>Customer Name</Label></div>
                     <div className="col-span-10">
-                      <Select options={['Customer A', 'Customer B', 'Customer C']} placeholder="--- All Customers ---" value={customer} onChange={e => setCustomer(e.target.value)} />
+                      <Select 
+                        options={Array.from(new Set(data.map(r => r.customerName).filter(Boolean)))} 
+                        placeholder="--- All Customers ---" 
+                        value={customer} 
+                        onChange={e => setCustomer(e.target.value)} 
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-12 gap-4 items-center">
-                    <div className="col-span-2"><Label>Serial No</Label></div>
+                    <div className="col-span-2"><Label>Booking Serial No</Label></div>
                     <div className="col-span-10">
-                      <Select options={['BSN-001', 'BSN-002']} placeholder="--- All Serial Numbers ---" />
+                      <Select 
+                        options={Array.from(new Set(data.map(r => r.serialJobNo).filter(Boolean)))} 
+                        placeholder="--- All Serial Numbers ---" 
+                        value={serialNo}
+                        onChange={e => setSerialNo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-12 gap-4 items-center">
+                    <div className="col-span-2"><Label>Assembly Part No</Label></div>
+                    <div className="col-span-8">
+                      <Select 
+                        options={Array.from(new Set(data.map(r => r.assemblyPartNo).filter(Boolean)))} 
+                        placeholder="--- All Assembly Parts ---" 
+                        value={assemblyPartNo}
+                        onChange={e => setAssemblyPartNo(e.target.value)}
+                        disabled={isAll}
+                      />
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="allParts" 
+                        checked={isAll} 
+                        onChange={e => setIsAll(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
+                      />
+                      <label htmlFor="allParts" className="text-[11px] font-bold text-slate-500 uppercase cursor-pointer select-none">ALL</label>
                     </div>
                   </div>
                 </div>

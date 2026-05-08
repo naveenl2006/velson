@@ -129,10 +129,10 @@ const NAV = [
     label: 'Maintainance', 
     icon: Wrench, 
     children: [
-      { id: 'machine-breakdown', label: 'Machine BreakDown', page: 'MachineBreakDown' },
-      { id: 'breakdown-clearence', label: 'BreakDown Clearence', page: 'BreakDownClearence' },
-      { id: 'breakdown-acceptance', label: 'BreakDown Acceptance', page: 'BreakDownAcceptance' },
-      { id: 'breakdown-approval-list', label: 'BreakDown Approval List', page: 'BreakDownApprovalList' },
+      { id: 'machine-breakdown', label: 'BreakDown Entry', page: 'MachineBreakDown' },
+      { id: 'breakdown-clearence', label: 'Waiting for Clearence', page: 'BreakDownClearence' },
+      { id: 'breakdown-acceptance', label: 'Waiting for Acceptance', page: 'BreakDownAcceptance' },
+      { id: 'breakdown-approval-list', label: 'Acceptance Breakdown', page: 'BreakDownApprovalList' },
     ] 
   },
   { 
@@ -140,10 +140,10 @@ const NAV = [
     label: 'NC', 
     icon: ShieldAlert, 
     children: [
-      { id: 'qc-rejection-details', label: 'QC Rejection Details', page: 'QCRejectionDetails' },
+      { id: 'qc-rejection-details', label: 'NC Details', page: 'QCRejectionDetails' },
       { id: 'nc-approval', label: 'NC Approval', page: 'NCApproval' },
       { id: 'nc-job-created', label: 'NC Job Created', page: 'NCJobCreated' },
-      { id: 'nc-dc-entry', label: 'NC DC Entry', page: 'NCDCEntry' },
+      { id: 'nc-dc-entry', label: 'DC NC Entry', page: 'NCDCEntry' },
       { id: 'nc-dc-details', label: 'NC DC Details', page: 'NCDCDetails' },
     ] 
   },
@@ -153,15 +153,15 @@ const NAV = [
     icon: LayoutGrid, 
     children: [
       { id: 'job-list', label: 'Job List', page: 'JobList' },
-      { id: 'barcode-details', label: 'Barcode Details', page: 'BarcodeDetails' },
-      { id: 'auto-job-entry', label: 'Auto Job Entry', page: 'AutoJobEntry' },
-      { id: 'service-job-entry-details', label: 'Service Job Entry Details', page: 'ServiceJobEntryDetails' },
-      { id: 'conformation-list', label: 'Conformation List', page: 'ConformationList' },
-      { id: 'conformation-entry-details', label: 'Conformation Entry Details', page: 'ConformationEntryDetails' },
-      { id: 'process-card', label: 'Process Card', page: 'ProcessCard' },
-      { id: 'raw-material-issue', label: 'Raw Material Issue', page: 'RawMaterialIssue' },
-      { id: 'raw-material-issued-details', label: 'Rawmaterial Issued Details', page: 'RawMaterialIssuedDetails' },
-      { id: 'prod-machine-breakdown', label: 'Machine BreakDown', page: 'MachineBreakDown' },
+      { id: 'barcode-details', label: 'Print Barcode', page: 'BarcodeDetails' },
+      { id: 'auto-job-entry', label: 'Service Auto Job Entry', page: 'AutoJobEntry' },
+      { id: 'service-job-entry-details', label: 'Service Entry Details', page: 'ServiceJobEntryDetails' },
+      { id: 'conformation-list', label: 'Conformation Final', page: 'ConformationList' },
+      { id: 'conformation-entry-details', label: 'Conformation List Details', page: 'ConformationEntryDetails' },
+      { id: 'process-card', label: 'Process Card Entry new', page: 'ProcessCard' },
+      { id: 'raw-material-issue', label: 'Rawmaterial Issue Job', page: 'RawMaterialIssue' },
+      { id: 'raw-material-issued-details', label: 'Rawmaterial Issue Details', page: 'RawMaterialIssuedDetails' },
+      { id: 'prod-machine-breakdown', label: 'BreakDown Entry', page: 'MachineBreakDown' },
     ] 
   },
   { id: 'technical',      label: 'Technical',        icon: Settings,       children: [] },

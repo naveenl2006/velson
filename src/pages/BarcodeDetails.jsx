@@ -1,182 +1,157 @@
 import { useState, useEffect } from 'react'
 import {
-  ChevronRight, X, Search, Printer, Download, FileSpreadsheet, FileJson, Filter, Settings, Barcode, LayoutGrid, RotateCcw
+  ChevronRight, X, Search, Printer, Download, FileSpreadsheet, FileJson, Filter, Settings, Barcode, LayoutGrid, RotateCcw, FileText
 } from 'lucide-react'
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+  <label className="block text-[11px] font-bold text-slate-500 mb-0 uppercase tracking-wider whitespace-nowrap">
     {children}
   </label>
 )
 
-const Input = ({ type = 'text', value, onChange, className = "" }) => (
-  <input
-    type={type}
-    value={value}
-    onChange={onChange}
-    className={`px-4 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 ${className}`}
-  />
+const Select = ({ options, value, onChange, className = "" }) => (
+  <div className={`relative group ${className}`}>
+    <select
+      value={value}
+      onChange={onChange}
+      className="w-full px-2 py-0.5 pr-6 text-[12px] border border-slate-300 rounded bg-white text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-[#0097A7] transition-all cursor-pointer font-bold shadow-sm"
+    >
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+    <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center group-hover:text-[#0097A7] transition-colors">
+      <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  </div>
 )
 
+const HeaderButton = ({ children, onClick, className = "", color = "slate" }) => {
+  const styles = {
+    slate: "text-slate-600 hover:bg-slate-50",
+    emerald: "text-emerald-600 hover:bg-emerald-50",
+    rose: "text-rose-600 hover:bg-rose-50"
+  }
+  return (
+    <button onClick={onClick} className={`flex items-center gap-1.5 px-3 py-1 border border-slate-200 bg-white text-[11px] font-bold rounded shadow-sm transition-all active:scale-95 ${styles[color]} ${className}`}>
+      {children}
+    </button>
+  )
+}
+
 export default function BarcodeDetails() {
-  const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0])
-  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
+  const [fromDate, setFromDate] = useState('15-Apr-2026')
+  const [toDate, setToDate] = useState('15-Apr-2026')
   const [data, setData] = useState([])
-  const [filteredData, setFilteredData] = useState([])
-  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('velson_production_jobs') || '[]')
     setData(saved)
-    setFilteredData(saved)
   }, [])
 
-  const handleSearch = () => {
-    setSearching(true)
-    setTimeout(() => {
-      const start = new Date(fromDate)
-      const end = new Date(toDate)
-      const result = data.filter(r => {
-        const d = new Date(r.reqDate)
-        return d >= start && d <= end
-      })
-      setFilteredData(result)
-      setSearching(false)
-    }, 600)
-  }
+  const dates = ['15-Apr-2026', '16-Apr-2026', '17-Apr-2026']
 
   return (
-    <div className="bg-[#f4f6f8] min-h-full pb-10">
-      <div className="px-6 py-6">
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black tracking-tight">
-          <span>Dashboard</span> <ChevronRight size={12} /> <span>Production</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">Inventory Serialization Hub</span>
+    <div className="bg-[#fcfdfe] min-h-screen">
+      {/* Top Header Bar */}
+      <div className="bg-white border-b border-slate-200 px-4 py-1.5 flex items-center justify-between shadow-sm sticky top-0 z-50">
+        <div className="flex items-center gap-2">
+           <div className="w-3 h-3 bg-red-700 rounded-sm" />
+           <h1 className="text-[12px] font-bold text-slate-700 uppercase tracking-tight">Barcode Details</h1>
+        </div>
+        <div className="flex items-center gap-3">
+           <HeaderButton><Printer size={14} className="text-slate-400" /> Print Pincode</HeaderButton>
+           <HeaderButton color="emerald"><FileSpreadsheet size={14} /> Excel</HeaderButton>
+           <HeaderButton onClick={() => window.history.back()} color="rose"><X size={16} strokeWidth={3} /> Close</HeaderButton>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {/* Filter Area */}
+        <div className="bg-[#f8fafc] border border-slate-200 rounded-lg p-3 shadow-sm relative">
+           <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                 <Label>From Date :</Label>
+                 <Select options={dates} value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-32" />
+              </div>
+              <div className="flex items-center gap-2">
+                 <Label>To Date :</Label>
+                 <Select options={dates} value={toDate} onChange={e => setToDate(e.target.value)} className="w-32" />
+              </div>
+              
+              <div className="w-[1px] h-6 bg-slate-300 mx-2" />
+              
+              <div className="flex items-center gap-3">
+                 <button className="flex items-center gap-1.5 px-4 py-1 bg-white border border-slate-300 rounded text-[11px] font-bold text-slate-700 shadow-sm hover:border-[#0097A7] transition-all active:scale-95">
+                    <div className="w-2.5 h-2.5 bg-red-600 rounded-full" /> Search
+                 </button>
+                 <button className="flex items-center gap-1.5 px-4 py-1 bg-white border border-slate-300 rounded text-[11px] font-bold text-slate-700 shadow-sm hover:border-[#0097A7] transition-all active:scale-95">
+                    <Printer size={14} className="text-emerald-500" /> Print Barcode
+                 </button>
+              </div>
+
+              <div className="ml-auto flex items-center gap-4 text-slate-500">
+                 <div className="flex items-center gap-1 text-[11px] font-bold">
+                    <span>LS</span>
+                    <input type="text" value="1" readOnly className="w-8 px-1 py-0.5 border border-slate-300 rounded text-center text-[#0097A7] font-black" />
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <button className="hover:text-slate-800 flex items-center gap-0.5 text-[11px] font-bold transition-colors"><Printer size={14} className="text-slate-400" /> Dos</button>
+                    <button className="hover:text-emerald-600 flex items-center gap-0.5 text-[11px] font-bold transition-colors"><FileSpreadsheet size={14} className="text-emerald-500" /> Excel</button>
+                    <button className="hover:text-rose-600 flex items-center gap-0.5 text-[11px] font-bold transition-colors"><FileText size={14} className="text-rose-500" /> Pdf</button>
+                    <button className="hover:text-[#0097A7] flex items-center gap-0.5 text-[11px] font-bold transition-colors"><Filter size={14} /> Filter</button>
+                    <button className="hover:text-[#0097A7] flex items-center gap-0.5 text-[11px] font-bold transition-colors"><Settings size={14} /> Setting</button>
+                 </div>
+              </div>
+           </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[850px]">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-8 py-5">
-            <div className="flex items-center gap-4">
-              <div className="w-4 h-4 bg-slate-900 rounded shadow-sm" />
-              <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-widest text-slate-700">Digital Barcode Archive</h2>
-            </div>
-            <div className="flex gap-3">
-               <button onClick={() => window.print()} className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded-2xl transition-all shadow-sm active:scale-95">
-                <Printer size={16} className="text-[#0097A7]" /> Batch Print
-              </button>
-              <button onClick={() => window.history.back()} className="flex items-center gap-2 px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-black rounded-2xl transition-all shadow-sm">
-                <X size={18} strokeWidth={2.5} /> Close Console
-              </button>
-            </div>
-          </div>
-
-          <div className="p-10 flex-1 flex flex-col space-y-10">
-            {/* Filter Suite */}
-            <div className="flex items-center gap-10 bg-slate-50/50 p-8 rounded-[3rem] border border-slate-100 shadow-inner">
-               <div className="flex items-center gap-4">
-                 <Label>Activation Start</Label>
-                 <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-44" />
-               </div>
-               <div className="flex items-center gap-4">
-                 <Label>Activation End</Label>
-                 <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-44" />
-               </div>
-               <button 
-                 onClick={handleSearch}
-                 className="flex items-center gap-3 px-12 py-3 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-black rounded-2xl shadow-xl transition-all active:scale-95 uppercase tracking-widest"
-               >
-                 {searching ? <RotateCcw size={18} className="animate-spin" /> : <Search size={18} />}
-                 Query Serialization
-               </button>
-            </div>
-
-            <div className="flex items-center justify-between mb-2 px-4">
-               <div className="flex items-center gap-4">
-                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
-                    <div className="w-1.5 h-4 bg-slate-400 rounded-full" />
-                    Serialized Component Ledger
-                 </h3>
-                 <span className="bg-[#0097A7]/5 text-[#0097A7] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">{filteredData.length} Validated Codes</span>
-               </div>
-               <div className="flex items-center gap-3">
-                  {[
-                    { icon: <Download size={14} />, l: 'EXPORT.RAW' },
-                    { icon: <FileSpreadsheet size={14} />, l: 'EXCEL' },
-                    { icon: <FileJson size={14} />, l: 'JSON' },
-                  ].map(tool => (
-                    <button key={tool.l} className="flex items-center gap-2 px-3 py-1.5 text-slate-300 hover:text-slate-600 text-[9px] font-black uppercase transition-all tracking-[0.1em]">
-                      {tool.icon} {tool.l}
-                    </button>
-                  ))}
-               </div>
-            </div>
-
-            {/* Matrix Result Area */}
-            <div className="flex-1 border border-slate-200 rounded-[3rem] overflow-hidden shadow-sm bg-white overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1400px]">
-                <thead className="bg-[#fcfdfe] text-[10px] uppercase text-slate-400 font-black border-b border-slate-200">
-                  <tr>
-                    <th className="px-8 py-5 border-r border-slate-100 w-20 text-center">#</th>
-                    <th className="px-8 py-5 border-r border-slate-100">Digital Identity</th>
-                    <th className="px-8 py-5 border-r border-slate-100">Job Reference</th>
-                    <th className="px-8 py-5 border-r border-slate-100">Target Model</th>
-                    <th className="px-8 py-5 border-r border-slate-100 text-center">Launch Date</th>
-                    <th className="px-8 py-5 border-r border-slate-100 text-right w-40">Unit Batch</th>
-                    <th className="px-8 py-5 text-center">Validation Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 text-[13px]">
-                  {filteredData.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-24 text-center text-slate-200 italic font-black uppercase tracking-widest opacity-20">
-                         No digital identities found for the current range.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredData.map((row, idx) => (
-                      <tr key={row.id} className="hover:bg-slate-50 transition-colors h-16 group">
-                        <td className="px-8 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
-                        <td className="px-8 py-2 border-r border-slate-50 font-black text-slate-800 tracking-tighter">
-                           CODE-2026-{(row.id % 100000).toString().padStart(6, '0')}
-                        </td>
-                        <td className="px-8 py-2 border-r border-slate-50 font-black text-[#0097A7]">{row.jobNo}</td>
-                        <td className="px-8 py-2 border-r border-slate-50 font-bold text-slate-700 uppercase tracking-tight">{row.model}</td>
-                        <td className="px-8 py-2 border-r border-slate-50 text-center font-black text-slate-300 uppercase text-[10px]">{row.reqDate}</td>
-                        <td className="px-8 py-2 border-r border-slate-50 text-right font-black text-slate-600">{row.qty} Units</td>
-                        <td className="px-8 py-2 text-center">
-                           <div className="flex items-center justify-center gap-3">
-                              <div className="w-2 h-2 bg-green-500 rounded-full" />
-                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">SECURE-VERIFIED</span>
-                           </div>
-                        </td>
+        {/* Matrix Data Area */}
+        <div className="border border-slate-200 rounded-xl overflow-hidden bg-white min-h-[600px]">
+           <table className="w-full text-left border-collapse min-w-[1200px]">
+              <thead className="bg-[#f8fafc] text-[10px] uppercase text-slate-500 font-bold border-b border-slate-300 sticky top-0 z-10">
+                 <tr className="divide-x divide-slate-300">
+                    <th className="px-3 py-2 w-16 text-center">S.No</th>
+                    <th className="px-3 py-2">Barcode</th>
+                    <th className="px-3 py-2">Job No</th>
+                    <th className="px-3 py-2">Part No</th>
+                    <th className="px-3 py-2">Material</th>
+                    <th className="px-3 py-2">Dimension</th>
+                    <th className="px-3 py-2 text-right">Weight</th>
+                    <th className="px-3 py-2 text-center">Target Date</th>
+                 </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                 {data.length === 0 ? (
+                    [...Array(20)].map((_, i) => (
+                      <tr key={i} className="h-8 hover:bg-slate-50 divide-x divide-slate-200 text-transparent select-none">
+                        <td className="px-3 py-1 text-center text-slate-200 font-bold text-slate-300 select-auto">{i + 1}</td>
+                        <td className="px-3 py-1">.</td>
+                        <td className="px-3 py-1">.</td>
+                        <td className="px-3 py-1">.</td>
+                        <td className="px-3 py-1">.</td>
+                        <td className="px-3 py-1">.</td>
+                        <td className="px-3 py-1">.</td>
+                        <td className="px-3 py-1 text-center">.</td>
                       </tr>
                     ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Dark Analytical Footer */}
-            <div className="mt-8 bg-slate-900 rounded-[2.5rem] p-10 flex items-center justify-between shadow-2xl relative overflow-hidden border border-slate-800">
-               <div className="absolute inset-0 bg-gradient-to-r from-[#0097A7]/5 to-transparent pointer-events-none" />
-               <div className="flex items-center gap-20 relative z-10">
-                  <div>
-                    <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.4em] mb-2">Matrix Identities</p>
-                    <p className="text-[32px] font-black text-white leading-none">{filteredData.length}</p>
-                  </div>
-                  <div className="w-[1px] h-12 bg-white/10" />
-                  <div>
-                    <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.4em] mb-2">Serialization Auth</p>
-                    <p className="text-[32px] font-black text-[#0097A7] leading-none">ACTIVE</p>
-                  </div>
-               </div>
-               <div className="text-right relative z-10 opacity-30">
-                  <div className="flex items-center gap-3">
-                    <Barcode size={32} className="text-white" />
-                    <span className="text-white text-[11px] font-black uppercase tracking-[0.3em] italic">Encrypted Inventory Stream</span>
-                  </div>
-               </div>
-            </div>
-          </div>
+                 ) : (
+                    data.map((row, idx) => (
+                       <tr key={row.id} className="h-8 hover:bg-[#f0f9fa]/40 transition-colors text-[12px] divide-x divide-slate-100 group">
+                          <td className="px-3 py-1 text-center text-slate-300 font-bold">{idx + 1}</td>
+                          <td className="px-3 py-1 font-bold text-slate-700">{(idx + 52433)}/2026</td>
+                          <td className="px-3 py-1 font-bold text-blue-600">{(idx + 41433)}</td>
+                          <td className="px-3 py-1 font-black text-[#0097A7]">{row.partNo || 'VGH-1003450'}</td>
+                          <td className="px-3 py-1 font-bold text-slate-500 uppercase text-[10px]">D50 HITAC...</td>
+                          <td className="px-3 py-1">-</td>
+                          <td className="px-3 py-1 text-right font-black text-slate-400">0.00</td>
+                          <td className="px-3 py-1 text-center text-slate-400">{row.reqDate || '15/04/2026'}</td>
+                       </tr>
+                    ))
+                 )}
+              </tbody>
+           </table>
         </div>
       </div>
     </div>

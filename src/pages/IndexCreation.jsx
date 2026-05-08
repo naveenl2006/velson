@@ -49,6 +49,7 @@ export default function IndexCreation() {
   })
 
   const [indices, setIndices] = useState([])
+  const [selectedIds, setSelectedIds] = useState([])
   const [isSaving, setIsSaving] = useState(false)
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -129,36 +130,36 @@ export default function IndexCreation() {
                   </div>
 
                   <div className="grid grid-cols-12 items-center gap-4">
-                    <div className="col-span-3"><Label required>Vehicle Model</Label></div>
+                    <div className="col-span-3"><Label required>Model</Label></div>
                     <div className="col-span-9"><Select options={['Model 1', 'Model 2', 'Model 3']} value={form.model} onChange={u('model')} placeholder="--- Select Primary Model ---" /></div>
                   </div>
 
                   <div className="grid grid-cols-12 items-center gap-4">
-                    <div className="col-span-3"><Label required>Model Number</Label></div>
+                    <div className="col-span-3"><Label required>Model No</Label></div>
                     <div className="col-span-9"><Input placeholder="Enter Model Serial Number..." value={form.modelNo} onChange={u('modelNo')} /></div>
                   </div>
 
                   <div className="grid grid-cols-12 items-center gap-4">
-                    <div className="col-span-3"><Label>Repository Path</Label></div>
+                    <div className="col-span-3"><Label>File Location</Label></div>
                     <div className="col-span-9"><Input placeholder="C:\ERP\BOM\Indices..." value={form.fileLocation} onChange={u('fileLocation')} /></div>
                   </div>
 
                   <div className="grid grid-cols-12 items-center gap-4">
-                    <div className="col-span-3"><Label required>Index File</Label></div>
+                    <div className="col-span-3"><Label required>File Path</Label></div>
                     <div className="col-span-9"><Select options={['Index_V1.xlsx', 'Index_V2.xlsx']} value={form.fileName} onChange={u('fileName')} placeholder="Select Resource File" /></div>
                   </div>
 
                   <div className="flex gap-4 pt-4 border-t border-slate-100">
                     <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-[13px] font-bold rounded-xl transition-all shadow-sm active:scale-95">
-                      <Search size={18} className="text-[#0097A7]" /> Browse Files
+                      <Search size={18} className="text-[#0097A7]" /> Browse
                     </button>
                     <button 
                       onClick={handleSave}
                       disabled={isSaving}
                       className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50"
                     >
-                      {isSaving ? <RotateCcw size={18} className="animate-spin" /> : <Save size={18} />}
-                      {isSaving ? 'Saving...' : 'Create Index'}
+                      {isSaving ? <RotateCcw size={18} className="animate-spin" /> : <Upload size={18} />}
+                      {isSaving ? 'Uploading...' : 'Upload'}
                     </button>
                   </div>
                 </div>
@@ -191,41 +192,78 @@ export default function IndexCreation() {
 
             {/* Table Section */}
             <div className="mt-12">
-               <div className="flex items-center justify-between mb-4 px-2">
-                 <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-700 rounded-full" />
-                    Existing BOM Indices
-                 </h3>
-                 <div className="flex gap-4">
-                    <button className="flex items-center gap-1.5 text-slate-400 hover:text-[#0097A7] text-[11px] font-bold uppercase transition-colors">
-                      <Download size={15} /> Export Registry
-                    </button>
-                 </div>
-               </div>
-               <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                 <table className="w-full text-left border-collapse">
-                   <thead className="bg-[#fcfdfe] text-[10px] uppercase text-slate-400 font-black border-b border-slate-200">
-                     <tr>
-                       <th className="px-6 py-4 border-r border-slate-100 w-16 text-center">#</th>
-                       <th className="px-6 py-4 border-r border-slate-100">Index No</th>
-                       <th className="px-6 py-4 border-r border-slate-100">Date</th>
-                       <th className="px-6 py-4 border-r border-slate-100">Model</th>
-                       <th className="px-6 py-4 border-r border-slate-100">Model No</th>
-                       <th className="px-6 py-4 border-r border-slate-100">File Reference</th>
-                       <th className="px-6 py-4 text-center w-20">Action</th>
-                     </tr>
-                   </thead>
+                <div className="flex items-center justify-between mb-4 px-2">
+                   <div className="flex items-center gap-6">
+                      <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-700 rounded-full" />
+                        Existing BOM Indices
+                      </h3>
+                      <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                        <input 
+                          type="checkbox" 
+                          id="selectAll"
+                          checked={selectedIds.length === indices.length && indices.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedIds(indices.map(i => i.id))
+                            else setSelectedIds([])
+                          }}
+                          className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
+                        />
+                        <label htmlFor="selectAll" className="text-[11px] font-bold text-slate-500 uppercase cursor-pointer select-none">Select All</label>
+                      </div>
+                   </div>
+                   <div className="flex gap-4">
+                      <button className="flex items-center gap-1.5 text-slate-400 hover:text-[#0097A7] text-[11px] font-bold uppercase transition-colors">
+                        <Download size={15} /> Export Registry
+                      </button>
+                   </div>
+                </div>
+                <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-[#fcfdfe] text-[10px] uppercase text-slate-400 font-black border-b border-slate-200">
+                      <tr>
+                        <th className="px-6 py-4 border-r border-slate-100 w-16 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedIds.length === indices.length && indices.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedIds(indices.map(i => i.id))
+                              else setSelectedIds([])
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
+                          />
+                        </th>
+                        <th className="px-6 py-4 border-r border-slate-100 w-16 text-center">#</th>
+                        <th className="px-6 py-4 border-r border-slate-100">Index No</th>
+                        <th className="px-6 py-4 border-r border-slate-100">Date</th>
+                        <th className="px-6 py-4 border-r border-slate-100">Model</th>
+                        <th className="px-6 py-4 border-r border-slate-100">Model No</th>
+                        <th className="px-6 py-4 border-r border-slate-100">File Path</th>
+                        <th className="px-6 py-4 text-center w-20">Action</th>
+                      </tr>
+                    </thead>
                    <tbody className="divide-y divide-slate-50 text-[12.5px]">
                      {indices.length === 0 ? (
                        <tr>
-                         <td colSpan={7} className="py-20 text-center text-slate-300 italic text-sm">
+                         <td colSpan={8} className="py-20 text-center text-slate-300 italic text-sm">
                             <FileSpreadsheet size={48} className="mx-auto mb-3 opacity-10" />
                             No index records found in local storage.
                          </td>
                        </tr>
                      ) : (
                        indices.map((row, idx) => (
-                         <tr key={row.id} className="hover:bg-[#0097A7]/5 transition-colors h-14 group">
+                         <tr key={row.id} className={`${selectedIds.includes(row.id) ? 'bg-[#0097A7]/5' : 'hover:bg-slate-50'} transition-colors h-14 group`}>
+                           <td className="px-6 py-2 border-r border-slate-50 text-center">
+                             <input 
+                               type="checkbox" 
+                               checked={selectedIds.includes(row.id)}
+                               onChange={(e) => {
+                                 if (e.target.checked) setSelectedIds(s => [...s, row.id])
+                                 else setSelectedIds(s => s.filter(id => id !== row.id))
+                               }}
+                               className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
+                             />
+                           </td>
                            <td className="px-6 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
                            <td className="px-6 py-2 border-r border-slate-50 font-black text-[#0097A7] uppercase">{row.indexNo}</td>
                            <td className="px-6 py-2 border-r border-slate-50 text-slate-500">{row.date}</td>

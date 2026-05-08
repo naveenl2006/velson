@@ -42,7 +42,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 export default function IndexCreationReport() {
   const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0])
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
-  const [modelFilter, setModelFilter] = useState('')
+  const [modelName, setModelName] = useState('')
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searching, setSearching] = useState(false)
@@ -61,7 +61,7 @@ export default function IndexCreationReport() {
       const result = data.filter(r => {
         const d = new Date(r.date)
         const dateMatch = d >= start && d <= end
-        const modelMatch = modelFilter ? r.model === modelFilter : true
+        const modelMatch = modelName ? r.model === modelName : true
         return dateMatch && modelMatch
       })
       setFilteredData(result)
@@ -100,34 +100,43 @@ export default function IndexCreationReport() {
           </div>
 
           <div className="p-6">
-            <div className="grid grid-cols-12 gap-8 mb-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-              <div className="col-span-8 space-y-5">
+            <div className="grid grid-cols-12 gap-8 mb-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-100 items-center">
+              <div className="col-span-8 space-y-4">
                 <div className="flex items-center gap-8">
                   <div className="flex items-center gap-3">
-                    <Label>From</Label>
+                    <Label>From Date :</Label>
                     <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-40 shadow-sm" />
                   </div>
                   <div className="flex items-center gap-3">
-                    <Label>To</Label>
+                    <Label>To Date :</Label>
                     <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-40 shadow-sm" />
                   </div>
-                  <button 
-                    onClick={handleSearch}
-                    className="flex items-center gap-2 px-8 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-bold rounded-lg shadow-md transition-all active:scale-95"
-                  >
-                    {searching ? <RotateCcw size={16} className="animate-spin" /> : <Search size={16} />}
-                    Apply Filters
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={handleSearch}
+                      className="flex items-center gap-2 px-8 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded shadow-md transition-all active:scale-95 whitespace-nowrap"
+                    >
+                      {searching ? <RotateCcw size={14} className="animate-spin" /> : <div className="w-2 h-2 bg-red-500 rounded-full" />}
+                      Search
+                    </button>
+                    <button 
+                      onClick={handleSearch}
+                      className="flex items-center gap-2 px-8 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[12px] font-bold rounded shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                    >
+                      <div className="w-2 h-2 bg-red-500 rounded-full" />
+                      Search Details
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-2"><Label>Model Filter</Label></div>
+                  <div className="col-span-2"><Label>Model Name :</Label></div>
                   <div className="col-span-10">
                     <Select 
-                      options={['Model 1', 'Model 2', 'Model 3']} 
+                      options={Array.from(new Set(data.map(r => r.model).filter(Boolean)))} 
                       placeholder="--- All Models ---" 
-                      value={modelFilter}
-                      onChange={e => setModelFilter(e.target.value)}
+                      value={modelName}
+                      onChange={e => setModelName(e.target.value)}
                     />
                   </div>
                 </div>

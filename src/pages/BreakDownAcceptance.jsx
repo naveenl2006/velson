@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import {
-  ChevronRight, X, Download, FileSpreadsheet, FileJson, Filter, Settings, Wrench, CheckCircle2, RotateCcw, Trash2, Search
+  ChevronRight, X, Download, FileSpreadsheet, FileText, Filter, Settings, Search, CheckCircle2, RotateCcw, Printer
 } from 'lucide-react'
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
-  <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider whitespace-nowrap">
+  <label className="block text-[11px] font-bold text-slate-500 mb-0 uppercase tracking-wider whitespace-nowrap">
     {children}
   </label>
 )
@@ -13,7 +13,6 @@ const Label = ({ children }) => (
 export default function BreakDownAcceptance() {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('velson_breakdowns') || '[]')
@@ -21,137 +20,94 @@ export default function BreakDownAcceptance() {
     setFilteredData(saved)
   }, [])
 
-  const handleRefresh = () => {
-    setLoading(true)
-    setTimeout(() => {
-      const saved = JSON.parse(localStorage.getItem('velson_breakdowns') || '[]')
-      setData(saved)
-      setFilteredData(saved)
-      setLoading(false)
-    }, 600)
-  }
-
-  const handleAccept = (id) => {
-    const updated = data.map(r => r.id === id ? { ...r, status: 'Accepted' } : r)
-    setData(updated)
-    setFilteredData(updated)
-    localStorage.setItem('velson_breakdowns', JSON.stringify(updated))
-    alert('Ticket Accepted and Initialized.')
-  }
-
   return (
-    <div className="bg-[#f4f6f8] min-h-full pb-10">
-      <div className="px-6 py-6">
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black tracking-tight">
-          <span>Dashboard</span> <ChevronRight size={12} /> <span>Maintenance</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">Maintenance Acceptance Console</span>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[800px]">
+    <div className="bg-[#f1f5f9] min-h-screen">
+      <div className="p-4">
+        <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden flex flex-col min-h-[90vh]">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 bg-amber-500 rounded" />
-              <h2 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">Active Acceptance Queue</h2>
+          <div className="flex items-center justify-between border-b border-slate-300 bg-[#f8fafc] px-3 py-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-700 rounded-sm" />
+              <h2 className="text-[12px] font-bold text-slate-800 uppercase tracking-tight">BreakDown Acceptance</h2>
             </div>
-            <div className="flex gap-3">
-              <button onClick={handleRefresh} className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded-xl transition-all shadow-sm active:scale-95">
-                {loading ? <RotateCcw size={16} className="animate-spin" /> : <Search size={16} />}
-                Refresh Queue
-              </button>
-              <button onClick={() => window.history.back()} className="flex items-center gap-1.5 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-black rounded-xl transition-all shadow-sm">
-                <X size={18} strokeWidth={2.5} /> Close
+            
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => window.history.back()} className="flex items-center gap-1 px-3 py-1 border border-slate-200 bg-white text-slate-600 text-[11px] font-bold rounded shadow-sm hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95">
+                <X size={16} strokeWidth={3} /> Close
               </button>
             </div>
           </div>
 
-          <div className="p-8 flex-1 flex flex-col">
-            <div className="flex items-center justify-between mb-6 px-2">
-               <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
-                  <div className="w-1.5 h-4 bg-amber-500 rounded-full" />
-                  Staged Breakdown Tickets
-               </h3>
-               <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-3 py-1 rounded-full uppercase">{filteredData.length} Staged</span>
+          {/* Analytical Toolbar */}
+          <div className="flex items-center justify-end gap-6 bg-white border-b border-slate-200 px-4 py-2 text-slate-500">
+            <div className="flex items-center gap-1.5 border-r border-slate-200 pr-6">
+              <span className="text-[11px] font-bold">LS</span>
+              <input type="text" value="1" readOnly className="w-8 px-1 py-0.5 border border-slate-300 rounded text-center text-[#0097A7] font-black text-[12px]" />
             </div>
+            
+            <div className="flex items-center gap-4">
+              <button className="hover:text-slate-800 flex items-center gap-1 text-[11px] font-bold transition-colors">
+                <Printer size={14} className="text-slate-400" /> Dos
+              </button>
+              <button className="hover:text-emerald-600 flex items-center gap-1 text-[11px] font-bold transition-colors">
+                <FileSpreadsheet size={14} className="text-emerald-500" /> Excel
+              </button>
+              <button className="hover:text-rose-600 flex items-center gap-1 text-[11px] font-bold transition-colors">
+                <FileText size={14} className="text-rose-500" /> Pdf
+              </button>
+              <button className="hover:text-[#0097A7] flex items-center gap-1 text-[11px] font-bold transition-colors">
+                <Filter size={14} /> Filter
+              </button>
+              <button className="hover:text-[#0097A7] flex items-center gap-1 text-[11px] font-bold transition-colors">
+                <Settings size={14} /> Setting
+              </button>
+            </div>
+          </div>
 
-            <div className="flex-1 border border-slate-200 rounded-[2.5rem] overflow-hidden overflow-x-auto shadow-sm bg-white">
-              <table className="w-full text-left border-collapse min-w-[1600px]">
-                <thead className="bg-[#fcfdfe] text-[10px] uppercase text-slate-400 font-black border-b border-slate-200">
+          {/* High-Density Table */}
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-left border-collapse min-w-[1800px]">
+              <thead className="bg-[#f8fafc] text-[10px] uppercase text-slate-500 font-bold border-b border-slate-300 sticky top-0 z-10">
+                <tr className="divide-x divide-slate-300">
+                  <th className="px-2 py-1.5 w-12 text-center">S.No</th>
+                  <th className="px-3 py-1.5">Machine Name</th>
+                  <th className="px-3 py-1.5">Item Name</th>
+                  <th className="px-3 py-1.5">Description</th>
+                  <th className="px-3 py-1.5 text-center w-40">Date</th>
+                  <th className="px-3 py-1.5">Problem</th>
+                  <th className="px-3 py-1.5">Action Taken</th>
+                  <th className="px-3 py-1.5">Remark</th>
+                  <th className="px-3 py-1.5">Reported By</th>
+                  <th className="px-3 py-1.5">Solved By</th>
+                  <th className="px-3 py-1.5 text-center w-40">Solved Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-[12px]">
+                {filteredData.length === 0 ? (
                   <tr>
-                    <th className="px-6 py-5 border-r border-slate-100 w-16 text-center">#</th>
-                    <th className="px-6 py-5 border-r border-slate-100">MWR Ticket</th>
-                    <th className="px-6 py-5 border-r border-slate-100">Machine Unit</th>
-                    <th className="px-6 py-5 border-r border-slate-100">Problem Description</th>
-                    <th className="px-6 py-5 border-r border-slate-100">Reported By</th>
-                    <th className="px-6 py-5 border-r border-slate-100 text-center">Severity</th>
-                    <th className="px-6 py-5 border-r border-slate-100 text-center">Current Status</th>
-                    <th className="px-6 py-5 text-center w-32">Acceptance</th>
+                    <td colSpan={11} className="py-24 text-center text-slate-300 italic uppercase font-black text-[10px] tracking-widest opacity-40">
+                      No tickets staged in acceptance queue
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 text-[13px]">
-                  {filteredData.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-24 text-center text-slate-300 italic">
-                         <CheckCircle2 size={80} className="mx-auto mb-4 opacity-10" />
-                         No tickets awaiting acceptance.
-                      </td>
+                ) : (
+                  filteredData.map((row, idx) => (
+                    <tr key={row.id} className="h-9 hover:bg-amber-50/40 transition-colors divide-x divide-slate-100 group">
+                      <td className="px-2 py-1 text-center text-slate-300 font-bold">{idx + 1}</td>
+                      <td className="px-3 py-1 font-bold text-[#0097A7] uppercase">{row.machineName}</td>
+                      <td className="px-3 py-1 font-semibold text-slate-700">{row.partNo}</td>
+                      <td className="px-3 py-1 text-slate-500">{row.processStage}</td>
+                      <td className="px-3 py-1 text-center text-slate-400 font-medium">{row.date}</td>
+                      <td className="px-3 py-1 text-slate-600 italic">{row.problemDescription}</td>
+                      <td className="px-3 py-1 text-slate-500">-</td>
+                      <td className="px-3 py-1 text-slate-500">-</td>
+                      <td className="px-3 py-1 font-bold text-slate-400 uppercase text-[10px]">{row.reportedBy}</td>
+                      <td className="px-3 py-1 text-slate-400">-</td>
+                      <td className="px-3 py-1 text-center text-slate-300">N/A</td>
                     </tr>
-                  ) : (
-                    filteredData.map((row, idx) => (
-                      <tr key={row.id} className="hover:bg-amber-50/30 transition-colors h-16 group">
-                        <td className="px-6 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
-                        <td className="px-6 py-2 border-r border-slate-50 font-black text-[#0097A7]">{row.mwrNo}</td>
-                        <td className="px-6 py-2 border-r border-slate-50 font-bold text-slate-700 uppercase tracking-tight">{row.machineName}</td>
-                        <td className="px-6 py-2 border-r border-slate-50 text-slate-500 max-w-xs truncate">{row.problemDescription}</td>
-                        <td className="px-6 py-2 border-r border-slate-50 font-black text-slate-400 uppercase text-[10px]">{row.reportedBy}</td>
-                        <td className="px-6 py-2 border-r border-slate-50 text-center">
-                           <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                row.priority.includes('Major') ? 'bg-rose-100 text-rose-600' : 
-                                row.priority.includes('Critical') ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'
-                              }`}>
-                                {row.priority || 'Standard'}
-                           </span>
-                        </td>
-                        <td className="px-6 py-2 border-r border-slate-50 text-center">
-                           <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                             row.status === 'Accepted' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
-                           }`}>
-                             {row.status}
-                           </span>
-                        </td>
-                        <td className="px-6 py-2 text-center">
-                          {row.status !== 'Accepted' ? (
-                            <button onClick={() => handleAccept(row.id)} className="px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[10px] font-black rounded-lg shadow-md transition-all uppercase tracking-widest active:scale-95">
-                               Accept
-                            </button>
-                          ) : (
-                            <CheckCircle2 size={20} className="text-green-500 mx-auto" />
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Dark Summary Footer */}
-            <div className="mt-8 bg-slate-900 rounded-[2rem] p-10 flex items-center justify-between shadow-2xl relative overflow-hidden border border-slate-800">
-               <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent pointer-events-none" />
-               <div className="flex items-center gap-20 relative z-10">
-                  <div>
-                    <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.4em] mb-2">Total Queue Depth</p>
-                    <p className="text-[32px] font-black text-white leading-none">{filteredData.length}</p>
-                  </div>
-                  <div className="w-[1px] h-12 bg-white/10" />
-                  <div>
-                    <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.4em] mb-2">SLA Compliance</p>
-                    <p className="text-[32px] font-black text-amber-500 leading-none">94.2%</p>
-                  </div>
-               </div>
-               <div className="text-right relative z-10">
-                  <p className="text-white/20 text-[11px] font-black uppercase tracking-widest italic">Authorization Required for Escalation</p>
-               </div>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

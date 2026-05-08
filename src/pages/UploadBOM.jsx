@@ -48,6 +48,7 @@ export default function UploadBOM() {
   })
 
   const [assemblyList, setAssemblyList] = useState([])
+  const [selectedParts, setSelectedParts] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -79,6 +80,7 @@ export default function UploadBOM() {
       fileName: ''
     })
     setAssemblyList([])
+    setSelectedParts([])
   }
 
   return (
@@ -117,7 +119,7 @@ export default function UploadBOM() {
                 </div>
 
                 <div className="grid grid-cols-12 items-center gap-4">
-                  <div className="col-span-3"><Label required>Model ID</Label></div>
+                  <div className="col-span-3"><Label required>Model No</Label></div>
                   <div className="col-span-6"><Input placeholder="Search Model No..." value={form.modelNo} onChange={u('modelNo')} /></div>
                   <div className="col-span-3">
                     <button className="w-full flex items-center justify-center gap-2 px-3 py-[7px] bg-[#0097A7]/10 hover:bg-[#0097A7]/20 text-[#0097A7] text-[11px] font-bold rounded-lg border border-[#0097A7]/20 transition-all shadow-sm active:scale-95">
@@ -127,7 +129,7 @@ export default function UploadBOM() {
                 </div>
 
                 <div className="grid grid-cols-12 items-center gap-4">
-                  <div className="col-span-3"><Label required>Assy No</Label></div>
+                  <div className="col-span-3"><Label required>Assembly Part No</Label></div>
                   <div className="col-span-6"><Input placeholder="Enter Assembly Part..." value={form.assemblyPartNo} onChange={u('assemblyPartNo')} /></div>
                   <div className="col-span-3">
                     <button 
@@ -136,18 +138,18 @@ export default function UploadBOM() {
                       className="w-full flex items-center justify-center gap-2 px-3 py-[7px] bg-[#0097A7] hover:bg-[#007a87] text-white text-[11px] font-bold rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50"
                     >
                       {isProcessing ? <RotateCcw size={14} className="animate-spin" /> : <Upload size={14} />}
-                      Process
+                      Upload
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 items-center gap-4 pt-2 border-t border-slate-100">
-                  <div className="col-span-3"><Label>Local Path</Label></div>
+                  <div className="col-span-3"><Label>File Location</Label></div>
                   <div className="col-span-9"><Input placeholder="Paste directory path here..." value={form.fileLocation} onChange={u('fileLocation')} /></div>
                 </div>
 
                 <div className="grid grid-cols-12 items-center gap-4">
-                  <div className="col-span-3"><Label required>File Select</Label></div>
+                  <div className="col-span-3"><Label required>File Name</Label></div>
                   <div className="col-span-9"><Select options={['Specification_A.xlsx', 'Specification_B.xlsx']} value={form.fileName} onChange={u('fileName')} placeholder="Choose File Source" /></div>
                 </div>
               </div>
@@ -155,11 +157,11 @@ export default function UploadBOM() {
               {/* Status Counters */}
               <div className="grid grid-cols-2 gap-4">
                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                   <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Loaded Count</p>
+                   <p className="text-[10px] font-black text-slate-400 uppercase mb-1">BOM Upload Count</p>
                    <p className="text-[24px] font-black text-[#0097A7]">{assemblyList.length}</p>
                  </div>
                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                   <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Pending Check</p>
+                   <p className="text-[10px] font-black text-slate-400 uppercase mb-1">BOM Un Upload Count</p>
                    <p className="text-[24px] font-black text-rose-500">0</p>
                  </div>
               </div>
@@ -193,8 +195,19 @@ export default function UploadBOM() {
                   ) : (
                     <div className="absolute inset-0 overflow-y-auto p-4 bg-white">
                       <table className="w-full text-left border-collapse">
-                        <thead className="bg-slate-50 text-[10px] uppercase text-slate-400 font-bold border-b border-slate-100 sticky top-0">
+                        <thead className="bg-slate-50 text-[10px] uppercase text-slate-400 font-bold border-b border-slate-100 sticky top-0 z-10">
                           <tr>
+                            <th className="px-4 py-3 w-12 text-center">
+                              <input 
+                                type="checkbox" 
+                                checked={selectedParts.length === assemblyList.length && assemblyList.length > 0}
+                                onChange={(e) => {
+                                  if (e.target.checked) setSelectedParts(assemblyList.map(item => item.id))
+                                  else setSelectedParts([])
+                                }}
+                                className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
+                              />
+                            </th>
                             <th className="px-4 py-3 w-12 text-center">#</th>
                             <th className="px-4 py-3">Part Number</th>
                             <th className="px-4 py-3">Description</th>
@@ -204,7 +217,18 @@ export default function UploadBOM() {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                           {assemblyList.map((item, idx) => (
-                            <tr key={item.id} className="hover:bg-[#0097A7]/5 transition-colors group h-12">
+                            <tr key={item.id} className={`${selectedParts.includes(item.id) ? 'bg-[#0097A7]/5' : 'hover:bg-[#0097A7]/5'} transition-colors group h-12`}>
+                              <td className="px-4 py-2 text-center">
+                                <input 
+                                  type="checkbox" 
+                                  checked={selectedParts.includes(item.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) setSelectedParts(s => [...s, item.id])
+                                    else setSelectedParts(s => s.filter(id => id !== item.id))
+                                  }}
+                                  className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
+                                />
+                              </td>
                               <td className="px-4 py-2 text-center text-slate-300 font-bold">{idx + 1}</td>
                               <td className="px-4 py-2 font-black text-[#0097A7]">{item.part}</td>
                               <td className="px-4 py-2 font-semibold text-slate-600 uppercase text-[11px]">{item.desc}</td>
