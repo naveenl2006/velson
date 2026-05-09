@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Search, Printer, X, Calendar, Download, FileSpreadsheet, FileJson, RotateCcw } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
@@ -26,6 +27,7 @@ const SAMPLE_MONTHLY = [
 ]
 
 export default function MonthlyLedgerBalance() {
+  const toast = useToast()
   const [fromDate, setFromDate] = useState('2026-04-01')
   const [toDate, setToDate] = useState('2027-03-30')
   const [acName, setAcName] = useState('Sales A/C')
@@ -33,7 +35,7 @@ export default function MonthlyLedgerBalance() {
   const [searching, setSearching] = useState(false)
 
   const handleSearch = () => {
-    if (!acName) { alert('Enter A/C Name first'); return }
+    if (!acName) { toast.warning('Enter A/C Name first'); return }
     setSearching(true)
     setTimeout(() => {
       setReportData(SAMPLE_MONTHLY)
@@ -41,7 +43,7 @@ export default function MonthlyLedgerBalance() {
     }, 600)
   }
 
-  const handleExport = (t) => alert(`Exporting monthly report as ${t}...`)
+  const handleExport = (t) => toast.info(`Exporting monthly report as ${t}...`)
 
   const totalCredit = reportData.reduce((acc, r) => acc + parseFloat(r.credit), 0)
   const totalDebit = reportData.reduce((acc, r) => acc + parseFloat(r.debit), 0)
@@ -69,7 +71,7 @@ export default function MonthlyLedgerBalance() {
               <button onClick={() => window.print()} className="flex items-center gap-1.5 text-slate-500 hover:text-[#0097A7] text-[12px] font-bold transition-colors">
                 <Printer size={16} /> PrintData
               </button>
-              <button onClick={() => alert('Closing...')} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-[12px] font-bold transition-colors">
+              <button onClick={() => toast.info('Closing...')} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-[12px] font-bold transition-colors">
                 <X size={18} strokeWidth={2.5} /> Close
               </button>
             </div>

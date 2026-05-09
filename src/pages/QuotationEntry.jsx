@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Plus, Trash2, Send, X, RefreshCw } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 const CUSTOMERS = [
   'VENKATESWARA ASSOCIATES','M/S VELSON INHOUSE PRODUCTION','AJAY KUMAR',
@@ -26,6 +27,7 @@ const inp = (err='') =>
 const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 export default function QuotationEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     customerName: '', customerAddress: '', contactPerson: '', contactNumber: '',
     gstNumber: '', customerRef: '', currencyType: 'INR', exRate: '0',
@@ -74,7 +76,7 @@ export default function QuotationEntry() {
   const taxAmt   = afterDisc * (parseFloat(taxPercent) || 0) / 100
   const totalAmt = afterDisc + taxAmt + freight + pack
 
-  const handleSubmit = () => alert('Quotation submitted!')
+  const handleSubmit = () => toast.success('Quotation submitted!')
   const handleCancel = () => {
     setForm({ customerName:'', customerAddress:'', contactPerson:'', contactNumber:'', gstNumber:'', customerRef:'', currencyType:'INR', exRate:'0', showTotalsGrid:false, model:'', quotationNumber:genQuotNum(), quotationDate:today, validityUntil:'', revisionNumber:'0', quotationType:'', taxType:'', discountType:'Dis_Per' })
     setItems([emptyItem()])

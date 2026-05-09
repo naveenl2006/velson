@@ -4,6 +4,7 @@ import {
   X, Download, FileSpreadsheet, FileJson, Filter, Settings 
 } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives (Consistent with Item Master & Receipt Entry) ──
 const Label = ({ children, required }) => (
@@ -24,6 +25,7 @@ const Input = ({ placeholder, value, onChange, type = 'text', className = "" }) 
 )
 
 export default function ReceiptDetails() {
+  const toast = useToast()
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [data, setData] = useState([])
@@ -57,7 +59,7 @@ export default function ReceiptDetails() {
   }
 
   const handleExport = (type) => {
-    alert(`Exporting ${filteredData.length} records as ${type}...`)
+    toast.info(`Exporting ${filteredData.length} records as ${type}...`)
   }
 
   return (
@@ -87,10 +89,10 @@ export default function ReceiptDetails() {
             </div>
             <div className="flex items-center gap-2">
               {[
-                { label: 'Edit',      icon: <Edit2 size={14} />,   bg: 'bg-green-500', action: () => selectedId ? alert(`Editing ID: ${selectedId}`) : alert('Select a row first') },
-                { label: 'Delete',    icon: <Trash2 size={14} />,  bg: 'bg-rose-500',  action: () => selectedId ? setConfirmDelete({ open: true, id: selectedId }) : alert('Select a row first') },
-                { label: 'PrintData', icon: <Printer size={14} />, bg: 'bg-slate-700', action: () => alert('Printing data...') },
-                { label: 'Close',     icon: <X size={14} />,       bg: 'bg-slate-400',  action: () => alert('Closing page...') },
+                { label: 'Edit',      icon: <Edit2 size={14} />,   bg: 'bg-green-500', action: () => selectedId ? toast.info(`Editing ID: ${selectedId}`) : toast.warning('Select a row first') },
+                { label: 'Delete',    icon: <Trash2 size={14} />,  bg: 'bg-rose-500',  action: () => selectedId ? setConfirmDelete({ open: true, id: selectedId }) : toast.warning('Select a row first') },
+                { label: 'PrintData', icon: <Printer size={14} />, bg: 'bg-slate-700', action: () => toast.info('Printing data...') },
+                { label: 'Close',     icon: <X size={14} />,       bg: 'bg-slate-400',  action: () => toast.info('Closing page...') },
               ].map(btn => (
                 <button 
                   key={btn.label} 

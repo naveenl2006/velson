@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Upload, Search, Download, X, Trash2, FileSpreadsheet, RotateCcw } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -39,6 +40,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 )
 
 export default function UploadBOM() {
+  const toast = useToast()
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     modelNo: '',
@@ -55,7 +57,7 @@ export default function UploadBOM() {
 
   const handleProcess = () => {
     if (!form.modelNo || !form.fileName) {
-      alert('Required: Model No and File Name.')
+      toast.warning('Required: Model No and File Name.')
       return
     }
     setIsProcessing(true)
@@ -67,7 +69,7 @@ export default function UploadBOM() {
       ]
       setAssemblyList(mockItems)
       setIsProcessing(false)
-      alert('BOM File Processed Successfully!')
+      toast.success('BOM File Processed Successfully!')
     }, 800)
   }
 

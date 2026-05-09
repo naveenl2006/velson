@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Plus, Trash2, Send, X } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 const SUPPLIERS = [
   'VENKATESWARA ASSOCIATES','M/S VELSON INHOUSE PRODUCTION','AJAY KUMAR',
@@ -26,6 +27,7 @@ const inp = (err='') =>
 const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 export default function PurchaseOrderEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     supplierName: '', supplierAddress: '', contactPerson: '', contactNumber: '',
     createdBy: '', gstNo: '', supplierRefNumber: '', showTotalsGrid: false,
@@ -93,7 +95,7 @@ export default function PurchaseOrderEntry() {
     (parseFloat(sgstAmt) || 0) +
     (parseFloat(igstAmt) || 0)
 
-  const handleSubmit = () => alert('Purchase Order submitted!')
+  const handleSubmit = () => toast.success('Purchase Order submitted!')
   const handleCancel = () => {
     setForm({
       supplierName:'', supplierAddress:'', contactPerson:'', contactNumber:'',

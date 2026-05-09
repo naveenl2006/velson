@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Save, ChevronRight, Plus, Trash2, RotateCcw } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives (Styling from Item Master) ────────────────
 const Label = ({ children, required }) => (
@@ -45,6 +46,7 @@ const emptyRow = () => ({
 })
 
 export default function PaymentEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     paymentType: 'PAYMENT',
     paymentNo: 'P-' + Math.floor(Math.random() * 9000 + 1000),
@@ -90,13 +92,13 @@ export default function PaymentEntry() {
 
   const handleSave = () => {
     if (!form.partyName || !form.amount) {
-      alert('Please fill Party Name and Amount.')
+      toast.warning('Please fill Party Name and Amount.')
       return
     }
     const payment = { ...form, rows, id: Date.now() }
     const existing = JSON.parse(localStorage.getItem('velson_payments') || '[]')
     localStorage.setItem('velson_payments', JSON.stringify([...existing, payment]))
-    alert('Payment Saved to LocalStorage Successfully!')
+    toast.success('Payment Saved to LocalStorage Successfully!')
     handleClear()
   }
 

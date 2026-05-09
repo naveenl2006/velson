@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { ChevronRight, Database, Copy, CheckCircle, AlertCircle, Loader } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 export default function DBCopy(){
+  const toast = useToast()
   const [form,setForm]=useState({SourceDatabase:'velson_erp',DestinationPath:'',BackupFileName:'',IncludeData:true})
   const [status,setStatus]=useState(null) // null | 'running' | 'success' | 'error'
   const [log,setLog]=useState([])
@@ -9,7 +11,7 @@ export default function DBCopy(){
   const sf=(k,v)=>setForm(f=>({...f,[k]:v}))
 
   const handleCopy=()=>{
-    if(!form.DestinationPath.trim()){alert('Please enter a destination path.');return}
+    if(!form.DestinationPath.trim()){toast.warning('Please enter a destination path.');return}
     setStatus('running')
     const ts=new Date().toLocaleTimeString()
     const fname=form.BackupFileName||`${form.SourceDatabase}_backup_${new Date().toISOString().slice(0,10)}.sql`

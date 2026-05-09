@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Save, X, RotateCcw, Trash2, Plus } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives (Consistent with Item Master & Receipt Entry) ──
 const Label = ({ children, required }) => (
@@ -45,6 +46,7 @@ const emptyRow = () => ({
 })
 
 export default function VoucherEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     tempVoucher: 'TV-' + Math.floor(Math.random() * 900 + 100),
     voucherType: '',
@@ -76,13 +78,13 @@ export default function VoucherEntry() {
 
   const handleSave = () => {
     if (!form.voucherType || rows.every(r => !r.amt)) {
-      alert('Please select Voucher Type and add amount.')
+      toast.warning('Please select Voucher Type and add amount.')
       return
     }
     const voucher = { ...form, rows, id: Date.now() }
     const existing = JSON.parse(localStorage.getItem('velson_vouchers') || '[]')
     localStorage.setItem('velson_vouchers', JSON.stringify([...existing, voucher]))
-    alert('Voucher Saved to LocalStorage Successfully!')
+    toast.success('Voucher Saved to LocalStorage Successfully!')
     handleCancel()
   }
 

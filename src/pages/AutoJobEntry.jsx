@@ -3,6 +3,7 @@ import {
   ChevronRight, X, Search, FileText, LayoutGrid, Calendar, Camera, CheckCircle2, Play,
   Plus, RotateCcw, Package, ClipboardList, Database, FileSpreadsheet, Save, Trash2, Eraser, Edit, Filter, Settings, Printer
 } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const TableLabel = ({ children, className = "" }) => (
@@ -65,6 +66,7 @@ const ActionButton = ({ onClick, children, className = "", color = "slate" }) =>
 }
 
 export default function AutoJobEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     jobNo: '77',
     model: 'Model B',
@@ -92,7 +94,7 @@ export default function AutoJobEntry() {
     const updated = [entry, ...saved]
     localStorage.setItem('velson_production_jobs', JSON.stringify(updated))
     setJobs(updated)
-    alert('Job registered.')
+    toast.success('Job registered.')
   }
 
   return (

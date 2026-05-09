@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { 
-  X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, 
-  Settings, Database, Timer, Workflow 
+import {
+  X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight,
+  Settings, Database, Timer, Workflow
 } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -53,6 +54,7 @@ const empty = {
 }
 
 export default function ProcessMaster() {
+  const toast = useToast()
   const [rows, setRows] = useState([])
   const [form, setForm] = useState({ ...empty })
   const [editId, setEditId] = useState(null)
@@ -67,7 +69,7 @@ export default function ProcessMaster() {
 
   const handleSave = () => {
     if (!form.PM_Process_Name) {
-      alert('Process Name is required.')
+      toast.warning('Process Name is required.')
       return
     }
     setIsSaving(true)
@@ -81,7 +83,7 @@ export default function ProcessMaster() {
       localStorage.setItem('velson_process_master', JSON.stringify(updated))
       setRows(updated)
       setIsSaving(false)
-      alert(editId ? 'Process Updated.' : 'New Process Defined.')
+      toast.success(editId ? 'Process Updated.' : 'New Process Defined.')
       handleClear()
     }, 600)
   }

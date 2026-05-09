@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Search, Send, X } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 const SUPPLIERS = ['VENKATESWARA ASSOCIATES','APS ENTERPRISES','SM DRILLING COMPANY','ABHISHEK SONI','AJAY KUMAR']
 const today = new Date().toISOString().split('T')[0]
@@ -10,6 +11,7 @@ const inp = (err='') => `w-full border rounded px-2 py-1 text-[12.5px] focus:out
 const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 export default function GateEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     poNo:'', prqNo:'', supplierName:'', supplierAddress:'',
     gateNo:'', carrierName:'', vehicleNo:'', user:'superadmin',
@@ -149,7 +151,7 @@ export default function GateEntry() {
             <textarea rows={2} value={remarks} onChange={e=>setRemarks(e.target.value)} className="flex-1 border border-slate-300 rounded px-2 py-1 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-[#0097A7] resize-none bg-white"/>
           </div>
           <div className="flex gap-2 justify-center pt-1">
-            <button onClick={()=>alert('Gate Entry submitted!')} className="flex items-center gap-1 px-5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-semibold rounded transition-colors shadow-sm"><Send className="w-3.5 h-3.5"/> Submit</button>
+            <button onClick={()=>toast.success('Gate Entry submitted!')} className="flex items-center gap-1 px-5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-semibold rounded transition-colors shadow-sm"><Send className="w-3.5 h-3.5"/> Submit</button>
             <button className="flex items-center gap-1 px-5 py-1.5 bg-slate-500 hover:bg-slate-600 text-white text-[12px] font-semibold rounded transition-colors shadow-sm"><X className="w-3.5 h-3.5"/> Cancel</button>
           </div>
         </div>
