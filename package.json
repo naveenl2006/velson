@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://naveenl2006.github.io/velson",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
