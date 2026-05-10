@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, RefreshCw, CheckCircle, AlertCircle, ShoppingCart } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 const SUPPLIERS=['ABC Supplies Pvt Ltd','XYZ Components Ltd','PQR Raw Materials Co.','DEF Industrial Supplies']
 
@@ -11,6 +12,7 @@ const LOW_STOCK=[
 ]
 
 export default function AutoPO(){
+  const toast = useToast()
   const [items,setItems]=useState(LOW_STOCK)
   const [approved,setApproved]=useState([])
   const [generated,setGenerated]=useState(false)
@@ -19,7 +21,7 @@ export default function AutoPO(){
 
   const handleGeneratePO=()=>{
     const selected=items.filter(i=>i.SupplierId)
-    if(!selected.length){alert('Please select a supplier for at least one item.');return}
+    if(!selected.length){toast.warning('Please select a supplier for at least one item.');return}
     setApproved(selected)
     setGenerated(true)
   }

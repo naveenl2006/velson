@@ -92,73 +92,28 @@ import SalesDetails from './pages/SalesDetails'
 import QuotationSales from './pages/QuotationSales'
 import DCSales from './pages/DCSales'
 
+import DrawingUpload from './pages/DrawingUpload'
+import JobCardEntry from './pages/JobCardEntry'
+import ProcessMenu from './pages/ProcessMenu'
+import TechAutoJobEntry from './pages/TechAutoJobEntry'
+import ViewJobStatus from './pages/ViewJobStatus'
+import WaitingForApproval from './pages/WaitingForApproval'
+import UpdateRouteDetails from './pages/UpdateRouteDetails'
+import RejectedJobList from './pages/RejectedJobList'
+import ProcessCompleted from './pages/ProcessCompleted'
+import FileUploads from './pages/FileUploads'
+import MRApproval from './pages/MRApproval'
+import JobEntryClosed from './pages/JobEntryClosed'
+import JobCardCancel from './pages/JobCardCancel'
+import IPRApproval from './pages/IPRApproval'
+import JobQtyMismatch from './pages/JobQtyMismatch'
+import ProcessCardClose from './pages/ProcessCardClose'
+import JobQCEntry from './pages/JobQCEntry'
 import DCDetails from './pages/DCDetails'
 import ServiceBillEntry from './pages/ServiceBillEntry'
 import ServiceBillDetails from './pages/ServiceBillDetails'
 import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
 import TempServiceBillDetails from './pages/TempServiceBillDetails'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const PAGES = {
   Dashboard:      <DashboardPage />,
@@ -259,68 +214,25 @@ const PAGES = {
   ServiceBillDetails: <ServiceBillDetails />,
   ServiceLabourBillDetails: <ServiceLabourBillDetails />,
   TempServiceBillDetails: <TempServiceBillDetails />,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  DrawingUpload: <DrawingUpload />,
+  JobCardEntry: <JobCardEntry />,
+  ProcessMenu: <ProcessMenu />,
+  TechAutoJobEntry: <TechAutoJobEntry />,
+  ViewJobStatus: <ViewJobStatus />,
+  WaitingForApproval: <WaitingForApproval />,
+  UpdateRouteDetails: <UpdateRouteDetails />,
+  RejectedJobList: <RejectedJobList />,
+  ProcessCompleted: <ProcessCompleted />,
+  FileUploads: <FileUploads />,
+  MRApproval: <MRApproval />,
+  NCJobCreated: <NCJobCreated />,
+  NCApproval: <NCApproval />,
+  JobEntryClosed: <JobEntryClosed />,
+  JobCardCancel: <JobCardCancel />,
+  IPRApproval: <IPRApproval />,
+  JobQtyMismatch: <JobQtyMismatch />,
+  ProcessCardClose: <ProcessCardClose />,
+  JobQCEntry: <JobQCEntry />,
 }
 
 export default function App() {

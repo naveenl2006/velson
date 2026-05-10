@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Save, X, Database, FileText, RotateCcw, Search, Plus } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -39,6 +40,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 )
 
 export default function MainIndex() {
+  const toast = useToast()
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     no: 'IDX-' + Math.floor(Math.random() * 9000 + 1000),
@@ -64,7 +66,7 @@ export default function MainIndex() {
 
   const handleLoadParts = () => {
     if (!form.bomModelNo) {
-      alert('Select BOM Model No first.')
+      toast.warning('Select BOM Model No first.')
       return
     }
     setIsLoading(true)
@@ -80,13 +82,13 @@ export default function MainIndex() {
 
   const handleSave = () => {
     if (!form.customerName || !form.serialJobNo) {
-      alert('Required: Customer and Job No.')
+      toast.warning('Required: Customer and Job No.')
       return
     }
     const entry = { ...form, childParts, id: Date.now() }
     const existing = JSON.parse(localStorage.getItem('velson_bom_main_index') || '[]')
     localStorage.setItem('velson_bom_main_index', JSON.stringify([entry, ...existing]))
-    alert('Main Index Entry Saved Successfully!')
+    toast.success('Main Index Entry Saved Successfully!')
     handleReset()
   }
 

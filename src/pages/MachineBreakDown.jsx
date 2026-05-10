@@ -4,6 +4,7 @@ import {
   FileSpreadsheet, ChevronUp, Wrench, AlertTriangle, User, Calendar,
   RotateCcw, Plus, Activity, RefreshCw
 } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -72,6 +73,7 @@ const ActionButton = ({ onClick, children, className = "", color = "slate" }) =>
 }
 
 export default function MachineBreakDown() {
+  const toast = useToast()
   const [form, setForm] = useState({
     machineName: '',
     jobCardNo: '',
@@ -96,7 +98,7 @@ export default function MachineBreakDown() {
     localStorage.setItem('velson_breakdowns', JSON.stringify(updated))
     setBreakdowns(updated)
     handleReset()
-    alert('Breakdown ticket registered.')
+    toast.success('Breakdown ticket registered.')
   }
 
   const handleReset = () => {

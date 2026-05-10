@@ -3,6 +3,7 @@ import {
   ChevronRight, Search, Printer, X, Download, FileSpreadsheet, 
   FileJson, Filter, Settings, RotateCcw
 } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -49,6 +50,7 @@ const SEED_OUTSTANDING = [
 ]
 
 export default function OutstandingReceiptReport() {
+  const toast = useToast()
   const [asOnDate, setAsOnDate] = useState('')
   const [group, setGroup] = useState('Sundry Debtors')
   const [reportData, setReportData] = useState([])
@@ -66,7 +68,7 @@ export default function OutstandingReceiptReport() {
     }, 600)
   }
 
-  const handleExport = (t) => alert(`Exporting outstanding report as ${t}...`)
+  const handleExport = (t) => toast.info(`Exporting outstanding report as ${t}...`)
 
   const totalBillAmt = reportData.reduce((acc, r) => acc + parseFloat(r.billAmt), 0)
   const totalBalance = reportData.reduce((acc, r) => acc + parseFloat(r.balance), 0)
@@ -108,7 +110,7 @@ export default function OutstandingReceiptReport() {
                     </button>
                   ))}
                </div>
-              <button onClick={() => alert('Closing...')} className="flex items-center gap-1.5 text-slate-400 hover:text-red-600 px-3 py-1.5 text-[11px] font-bold transition-all border-l border-slate-200 ml-1">
+              <button onClick={() => toast.info('Closing...')} className="flex items-center gap-1.5 text-slate-400 hover:text-red-600 px-3 py-1.5 text-[11px] font-bold transition-all border-l border-slate-200 ml-1">
                 <X size={18} strokeWidth={2.5} /> Close
               </button>
             </div>

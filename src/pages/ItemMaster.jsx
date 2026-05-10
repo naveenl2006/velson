@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Package, Store, Settings, Paperclip } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ─────────────────────────────────────────
 const Label = ({ children, required }) => (
@@ -119,6 +120,7 @@ const emptyForm = {
 const requiredFields = ['GroupName', 'IM_Part_No', 'IM_PartName', 'UnitName', 'ItemTypeName', 'QcTypeId']
 
 export default function ItemMaster() {
+  const toast = useToast()
   const [form, setForm] = useState(emptyForm)
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -133,8 +135,8 @@ export default function ItemMaster() {
 
   const handleCreate = () => {
     const missing = requiredFields.filter(k => !form[k])
-    if (missing.length) { alert('Please fill required fields: ' + missing.join(', ')); return }
-    alert('Item Created!\n' + JSON.stringify(form, null, 2))
+    if (missing.length) { toast.warning('Please fill required fields: ' + missing.join(', ')); return }
+    toast.success('Item Created Successfully!')
   }
 
   const completedCount = requiredFields.filter(k => form[k]).length

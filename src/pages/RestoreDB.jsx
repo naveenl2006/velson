@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { ChevronRight, UploadCloud, RotateCcw, CheckCircle, AlertCircle, Loader, ShieldAlert } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 export default function RestoreDB(){
+  const toast = useToast()
   const [form,setForm]=useState({BackupFile:null,BackupFileName:'',TargetDatabase:'velson_erp',OverwriteExisting:false})
   const [status,setStatus]=useState(null)
   const [log,setLog]=useState([])
@@ -10,9 +12,9 @@ export default function RestoreDB(){
   const sf=(k,v)=>setForm(f=>({...f,[k]:v}))
 
   const handleRestore=()=>{
-    if(!form.BackupFileName){alert('Please upload a backup file.');return}
-    if(!form.OverwriteExisting){alert('Please check "Overwrite Existing" to confirm you understand this is destructive.');return}
-    if(!confirmed){alert('Please confirm the restore operation by checking the confirmation box.');return}
+    if(!form.BackupFileName){toast.warning('Please upload a backup file.');return}
+    if(!form.OverwriteExisting){toast.warning('Please check "Overwrite Existing" to confirm you understand this is destructive.');return}
+    if(!confirmed){toast.warning('Please confirm the restore operation by checking the confirmation box.');return}
     setStatus('running')
     const ts=new Date().toLocaleTimeString()
     setLog([

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Save, Edit, Trash2, Info, ChevronRight } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 const TAX_LEDGERS = ['GST 0%', 'GST 5%', 'GST 7%', 'GST 12%', 'GST 18%', 'GST 28%', 'GST 30%']
 
@@ -53,6 +54,7 @@ function DetailModal({ row, onClose }) {
 }
 
 export default function TaxMaster() {
+  const toast = useToast()
   const [rows, setRows] = useState(SEED)
   const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState(null)
@@ -74,7 +76,7 @@ export default function TaxMaster() {
   }
 
   const handleCreate = () => {
-    if (!form.taxLedger) return alert('Tax Ledger A/C is required')
+    if (!form.taxLedger) return toast.warning('Tax Ledger A/C is required')
     if (editId !== null) {
       setRows(r => r.map(x => x.id === editId
         ? {
