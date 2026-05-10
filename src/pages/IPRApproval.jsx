@@ -1,87 +1,60 @@
 import { useState } from 'react'
-import { ChevronRight, Search, CheckCircle2, X, FileText } from 'lucide-react'
+import { ChevronRight, CheckCircle2, X } from 'lucide-react'
 import { useToast } from '../components/Toast'
 
-const TextInput = ({ value, onChange, className = '' }) => (
-  <input type="text" value={value} onChange={onChange}
-    className={`px-2 py-[3px] text-[12px] border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7] w-full ${className}`} />
-)
-
-const DateInput = ({ value, onChange }) => (
-  <input type="date" value={value} onChange={onChange}
-    className="px-2 py-[4px] text-[12px] border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7] w-36" />
-)
-
 const SEED = [
-  { sno: 1, jobNo: 41432, barcode: '2432/2026',   partNo: 'VGH-1002109', partName: 'V10 SOLAR MAST TILTING MOUNT BASE FRAME',        planDate: '15-04-2026', targetDate: '20-04-2026', vehicleType: 'V10',  qty: 1,  status: 'Pending' },
-  { sno: 2, jobNo: 41433, barcode: '052433/2026', partNo: 'VGH-1003450', partName: 'D50 HITACHI 210 HAND RAIL FRAME 1 COVER PLATE 1', planDate: '15-04-2026', targetDate: '20-04-2026', vehicleType: 'D50',  qty: 5,  status: 'Approved' },
-  { sno: 3, jobNo: 41434, barcode: '2434/2026',   partNo: 'VGH-1002457', partName: 'V10 7.7 MTR MASTER ARM PLATE TILTING SU',         planDate: '14-04-2026', targetDate: '19-04-2026', vehicleType: 'V10',  qty: 2,  status: 'Pending' },
-  { sno: 4, jobNo: 41435, barcode: '052435/2026', partNo: 'VGH-1003451', partName: 'D50 HITACHI 210 HAND RAIL FRAME 2 COVER PLATE 1', planDate: '14-04-2026', targetDate: '19-04-2026', vehicleType: 'D50',  qty: 3,  status: 'Pending' },
-  { sno: 5, jobNo: 41436, barcode: '2436/2026',   partNo: 'VGH-1003452', partName: 'D50 HITACHI 210 HAND RAIL FRAME 3 COVER PLATE 1', planDate: '13-04-2026', targetDate: '18-04-2026', vehicleType: 'D50',  qty: 1,  status: 'Approved' },
-  { sno: 6, jobNo: 41440, barcode: '2441/2026',   partNo: 'VGH-1001128', partName: '6MM SQUARE ROD-80MM',                             planDate: '13-04-2026', targetDate: '18-04-2026', vehicleType: 'MISC', qty: 100,status: 'Rejected' },
-  { sno: 7, jobNo: 41441, barcode: '2442/2026',   partNo: 'VG-21905',    partName: 'M1 YTYPE 110 BOTTOM OIL SEAL FLANGE',             planDate: '12-04-2026', targetDate: '17-04-2026', vehicleType: 'M1',   qty: 5,  status: 'Pending' },
+  { id:1,  reqNo:'23-24/PQ00001', reqDate:'21/03/2023', deptName:'ACCOUNTS',  requiredDate:'21/03/2023', createdUser:'purchase'  },
+  { id:2,  reqNo:'23-24/PQ00100', reqDate:'05/08/2023', deptName:'PARCEL',     requiredDate:'05/08/2023', createdUser:'PURCHASE'  },
+  { id:3,  reqNo:'23-24/PQ00106', reqDate:'09/08/2023', deptName:'PURCHASE',   requiredDate:'09/08/2023', createdUser:'PURCHASE'  },
+  { id:4,  reqNo:'23-24/PQ00110', reqDate:'16/08/2023', deptName:'PURCHASE',   requiredDate:'16/08/2023', createdUser:'PURCHASE'  },
+  { id:5,  reqNo:'23-24/PQ00111', reqDate:'16/08/2023', deptName:'PURCHASE',   requiredDate:'16/08/2023', createdUser:'PURCHASE'  },
+  { id:6,  reqNo:'23-24/PQ00117', reqDate:'16/09/2023', deptName:'PURCHASE',   requiredDate:'16/09/2023', createdUser:'purchase'  },
+  { id:7,  reqNo:'23-24/PQ00118', reqDate:'16/09/2023', deptName:'PURCHASE',   requiredDate:'16/09/2023', createdUser:'purchase'  },
+  { id:8,  reqNo:'23-24/PQ00119', reqDate:'16/09/2023', deptName:'PURCHASE',   requiredDate:'16/09/2023', createdUser:'purchase'  },
+  { id:9,  reqNo:'23-24/PQ00131', reqDate:'05/12/2023', deptName:'PURCHASE',   requiredDate:'05/12/2023', createdUser:'purchase1' },
+  { id:10, reqNo:'23-24/PQ00132', reqDate:'05/12/2023', deptName:'PURCHASE',   requiredDate:'05/12/2023', createdUser:'purchase1' },
+  { id:11, reqNo:'23-24/PQ00137', reqDate:'18/12/2023', deptName:'PURCHASE',   requiredDate:'18/12/2023', createdUser:'purchase2' },
+  { id:12, reqNo:'23-24/PQ00138', reqDate:'19/12/2023', deptName:'PURCHASE',   requiredDate:'19/12/2023', createdUser:'PURCHASE1' },
+  { id:13, reqNo:'23-24/PQ00139', reqDate:'20/12/2023', deptName:'PURCHASE',   requiredDate:'20/12/2023', createdUser:'purchase1' },
+  { id:14, reqNo:'23-24/PQ00140', reqDate:'20/12/2023', deptName:'PURCHASE',   requiredDate:'20/12/2023', createdUser:'purchase2' },
+  { id:15, reqNo:'23-24/PQ00141', reqDate:'20/12/2023', deptName:'PURCHASE',   requiredDate:'20/12/2023', createdUser:'purchase2' },
+  { id:16, reqNo:'23-24/PQ00144', reqDate:'02/01/2024', deptName:'PURCHASE',   requiredDate:'02/01/2024', createdUser:'PURCHASE1' },
+  { id:17, reqNo:'23-24/PQ00183', reqDate:'22/03/2024', deptName:'MARKETING',  requiredDate:'22/03/2024', createdUser:'purchase1' },
+  { id:18, reqNo:'23-24/PQ00184', reqDate:'22/03/2024', deptName:'MARKETING',  requiredDate:'22/03/2024', createdUser:'purchase1' },
+  { id:19, reqNo:'24-25/PQ00078', reqDate:'25/07/2024', deptName:'PURCHASE',   requiredDate:'25/07/2024', createdUser:'purchase2' },
+  { id:20, reqNo:'25-26/PQ00097', reqDate:'30/07/2025', deptName:'PURCHASE',   requiredDate:'30/07/2025', createdUser:'purchase2' },
+  { id:21, reqNo:'25-26/PQ00156', reqDate:'19/09/2025', deptName:'PURCHASE',   requiredDate:'19/09/2025', createdUser:'purchase2' },
+  { id:22, reqNo:'25-26/PQ00157', reqDate:'19/09/2025', deptName:'PURCHASE',   requiredDate:'19/09/2025', createdUser:'purchase2' },
+  { id:23, reqNo:'25-26/PQ00162', reqDate:'20/09/2025', deptName:'PURCHASE',   requiredDate:'20/09/2025', createdUser:'purchase2' },
+  { id:24, reqNo:'25-26/PQ00176', reqDate:'10/10/2025', deptName:'PURCHASE',   requiredDate:'10/10/2025', createdUser:'purchase1' },
+  { id:25, reqNo:'25-26/PQ00177', reqDate:'10/10/2025', deptName:'PURCHASE',   requiredDate:'10/10/2025', createdUser:'purchase1' },
+  { id:26, reqNo:'25-26/PQ00178', reqDate:'10/10/2025', deptName:'PURCHASE',   requiredDate:'10/10/2025', createdUser:'purchase1' },
+  { id:27, reqNo:'25-26/PQ00184', reqDate:'14/10/2025', deptName:'PURCHASE',   requiredDate:'14/10/2025', createdUser:'purchase2' },
+  { id:28, reqNo:'25-26/PQ00257', reqDate:'08/01/2026', deptName:'PURCHASE',   requiredDate:'08/01/2026', createdUser:'purchase2' },
+  { id:29, reqNo:'25-26/PQ00279', reqDate:'30/01/2026', deptName:'PURCHASE',   requiredDate:'30/01/2026', createdUser:'purchase2' },
+  { id:30, reqNo:'25-26/PQ00322', reqDate:'05/03/2026', deptName:'PURCHASE',   requiredDate:'05/03/2026', createdUser:'purchase1' },
 ]
 
 const STORAGE_KEY = 'velson_pr_approval'
 
 export default function PRApproval() {
   const toast = useToast()
-  const today = new Date().toISOString().split('T')[0]
-
-  const [jobNumber,   setJobNumber]   = useState('')
-  const [planDate,    setPlanDate]    = useState('')
-  const [vehicleType, setVehicleType] = useState('')
-  const [targetDate,  setTargetDate]  = useState('')
-  const [partNo,      setPartNo]      = useState('')
-  const [qtyV,        setQtyV]        = useState('')
-  const [partName,    setPartName]    = useState('')
-  const [fromDate,    setFromDate]    = useState(today)
-  const [toDate,      setToDate]      = useState(today)
 
   const [rows, setRows] = useState(() => {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    return SEED.map(r => ({ ...r, status: saved[r.sno] || r.status }))
+    return SEED.map(r => ({ ...r, status: saved[r.id] || 'Pending' }))
   })
-  const [selectedRows, setSelectedRows] = useState(new Set())
-  const [selectAll, setSelectAll] = useState(false)
-
-  const handleSelectAll = (checked) => {
-    setSelectAll(checked)
-    setSelectedRows(checked ? new Set(rows.map((_, i) => i)) : new Set())
-  }
-
-  const handleRowSelect = (i, checked) => {
-    const next = new Set(selectedRows)
-    checked ? next.add(i) : next.delete(i)
-    setSelectedRows(next)
-    setSelectAll(next.size === rows.length)
-  }
+  const [selectedRow, setSelectedRow] = useState(1)
 
   const handleApprove = () => {
-    const targets = selectedRows.size > 0
-      ? [...selectedRows].filter(i => rows[i].status === 'Pending')
-      : rows.map((r, i) => r.status === 'Pending' ? i : -1).filter(i => i >= 0)
-    if (!targets.length) { toast.warning('No pending records to approve.'); return }
+    const target = rows.find(r => r.id === selectedRow)
+    if (!target) { toast.warning('Select a row to approve.'); return }
+    if (target.status !== 'Pending') { toast.info(`Already ${target.status}.`); return }
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    setRows(prev => prev.map((r, i) => {
-      if (targets.includes(i)) { saved[r.sno] = 'Approved'; return { ...r, status: 'Approved' } }
-      return r
-    }))
+    saved[selectedRow] = 'Approved'
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
-    setSelectedRows(new Set()); setSelectAll(false)
-    toast.success(`${targets.length} PR record(s) approved.`)
-  }
-
-  const handleClear = () => {
-    setJobNumber(''); setPlanDate(''); setVehicleType('')
-    setTargetDate(''); setPartNo(''); setQtyV(''); setPartName('')
-    setFromDate(today); setToDate(today)
-  }
-
-  const statusBadge = (s) => {
-    if (s === 'Approved') return <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">{s}</span>
-    if (s === 'Rejected') return <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">{s}</span>
-    return <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">{s}</span>
+    setRows(prev => prev.map(r => r.id === selectedRow ? { ...r, status: 'Approved' } : r))
+    toast.success(`${target.reqNo} approved.`)
   }
 
   return (
@@ -97,146 +70,78 @@ export default function PRApproval() {
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2.5">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-700 rounded-sm" />
-              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">JOB LIST</h2>
+              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">
+                Purchase Request Approval Pending
+              </h2>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={handleApprove}
                 className="flex items-center gap-1.5 px-3 py-1 bg-[#1A76D1] hover:bg-[#1560b0] text-white text-[11px] font-bold rounded transition-all active:scale-95 shadow-sm">
                 <CheckCircle2 size={13} /> Approve
               </button>
-              <button className="flex items-center gap-1 px-3 py-1 text-slate-500 hover:text-red-600 text-[11px] font-bold rounded border border-slate-200 hover:border-red-300 transition-all active:scale-95">
+              <button className="flex items-center gap-1 px-3 py-1 text-slate-500 hover:text-red-600 text-[11px] font-bold rounded border border-slate-200 hover:border-red-300 transition-all">
                 <X size={13} /> Close
               </button>
             </div>
           </div>
 
-          <div className="p-4 space-y-3">
-            {/* Filter Form — bordered grid matching screenshot */}
-            <div className="border border-slate-300">
-              {/* Row 1: JOB Number | Plan Date */}
-              <div className="grid grid-cols-2 border-b border-slate-300">
-                <div className="flex items-center border-r border-slate-300">
-                  <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap px-3 py-1.5 bg-slate-50 border-r border-slate-300 w-28">JOB Number :</span>
-                  <div className="flex-1 px-2 py-1"><TextInput value={jobNumber} onChange={e => setJobNumber(e.target.value)} /></div>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap px-3 py-1.5 bg-slate-50 border-r border-slate-300 w-28">Plan Date :</span>
-                  <div className="flex-1 px-2 py-1"><TextInput value={planDate} onChange={e => setPlanDate(e.target.value)} /></div>
-                </div>
-              </div>
-              {/* Row 2: Vehicle Type | Target Date */}
-              <div className="grid grid-cols-2 border-b border-slate-300">
-                <div className="flex items-center border-r border-slate-300">
-                  <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap px-3 py-1.5 bg-slate-50 border-r border-slate-300 w-28">Vehicle Type :</span>
-                  <div className="flex-1 px-2 py-1"><TextInput value={vehicleType} onChange={e => setVehicleType(e.target.value)} /></div>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap px-3 py-1.5 bg-slate-50 border-r border-slate-300 w-28">Target Date :</span>
-                  <div className="flex-1 px-2 py-1"><TextInput value={targetDate} onChange={e => setTargetDate(e.target.value)} /></div>
-                </div>
-              </div>
-              {/* Row 3: Part No | Qty/V */}
-              <div className="grid grid-cols-2 border-b border-slate-300">
-                <div className="flex items-center border-r border-slate-300">
-                  <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap px-3 py-1.5 bg-slate-50 border-r border-slate-300 w-28">Part No :</span>
-                  <div className="flex-1 px-2 py-1"><TextInput value={partNo} onChange={e => setPartNo(e.target.value)} /></div>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap px-3 py-1.5 bg-slate-50 border-r border-slate-300 w-28">Qty/V :</span>
-                  <div className="flex-1 px-2 py-1"><TextInput value={qtyV} onChange={e => setQtyV(e.target.value)} /></div>
-                </div>
-              </div>
-              {/* Row 4: Part Name (full width) */}
-              <div className="flex items-center">
-                <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap px-3 py-1.5 bg-slate-50 border-r border-slate-300 w-28">Part Name :</span>
-                <div className="flex-1 px-2 py-1"><TextInput value={partName} onChange={e => setPartName(e.target.value)} /></div>
-              </div>
-            </div>
-
-            {/* Action Bar */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">From Date :</span>
-              <DateInput value={fromDate} onChange={e => setFromDate(e.target.value)} />
-              <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">To Date :</span>
-              <DateInput value={toDate} onChange={e => setToDate(e.target.value)} />
-              <button onClick={() => toast.info(`${rows.length} PR records loaded.`)}
-                className="flex items-center gap-1.5 px-3 py-[5px] bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold rounded transition-all active:scale-95 shadow-sm">
-                <Search size={12} /> Search
-              </button>
-              <button onClick={() => toast.info('Details view...')}
-                className="flex items-center gap-1.5 px-3 py-[5px] bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold rounded transition-all active:scale-95 shadow-sm">
-                <FileText size={12} /> Details
-              </button>
-              <button onClick={handleClear}
-                className="flex items-center gap-1.5 px-3 py-[5px] bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-bold rounded transition-all active:scale-95 shadow-sm">
-                Clear
-              </button>
-              <div className="ml-auto flex items-center gap-2">
-                <button onClick={() => {
-                  const sel = [...selectedRows]
-                  if (!sel.length) { toast.warning('Select rows to cancel.'); return }
-                  toast.warning(`Cancel Job for ${sel.length} row(s).`)
-                }}
-                  className="flex items-center gap-1 px-3 py-[5px] text-red-600 hover:text-red-700 text-[11px] font-bold rounded border border-red-300 hover:border-red-400 transition-all active:scale-95">
-                  <X size={12} /> Cancel Job
-                </button>
-                <button onClick={() => toast.warning('Cancel Route Card...')}
-                  className="flex items-center gap-1 px-3 py-[5px] text-red-600 hover:text-red-700 text-[11px] font-bold rounded border border-red-300 hover:border-red-400 transition-all active:scale-95">
-                  <X size={12} /> Cancel Route Card
-                </button>
-              </div>
+          <div className="p-4">
+            {/* Sub-heading */}
+            <div className="text-[12px] font-bold text-slate-600 mb-2 px-1">
+              Purchase Request Approval Pending
             </div>
 
             {/* Table */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
-                <table className="w-full text-left border-collapse min-w-[1050px]">
-                  <thead className="sticky top-0 z-10 bg-[#4472C4] text-white text-[10px] uppercase font-bold">
+            <div className="border border-slate-300 overflow-hidden">
+              <div className="overflow-x-auto max-h-[560px] overflow-y-auto">
+                <table className="w-full text-left border-collapse min-w-[700px]">
+                  <thead className="sticky top-0 z-10 bg-white text-slate-700 text-[11px] font-bold border-b border-slate-300">
                     <tr>
-                      <th className="px-2 py-2.5 border-r border-blue-400 w-8 text-center">
-                        <input type="checkbox" checked={selectAll} onChange={e => handleSelectAll(e.target.checked)}
-                          className="w-3 h-3 cursor-pointer accent-white" />
-                      </th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-10 text-center">S.No</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-16">Job No</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-28">Barcode</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-28">Part No</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400">Part Name</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-24 text-center">Plan Date</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-24 text-center">Target Date</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-16 text-center">Qty/V</th>
-                      <th className="px-3 py-2.5 w-20 text-center">Status</th>
+                      <th className="w-6 border-r border-slate-300 px-1" />
+                      <th className="px-3 py-2 border-r border-slate-300 w-36">Req_No</th>
+                      <th className="px-3 py-2 border-r border-slate-300 w-24">Req Date</th>
+                      <th className="px-3 py-2 border-r border-slate-300 w-28">Dept<br />Name</th>
+                      <th className="px-3 py-2 border-r border-slate-300 w-28">Required<br />Date</th>
+                      <th className="px-3 py-2">Created<br />User</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="text-[12px]">
                     {rows.map((r, i) => {
-                      const isSel = selectedRows.has(i)
-                      const rowBg = isSel ? 'bg-[#1565C0] text-white'
-                        : r.status === 'Approved' ? 'bg-emerald-50/60 hover:bg-emerald-50'
-                        : r.status === 'Rejected' ? 'bg-red-50/60 hover:bg-red-50'
-                        : i % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/50 hover:bg-slate-100/50'
+                      const isSel = selectedRow === r.id
                       return (
-                        <tr key={i} onClick={() => handleRowSelect(i, !selectedRows.has(i))}
-                          className={`h-9 cursor-pointer text-[12px] transition-colors ${rowBg}`}>
-                          <td className="px-2 py-1 border-r border-slate-100 text-center" onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={isSel} onChange={e => handleRowSelect(i, e.target.checked)}
-                              className="w-3 h-3 cursor-pointer accent-[#0097A7]" />
+                        <tr key={r.id} onClick={() => setSelectedRow(r.id)}
+                          className={`h-8 cursor-pointer border-b border-slate-200 transition-colors ${isSel ? 'bg-[#1565C0] text-white' : i % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/40 hover:bg-slate-100/50'}`}>
+                          {/* Row selector arrow */}
+                          <td className={`border-r border-slate-200 text-center w-6 text-[10px] ${isSel ? 'text-white' : 'text-transparent'}`}>
+                            ▶
                           </td>
-                          <td className={`px-3 py-1 border-r border-slate-100 text-center font-bold ${isSel ? '' : 'text-slate-400'}`}>{r.sno}</td>
-                          <td className={`px-3 py-1 border-r border-slate-100 font-bold ${isSel ? '' : 'text-slate-700'}`}>{r.jobNo}</td>
-                          <td className={`px-3 py-1 border-r border-slate-100 text-[11px] ${isSel ? '' : 'text-slate-600'}`}>{r.barcode}</td>
-                          <td className={`px-3 py-1 border-r border-slate-100 font-mono text-[11px] ${isSel ? '' : 'text-[#0097A7]'}`}>{r.partNo}</td>
-                          <td className={`px-3 py-1 border-r border-slate-100 truncate max-w-[220px] ${isSel ? '' : 'text-slate-700'}`}>{r.partName}</td>
-                          <td className={`px-3 py-1 border-r border-slate-100 text-center text-[11px] ${isSel ? '' : 'text-slate-500'}`}>{r.planDate}</td>
-                          <td className={`px-3 py-1 border-r border-slate-100 text-center text-[11px] ${isSel ? '' : 'text-slate-500'}`}>{r.targetDate}</td>
-                          <td className={`px-3 py-1 border-r border-slate-100 text-center font-bold ${isSel ? '' : 'text-slate-600'}`}>{r.qty}</td>
-                          <td className="px-3 py-1 text-center">{isSel ? r.status : statusBadge(r.status)}</td>
+                          <td className={`px-3 py-1 border-r border-slate-200 font-semibold text-[11px] ${isSel ? 'text-white' : 'text-[#1565C0]'}`}>
+                            {r.reqNo}
+                          </td>
+                          <td className={`px-3 py-1 border-r border-slate-200 ${isSel ? 'text-white' : 'text-slate-600'}`}>
+                            {r.reqDate}
+                          </td>
+                          <td className={`px-3 py-1 border-r border-slate-200 font-semibold ${isSel ? 'text-white' : 'text-slate-700'}`}>
+                            {r.deptName}
+                          </td>
+                          <td className={`px-3 py-1 border-r border-slate-200 ${isSel ? 'text-white' : 'text-slate-600'}`}>
+                            {r.requiredDate}
+                          </td>
+                          <td className={`px-3 py-1 ${isSel ? 'text-white' : 'text-slate-600'}`}>
+                            {r.createdUser}
+                          </td>
                         </tr>
                       )
                     })}
+                    {/* Empty new-row indicator */}
+                    <tr className="h-7 border-b border-slate-200 bg-white">
+                      <td className="border-r border-slate-200 text-center text-[10px] text-slate-400 px-1">*</td>
+                      <td colSpan={5} />
+                    </tr>
                   </tbody>
                 </table>
               </div>
+
               <div className="border-t border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-500">
                 Row : {rows.length}
               </div>
