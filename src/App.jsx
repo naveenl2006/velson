@@ -97,6 +97,8 @@ import ServiceBillEntry from './pages/ServiceBillEntry'
 import ServiceBillDetails from './pages/ServiceBillDetails'
 import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
 import TempServiceBillDetails from './pages/TempServiceBillDetails'
+import DCDetailsReport from './pages/DCDetailsReport'
+
 
 
 
@@ -259,6 +261,8 @@ const PAGES = {
   ServiceBillDetails: <ServiceBillDetails />,
   ServiceLabourBillDetails: <ServiceLabourBillDetails />,
   TempServiceBillDetails: <TempServiceBillDetails />,
+  DCDetailsReport: <DCDetailsReport />,
+
 
 
 

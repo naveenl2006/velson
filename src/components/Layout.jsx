@@ -122,6 +122,7 @@ const NAV = [
     icon: Truck, 
     children: [
       { id: 'dc-entry', label: 'DC Entry', page: 'DCEntry' },
+      { id: 'dc-details-report', label: 'DC Details', page: 'DCDetailsReport' },
     ] 
   },
   { 
