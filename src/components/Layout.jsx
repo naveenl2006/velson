@@ -21,6 +21,7 @@ const NAV = [
       { id: 'vehicle-service-master',  label: 'Vehicle Service Master',        page: 'VehicleServiceMaster'},
       { id: 'contractor-master',       label: 'Contractor Master',             page: 'ContractorMaster'    },
       { id: 'process-master',          label: 'Process Master',                page: 'ProcessMaster'       },
+      { id: 'reference-master',        label: 'Reference Master',              page: 'ReferenceMaster'     },
       { id: 'part-usage-list',         label: 'Part Usage List Display',       page: 'PartUsageList'       },
       { id: 'qc-check-method',         label: 'QC Check Method Master',        page: 'QCCheckMethod'       },
       { id: 'qc-inspection-char',      label: 'QC Inspection Character Master',page: 'QCInspectionChar'    },

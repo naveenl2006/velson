@@ -106,6 +106,8 @@ import MRApproval from './pages/MRApproval'
 import JobEntryClosed from './pages/JobEntryClosed'
 import JobCardCancel from './pages/JobCardCancel'
 import IPRApproval from './pages/IPRApproval'
+import ReferenceMaster from './pages/ReferenceMaster'
+import LoginPage from './pages/LoginPage'
 import JobQtyMismatch from './pages/JobQtyMismatch'
 import ProcessCardClose from './pages/ProcessCardClose'
 import JobQCEntry from './pages/JobQCEntry'
@@ -114,146 +116,83 @@ import ServiceBillEntry from './pages/ServiceBillEntry'
 import ServiceBillDetails from './pages/ServiceBillDetails'
 import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
 import TempServiceBillDetails from './pages/TempServiceBillDetails'
-import DCDetailsReport from './pages/DCDetailsReport'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const PAGES = {
-  Dashboard: <DashboardPage />,
+  Dashboard:      <DashboardPage />,
   PartNumberBase: <PartNumberBaseMaster />,
-  DropDownName: <DropDownNameMaster />,
-  DropDownList: <DropDownListMaster />,
-  TaxLedger: <TaxLedgerMaster />,
-  TaxMaster: <TaxMaster />,
-  ItemGroup: <ItemGroupMaster />,
-  ItemMaster: <ItemMaster />,
+  DropDownName:   <DropDownNameMaster />,
+  DropDownList:   <DropDownListMaster />,
+  TaxLedger:      <TaxLedgerMaster />,
+  TaxMaster:      <TaxMaster />,
+  ItemGroup:      <ItemGroupMaster />,
+  ItemMaster:     <ItemMaster />,
   SupplierMaster: <SupplierMaster />,
-  CustomerMaster: <CustomerMaster />,
-  VehicleMaster: <VehicleMaster />,
-  QuotationEntry: <QuotationEntry />,
-  QuotationDetails: <QuotationDetails />,
-  PurchaseOrderEntry: <PurchaseOrderEntry />,
+  CustomerMaster:    <CustomerMaster />,
+  VehicleMaster:     <VehicleMaster />,
+  QuotationEntry:    <QuotationEntry />,
+  QuotationDetails:     <QuotationDetails />,
+  PurchaseOrderEntry:   <PurchaseOrderEntry />,
   PurchaseOrderDetails: <PurchaseOrderDetails />,
   MaterialRequestEntry: <MaterialRequestEntry />,
-  PrintMaterialRequest: <PrintMaterialRequest />,
-  GateEntry: <GateEntry />,
-  GRNEntry: <GRNEntry />,
-  GRNEntryReport: <GRNEntryReport />,
+  PrintMaterialRequest:  <PrintMaterialRequest />,
+  GateEntry:             <GateEntry />,
+  GRNEntry:              <GRNEntry />,
+  GRNEntryReport:        <GRNEntryReport />,
   // ── New Master Pages ──
-  CompanyMaster: <CompanyMaster />,
-  EmployeeMaster: <EmployeeMaster />,
-  LedgerGroupMaster: <LedgerGroupMaster />,
-  MachineMaster: <MachineMaster />,
-  VehicleServiceMaster: <VehicleServiceMaster />,
-  ContractorMaster: <ContractorMaster />,
-  ProcessMaster: <ProcessMaster />,
-  PartUsageList: <PartUsageList />,
-  QCCheckMethod: <QCCheckMethod />,
-  QCInspectionChar: <QCInspectionChar />,
-  QCStandardMaster: <QCStandardMaster />,
-  AutoPO: <AutoPO />,
-  SystemInfoMaster: <SystemInfoMaster />,
-  DBCopy: <DBCopy />,
-  RestoreDB: <RestoreDB />,
-  ReceiptEntry: <ReceiptEntry />,
-  ReceiptDetails: <ReceiptDetails />,
-  VoucherEntry: <VoucherEntry />,
-  DayReport: <DayReport />,
-  DayBook: <DayBook />,
-  LedgerBalance: <LedgerBalance />,
+  CompanyMaster:       <CompanyMaster />,
+  EmployeeMaster:      <EmployeeMaster />,
+  LedgerGroupMaster:   <LedgerGroupMaster />,
+  MachineMaster:       <MachineMaster />,
+  VehicleServiceMaster:<VehicleServiceMaster />,
+  ContractorMaster:    <ContractorMaster />,
+  ProcessMaster:       <ProcessMaster />,
+  ReferenceMaster:     <ReferenceMaster />,
+  PartUsageList:       <PartUsageList />,
+  QCCheckMethod:       <QCCheckMethod />,
+  QCInspectionChar:    <QCInspectionChar />,
+  QCStandardMaster:    <QCStandardMaster />,
+  AutoPO:              <AutoPO />,
+  SystemInfoMaster:    <SystemInfoMaster />,
+  DBCopy:              <DBCopy />,
+  RestoreDB:           <RestoreDB />,
+  ReceiptEntry:        <ReceiptEntry />,
+  ReceiptDetails:      <ReceiptDetails />,
+  VoucherEntry:        <VoucherEntry />,
+  DayReport:           <DayReport />,
+  DayBook:             <DayBook />,
+  LedgerBalance:       <LedgerBalance />,
   MonthlyLedgerBalance: <MonthlyLedgerBalance />,
   OutstandingReceiptReport: <OutstandingReceiptReport />,
-  PaymentEntry: <PaymentEntry />,
-  PaymentDetails: <PaymentDetails />,
-  JournalEntry: <JournalEntry />,
-  BOMUpload: <BOMUpload />,
+  PaymentEntry:         <PaymentEntry />,
+  PaymentDetails:       <PaymentDetails />,
+  JournalEntry:         <JournalEntry />,
+  BOMUpload:            <BOMUpload />,
   CustomerwiseBOMReport: <CustomerwiseBOMReport />,
-  IndexCreation: <IndexCreation />,
-  IndexCreationReport: <IndexCreationReport />,
-  UploadBOM: <UploadBOM />,
-  MainIndex: <MainIndex />,
-  MainIndexReport: <MainIndexReport />,
-  ViewModel: <ViewModel />,
+  IndexCreation:         <IndexCreation />,
+  IndexCreationReport:   <IndexCreationReport />,
+  UploadBOM:             <UploadBOM />,
+  MainIndex:             <MainIndex />,
+  MainIndexReport:       <MainIndexReport />,
+  ViewModel:             <ViewModel />,
   CustomerComplaintEntry: <CustomerComplaintEntry />,
-  DCEntry: <DCEntry />,
-  MachineBreakDown: <MachineBreakDown />,
-  BreakDownClearence: <BreakDownClearence />,
-  BreakDownAcceptance: <BreakDownAcceptance />,
+  DCEntry:               <DCEntry />,
+  MachineBreakDown:      <MachineBreakDown />,
+  BreakDownClearence:    <BreakDownClearence />,
+  BreakDownAcceptance:   <BreakDownAcceptance />,
   BreakDownApprovalList: <BreakDownApprovalList />,
-  QCRejectionDetails: <QCRejectionDetails />,
-  NCApproval: <NCApproval />,
-  NCJobCreated: <NCJobCreated />,
-  NCDCEntry: <NCDCEntry />,
-  NCDCDetails: <NCDCDetails />,
-  JobList: <JobList />,
-  BarcodeDetails: <BarcodeDetails />,
-  AutoJobEntry: <AutoJobEntry />,
+  QCRejectionDetails:    <QCRejectionDetails />,
+  NCApproval:            <NCApproval />,
+  NCJobCreated:          <NCJobCreated />,
+  NCDCEntry:             <NCDCEntry />,
+  NCDCDetails:           <NCDCDetails />,
+  JobList:               <JobList />,
+  BarcodeDetails:        <BarcodeDetails />,
+  AutoJobEntry:          <AutoJobEntry />,
   ServiceJobEntryDetails: <ServiceJobEntryDetails />,
-  ConformationList: <ConformationList />,
+  ConformationList:      <ConformationList />,
   ConformationEntryDetails: <ConformationEntryDetails />,
-  ProcessCard: <ProcessCard />,
-  RawMaterialIssue: <RawMaterialIssue />,
+  ProcessCard:           <ProcessCard />,
+  RawMaterialIssue:      <RawMaterialIssue />,
   RawMaterialIssuedDetails: <RawMaterialIssuedDetails />,
   MaterialRequestRejectionList: <MaterialRequestRejectionList />,
   InwardReports: <InwardReports />,
@@ -278,74 +217,32 @@ const PAGES = {
   ServiceBillDetails: <ServiceBillDetails />,
   ServiceLabourBillDetails: <ServiceLabourBillDetails />,
   TempServiceBillDetails: <TempServiceBillDetails />,
-  DCDetailsReport: <DCDetailsReport />,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  DrawingUpload: <DrawingUpload />,
+  JobCardEntry: <JobCardEntry />,
+  ProcessMenu: <ProcessMenu />,
+  TechAutoJobEntry: <TechAutoJobEntry />,
+  ViewJobStatus: <ViewJobStatus />,
+  WaitingForApproval: <WaitingForApproval />,
+  UpdateRouteDetails: <UpdateRouteDetails />,
+  RejectedJobList: <RejectedJobList />,
+  ProcessCompleted: <ProcessCompleted />,
+  FileUploads: <FileUploads />,
+  MRApproval: <MRApproval />,
+  NCJobCreated: <NCJobCreated />,
+  NCApproval: <NCApproval />,
+  JobEntryClosed: <JobEntryClosed />,
+  JobCardCancel: <JobCardCancel />,
+  IPRApproval: <IPRApproval />,
+  JobQtyMismatch: <JobQtyMismatch />,
+  ProcessCardClose: <ProcessCardClose />,
+  JobQCEntry: <JobQCEntry />,
 }
 
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState(false)
   const [page, setPage] = useState('Dashboard')
+
+  if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />
 
   return (
     <Layout currentPage={page} onNavigate={setPage}>
