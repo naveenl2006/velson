@@ -3,6 +3,7 @@ import {
   Plus, ArrowLeft, Pencil, Trash2, Info, Search,
   ChevronLeft, ChevronRight, ArrowUpDown, CheckCircle2, XCircle,
 } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Seed data (mirrors screenshot rows) ──────────────────────────────────────
 const DROPDOWN_NAMES = [
@@ -72,6 +73,7 @@ function DetailModal({ row, onClose }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function DropDownListMaster() {
+  const toast = useToast()
   const [rows, setRows] = useState(SEED)
   const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState(null)
@@ -86,8 +88,8 @@ export default function DropDownListMaster() {
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleCreate = () => {
-    if (!form.dropdownName) return alert('Drop Down Name is required')
-    if (!form.dropdownList) return alert('Drop Down List value is required')
+    if (!form.dropdownName) return toast.warning('Drop Down Name is required')
+    if (!form.dropdownList) return toast.warning('Drop Down List value is required')
 
     if (editId !== null) {
       setRows(r => r.map(x => x.id === editId

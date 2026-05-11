@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Plus, Trash2, Send, X } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 const DEPARTMENTS = ['Production','Quality','Stores','Maintenance','HR','Admin']
 const TEAMS = ['Team A','Team B','Team C','Team D']
@@ -22,6 +23,7 @@ const inp = (err='') =>
 const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 export default function MaterialRequestEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     tempRequestNo: '', departmentTo: '', requestingUser: 'superadmin',
     team: '', requestingFor: '', requestNo: genReqNo(),
@@ -40,7 +42,7 @@ export default function MaterialRequestEntry() {
   const addRow = () => setItems(r => [...r, emptyItem()])
   const removeRow = idx => setItems(r => r.filter((_, i) => i !== idx))
 
-  const handleSubmit = () => alert('Material Request submitted!')
+  const handleSubmit = () => toast.success('Material Request submitted!')
   const handleCancel = () => {
     setForm({
       tempRequestNo:'', departmentTo:'', requestingUser:'superadmin',

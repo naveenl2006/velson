@@ -3,6 +3,7 @@ import {
   ChevronRight, Search, Download, FileSpreadsheet, FileJson, 
   Filter, Settings, X, RotateCcw
 } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
@@ -29,6 +30,7 @@ const SEED_DAY_REPORT = [
 ]
 
 export default function DayReport() {
+  const toast = useToast()
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [reportData, setReportData] = useState([])
@@ -46,7 +48,7 @@ export default function DayReport() {
     }, 600)
   }
 
-  const handleExport = (t) => alert(`Exporting day report as ${t}...`)
+  const handleExport = (t) => toast.info(`Exporting day report as ${t}...`)
 
   const totalCredit = reportData.reduce((acc, r) => acc + parseFloat(r.credit), 0)
   const totalDebit = reportData.reduce((acc, r) => acc + parseFloat(r.debit), 0)
@@ -70,7 +72,7 @@ export default function DayReport() {
               <div className="w-3 h-3 bg-red-700 rounded-sm" />
               <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">Day Report Summary</h2>
             </div>
-            <button onClick={() => alert('Closing...')} className="text-slate-400 hover:text-red-600 transition-colors">
+            <button onClick={() => toast.info('Closing...')} className="text-slate-400 hover:text-red-600 transition-colors">
               <X size={18} strokeWidth={2.5} />
             </button>
           </div>

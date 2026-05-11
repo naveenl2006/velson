@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Search, FileText, X, Layers, Printer, FileDown, RotateCcw, Box } from 'lucide-react'
+import { useToast } from '../components/Toast'
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
   <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
@@ -38,6 +39,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 )
 
 export default function ViewModel() {
+  const toast = useToast()
   const [form, setForm] = useState({
     customerName: '',
     customerCode: '',
@@ -53,7 +55,7 @@ export default function ViewModel() {
 
   const handleFetchHierarchy = () => {
     if (!form.modelNo) {
-      alert('Select a Model No to view hierarchy.')
+      toast.warning('Select a Model No to view hierarchy.')
       return
     }
     setLoading(true)

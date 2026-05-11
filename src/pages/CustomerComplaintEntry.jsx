@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Save, X, Camera, Send, CheckCircle2, User, Phone, MapPin, ClipboardList, RotateCcw, Search, Trash2, Mail, Map, Plus, ImageIcon } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -67,6 +68,7 @@ const ActionButton = ({ onClick, children, className = "" }) => (
 )
 
 export default function CustomerComplaintEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     ccNo: '26-27/CC' + Math.floor(Math.random() * 90000 + 10000),
     date: '15-Apr-2026',
@@ -101,7 +103,7 @@ export default function CustomerComplaintEntry() {
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
   const handleStepSave = (step) => {
-    alert(`Step ${step} Data Saved Successfully!`)
+    toast.info(`Step ${step} Data Saved Successfully!`)
   }
 
   return (
@@ -196,7 +198,7 @@ export default function CustomerComplaintEntry() {
                
                <div className="flex justify-end gap-2 pt-2">
                   <ActionButton onClick={() => handleStepSave(1)}>Step 1 Save</ActionButton>
-                  <ActionButton onClick={() => alert('Image Saved')}>Save image 2</ActionButton>
+                  <ActionButton onClick={() => toast.success('Image Saved')}>Save image 2</ActionButton>
                </div>
             </div>
 

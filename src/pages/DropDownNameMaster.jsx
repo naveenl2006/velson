@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Save, ArrowLeft, Plus, Edit, Trash2, Info, ChevronRight } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Seed data (80 entries matching screenshot "Showing 1 to 8 of 80 entries") ──
 const SEED_NAMES = [
@@ -50,6 +51,7 @@ function DetailModal({ row, onClose }) {
 }
 
 export default function DropDownNameMaster() {
+  const toast = useToast()
   const [rows, setRows]         = useState(makeSeed)
   const [search, setSearch]     = useState('')
   const [pageSize, setPageSize] = useState(8)
@@ -71,7 +73,7 @@ export default function DropDownNameMaster() {
   // ── Handlers ──────────────────────────────────────────────────────
   const handleCreate = () => {
     const trimmed = formName.trim()
-    if (!trimmed) { alert('Drop Down Name is required.'); return }
+    if (!trimmed) { toast.warning('Drop Down Name is required.'); return }
 
     if (editId !== null) {
       setRows(r => r.map(x => x.id === editId ? { ...x, name: trimmed } : x))

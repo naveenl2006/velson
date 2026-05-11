@@ -165,7 +165,32 @@ const NAV = [
       { id: 'prod-machine-breakdown', label: 'BreakDown Entry', page: 'MachineBreakDown' },
     ] 
   },
-  { id: 'technical',      label: 'Technical',        icon: Settings,       children: [] },
+  { 
+    id: 'technical',      
+    label: 'Technical',        
+    icon: Settings,       
+    children: [
+      { id: 'drawing-upload', label: 'Drawing Upload', page: 'DrawingUpload' },
+      { id: 'job-card-entry', label: 'Job Card Entry', page: 'JobCardEntry' },
+      { id: 'process-menu', label: 'Process Menu', page: 'ProcessMenu' },
+      { id: 'tech-auto-job', label: 'Auto Job Entry', page: 'TechAutoJobEntry' },
+      { id: 'view-job-status', label: 'View Job Status', page: 'ViewJobStatus' },
+      { id: 'waiting-for-approval', label: 'Waiting For Approval', page: 'WaitingForApproval' },
+      { id: 'update-route-details', label: 'Update Route Details', page: 'UpdateRouteDetails' },
+      { id: 'rejected-job-list', label: 'Rejected Job List', page: 'RejectedJobList' },
+      { id: 'process-completed', label: 'Process Completed', page: 'ProcessCompleted' },
+      { id: 'file-uploads', label: 'File Uploads', page: 'FileUploads' },
+      { id: 'mr-approval', label: 'MR Approval', page: 'MRApproval' },
+      { id: 'nc-job-created', label: 'NC Job Created', page: 'NCJobCreated' },
+      { id: 'nc-approval', label: 'NC Approval', page: 'NCApproval' },
+      { id: 'job-entry-closed', label: 'Job Entry Closed', page: 'JobEntryClosed' },
+      { id: 'job-card-cancel', label: 'Job Card Cancel', page: 'JobCardCancel' },
+      { id: 'ipr-approval', label: 'PR Approval', page: 'IPRApproval' },
+      { id: 'job-qty-mismatch', label: 'Job Qty Mismatch', page: 'JobQtyMismatch' },
+      { id: 'process-card-close', label: 'Process Card Close', page: 'ProcessCardClose' },
+      { id: 'job-qc-entry', label: 'Job QC Entry', page: 'JobQCEntry' },
+    ] 
+  },
   {
     id: 'sales',
     label: 'Sales',

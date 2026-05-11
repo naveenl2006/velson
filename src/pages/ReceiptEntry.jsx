@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Save, ChevronRight, Plus, Trash2, RotateCcw } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives (Enhanced Professional Styling) ────────────────
 const Label = ({ children, required }) => (
@@ -45,6 +46,7 @@ const emptyRow = () => ({
 })
 
 export default function ReceiptEntry() {
+  const toast = useToast()
   // Initial state empty for "Enterable" experience
   const [form, setForm] = useState({
     receiptType: 'RECEIPT',
@@ -92,13 +94,13 @@ export default function ReceiptEntry() {
 
   const handleSave = () => {
     if (!form.partyName || !form.amount) {
-      alert('Please fill Party Name and Amount.')
+      toast.warning('Please fill Party Name and Amount.')
       return
     }
     const receipt = { ...form, rows, id: Date.now() }
     const existing = JSON.parse(localStorage.getItem('velson_receipts') || '[]')
     localStorage.setItem('velson_receipts', JSON.stringify([...existing, receipt]))
-    alert('Receipt Saved to LocalStorage Successfully!')
+    toast.success('Receipt Saved to LocalStorage Successfully!')
     handleClear()
   }
 

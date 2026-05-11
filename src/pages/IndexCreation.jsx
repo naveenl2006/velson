@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Search, Upload, Download, X, Image as ImageIcon, FileSpreadsheet, RotateCcw, Save, Trash2, Plus } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -39,6 +40,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 )
 
 export default function IndexCreation() {
+  const toast = useToast()
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     indexNo: 'IDX-' + Math.floor(Math.random() * 900 + 100),
@@ -56,7 +58,7 @@ export default function IndexCreation() {
 
   const handleSave = () => {
     if (!form.model || !form.modelNo) {
-      alert('Required: Model and Model No.')
+      toast.warning('Required: Model and Model No.')
       return
     }
     setIsSaving(true)
@@ -67,7 +69,7 @@ export default function IndexCreation() {
       localStorage.setItem('velson_bom_indices', JSON.stringify(updated))
       setIndices(updated)
       setIsSaving(false)
-      alert('Index Created Successfully!')
+      toast.success('Index Created Successfully!')
       handleReset()
     }, 600)
   }

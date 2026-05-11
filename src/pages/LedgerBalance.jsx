@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Search, Printer, X, FileBarChart, Download, FileSpreadsheet, FileJson, Filter, Settings, RotateCcw } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -54,6 +55,7 @@ const SAMPLE_TRANS = [
 ]
 
 export default function LedgerBalance() {
+  const toast = useToast()
   const [fromDate, setFromDate] = useState('2026-04-01')
   const [toDate, setToDate] = useState('2026-04-15')
   const [ledgerAc, setLedgerAc] = useState('')
@@ -64,7 +66,7 @@ export default function LedgerBalance() {
   const [searching, setSearching] = useState(false)
 
   const handleSearch = () => {
-    if (!ledgerAc) { alert('Select a ledger first'); return }
+    if (!ledgerAc) { toast.warning('Select a ledger first'); return }
     setSearching(true)
     setTimeout(() => {
       setReportData(SAMPLE_TRANS)
@@ -72,7 +74,7 @@ export default function LedgerBalance() {
     }, 600)
   }
 
-  const handleExport = (t) => alert(`Exporting report as ${t}...`)
+  const handleExport = (t) => toast.info(`Exporting report as ${t}...`)
 
   return (
     <div className="bg-[#f4f6f8] min-h-full pb-10">
@@ -97,7 +99,7 @@ export default function LedgerBalance() {
               <button onClick={() => window.print()} className="flex items-center gap-1.5 text-slate-500 hover:text-[#0097A7] text-[12px] font-bold transition-colors">
                 <Printer size={16} /> PrintData
               </button>
-              <button onClick={() => alert('Closing...')} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-[12px] font-bold transition-colors">
+              <button onClick={() => toast.info('Closing...')} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-[12px] font-bold transition-colors">
                 <X size={18} strokeWidth={2.5} /> Close
               </button>
             </div>

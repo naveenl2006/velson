@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Search, Printer, X, FileText, Download, FileSpreadsheet, FileJson, Filter, Settings } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -45,6 +46,7 @@ const SEED_DATA = [
 ]
 
 export default function DayBook() {
+  const toast = useToast()
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [company, setCompany] = useState('VELSON')
@@ -86,7 +88,7 @@ export default function DayBook() {
     setFilteredData(result)
   }
 
-  const handleExport = (type) => alert(`Exporting ${filteredData.length} records as ${type}...`)
+  const handleExport = (type) => toast.info(`Exporting ${filteredData.length} records as ${type}...`)
 
   const totalDebit = filteredData.reduce((acc, r) => acc + parseFloat(r.debit || 0), 0)
   const totalCredit = filteredData.reduce((acc, r) => acc + parseFloat(r.credit || 0), 0)
@@ -115,7 +117,7 @@ export default function DayBook() {
               <button onClick={() => window.print()} className="flex items-center gap-1.5 text-slate-500 hover:text-[#0097A7] text-[12px] font-bold transition-colors">
                 <Printer size={16} /> PrintData
               </button>
-              <button onClick={() => alert('Closing...')} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-[12px] font-bold transition-colors">
+              <button onClick={() => toast.info('Closing...')} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-[12px] font-bold transition-colors">
                 <X size={18} strokeWidth={2.5} /> Close
               </button>
             </div>

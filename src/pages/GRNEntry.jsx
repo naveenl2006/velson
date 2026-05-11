@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Plus, Trash2, Send, X } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 const SUPPLIERS = ['VENKATESWARA ASSOCIATES','APS ENTERPRISES','SM DRILLING COMPANY','ABHISHEK SONI']
 const GRN_TYPES = ['GRN Against PO','GRN Without PO','GRN Against Job Work']
@@ -19,6 +20,7 @@ const inp = (err='') => `w-full border rounded px-2 py-1 text-[12.5px] focus:out
 const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 export default function GRNEntry() {
+  const toast = useToast()
   const [form, setForm] = useState({
     grnType:'GRN Against PO', gateEntryNo:'', supplierName:'', purchaseLedger:'apple tech',
     purchaseType:'CASH', currency:'INR', currencyType:'EXPORT',
@@ -238,7 +240,7 @@ export default function GRNEntry() {
                 <select value={tcsLedger} onChange={e=>setTcsLedger(e.target.value)} className={inp()}><option>TCS A/C</option></select>
               </div>
               <div className="flex gap-2 pt-1">
-                <button onClick={()=>alert('GRN Entry submitted!')} className="flex items-center gap-1 px-5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-semibold rounded transition-colors shadow-sm"><Send className="w-3.5 h-3.5"/> Submit</button>
+                <button onClick={()=>toast.success('GRN Entry submitted!')} className="flex items-center gap-1 px-5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-semibold rounded transition-colors shadow-sm"><Send className="w-3.5 h-3.5"/> Submit</button>
                 <button className="flex items-center gap-1 px-5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[12px] font-semibold rounded transition-colors shadow-sm"><X className="w-3.5 h-3.5"/> Cancel</button>
               </div>
             </div>

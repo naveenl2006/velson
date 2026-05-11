@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Upload, Download, X, Plus, Image as ImageIcon, FileText, Search, RotateCcw } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children, required }) => (
@@ -39,6 +40,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 )
 
 export default function BOMUpload() {
+  const toast = useToast()
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     bomNo: 'BOM-' + Math.floor(Math.random() * 9000 + 1000),
@@ -61,7 +63,7 @@ export default function BOMUpload() {
 
   const handleUpload = () => {
     if (!form.customerName || !form.fileName) {
-      alert('Please fill required fields (Customer, File Name).')
+      toast.warning('Please fill required fields (Customer, File Name).')
       return
     }
     setIsUploading(true)
@@ -72,7 +74,7 @@ export default function BOMUpload() {
       localStorage.setItem('velson_bom_uploads', JSON.stringify(updated))
       setUploadedRecords(updated)
       setIsUploading(false)
-      alert('BOM Uploaded Successfully!')
+      toast.warning('BOM Uploaded Successfully!')
     }, 1000)
   }
 
