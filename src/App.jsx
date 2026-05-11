@@ -112,6 +112,8 @@ import JobQtyMismatch from './pages/JobQtyMismatch'
 import ProcessCardClose from './pages/ProcessCardClose'
 import JobQCEntry from './pages/JobQCEntry'
 import DCDetails from './pages/DCDetails'
+import DCDetailsReport from './pages/DCDetailsReport'
+
 import ServiceBillEntry from './pages/ServiceBillEntry'
 import ServiceBillDetails from './pages/ServiceBillDetails'
 import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
@@ -213,6 +215,8 @@ const PAGES = {
   DCSales: <DCSales />,
 
   DCDetails: <DCDetails />,
+  DCDetailsReport: <DCDetailsReport />,
+
   ServiceBillEntry: <ServiceBillEntry />,
   ServiceBillDetails: <ServiceBillDetails />,
   ServiceLabourBillDetails: <ServiceLabourBillDetails />,
