@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Layout from './components/Layout'
 import ItemMaster from './pages/ItemMaster'
 import PartNumberBaseMaster from './pages/PartNumberBaseMaster'
@@ -18,7 +18,8 @@ import PrintMaterialRequest from './pages/PrintMaterialRequest'
 import GateEntry from './pages/GateEntry'
 import GRNEntry from './pages/GRNEntry'
 import GRNEntryReport from './pages/GRNEntryReport'
-import { TaxLedgerMaster, DashboardPage } from './pages/OtherPages'
+import { DashboardPage } from './pages/OtherPages'
+import TaxLedgerMaster from './pages/TaxLedgerMaster'
 // ── New Master Pages ──
 import CompanyMaster from './pages/CompanyMaster'
 import EmployeeMaster from './pages/EmployeeMaster'
@@ -250,7 +251,7 @@ export default function App() {
 
   return (
     <Layout currentPage={page} onNavigate={setPage}>
-      {PAGES[page] ?? <DashboardPage />}
+      {React.cloneElement(PAGES[page] ?? <DashboardPage />, { onNavigate: setPage })}
     </Layout>
   )
 }

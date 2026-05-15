@@ -3,11 +3,9 @@ import { X, Save, ArrowLeft, Edit, Trash2, Info, ChevronRight } from 'lucide-rea
 
 const STORE_OPTIONS = [
   'STORE 1-MAINSTORE',
-  'STORE 2-SUBSTORE',
-  'STORE 3-PRODUCTION',
-  'STORE 4-SERVICE',
-  'STORE 5-PROJECT',
-  'STORE 6-DISPATCH',
+  'STORE 2-GAS CUTTING',
+  'STORE 3-SHEET METAL',
+  'STORE 4-BANDSAW CUTTING',
 ]
 
 const PREFIX_OPTIONS = [

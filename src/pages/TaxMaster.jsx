@@ -53,7 +53,7 @@ function DetailModal({ row, onClose }) {
   )
 }
 
-export default function TaxMaster() {
+export default function TaxMaster({ onNavigate }) {
   const toast = useToast()
   const [rows, setRows] = useState(SEED)
   const [form, setForm] = useState(emptyForm)
@@ -152,7 +152,9 @@ export default function TaxMaster() {
               <option value="">-- Select --</option>
               {TAX_LEDGERS.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
-            <button className="px-3 py-1 text-[12px] font-semibold text-white bg-[#0097A7] hover:bg-[#007a87] rounded transition-colors whitespace-nowrap">
+            <button 
+              onClick={() => onNavigate && onNavigate('TaxLedger')}
+              className="px-3 py-1 text-[12px] font-semibold text-white bg-[#0097A7] hover:bg-[#007a87] rounded transition-colors whitespace-nowrap">
               Add New Tax Ledger A/C
             </button>
           </div>
