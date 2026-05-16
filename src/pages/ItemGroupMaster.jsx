@@ -1,111 +1,10 @@
-import { useState } from 'react'
-import { X, Save, ArrowLeft, Edit, Trash2, Info, ChevronRight } from 'lucide-react'
-
-const STORE_OPTIONS = [
-  'STORE 1-MAINSTORE',
-  'STORE 2-GAS CUTTING',
-  'STORE 3-SHEET METAL',
-  'STORE 4-BANDSAW CUTTING',
-]
-
-const PREFIX_OPTIONS = [
-  'VT', 'VAMW', 'VAWP', 'VAWS', 'VAWSR', 'VG', 'VHC', 'VHP', 'VHM',
-  'VEM', 'VB', 'VF', 'VSK', 'VC', 'VHT', 'VPM', 'VPF', 'VEI', 'VWI', 'VSI',
-  'PRM', 'PFG', 'PSF', 'PSA', 'PMA', 'PBO', 'PWIP', 'PSC',
-  'SSP', 'SSR', 'SMT', 'SAM', 'PRJ', 'PCG',
-]
-
-// 773 seeded item groups (abbreviated representative set)
-const RAW_GROUPS = [
-  ['HYDRAULIC PUMP', 'STORE 1-MAINSTORE', 'VHP'],
-  ['HYDRAULIC MOTOR', 'STORE 1-MAINSTORE', 'VHM'],
-  ['HYDRAULIC VALVE', 'STORE 1-MAINSTORE', 'VHC'],
-  ['ELECTRICAL-CNC', 'STORE 1-MAINSTORE', 'VEI'],
-  ['ELECTRICAL-SENSOR CLAMP', 'STORE 1-MAINSTORE', 'VEI'],
-  ['ELECTRICAL-SENSING CLAMP', 'STORE 1-MAINSTORE', 'VEI'],
-  ['ELECTRICAL-V10 CNC', 'STORE 1-MAINSTORE', 'VEI'],
-  ['ELECTRICAL-RPM METER SET', 'STORE 1-MAINSTORE', 'VEI'],
-  ['ELECTRICAL MOTOR', 'STORE 1-MAINSTORE', 'VEM'],
-  ['BEARING-BALL', 'STORE 1-MAINSTORE', 'VB'],
-  ['BEARING-ROLLER', 'STORE 1-MAINSTORE', 'VB'],
-  ['BEARING-NEEDLE', 'STORE 1-MAINSTORE', 'VB'],
-  ['FASTENER-BOLT', 'STORE 1-MAINSTORE', 'VF'],
-  ['FASTENER-NUT', 'STORE 1-MAINSTORE', 'VF'],
-  ['FASTENER-WASHER', 'STORE 1-MAINSTORE', 'VF'],
-  ['FASTENER-SCREW', 'STORE 1-MAINSTORE', 'VF'],
-  ['SEAL KIT-PUMP', 'STORE 1-MAINSTORE', 'VSK'],
-  ['SEAL KIT-MOTOR', 'STORE 1-MAINSTORE', 'VSK'],
-  ['SEAL KIT-CYLINDER', 'STORE 1-MAINSTORE', 'VSK'],
-  ['SEAL KIT-VALVE', 'STORE 1-MAINSTORE', 'VSK'],
-  ['TOOLS-HAND', 'STORE 1-MAINSTORE', 'VT'],
-  ['TOOLS-POWER', 'STORE 1-MAINSTORE', 'VT'],
-  ['TOOLS-CUTTING', 'STORE 1-MAINSTORE', 'VT'],
-  ['TOOLS-MEASURING', 'STORE 1-MAINSTORE', 'VT'],
-  ['CONSUMABLES-OIL', 'STORE 1-MAINSTORE', 'VC'],
-  ['CONSUMABLES-GREASE', 'STORE 1-MAINSTORE', 'VC'],
-  ['CONSUMABLES-COOLANT', 'STORE 1-MAINSTORE', 'VC'],
-  ['CONSUMABLES-ABRASIVE', 'STORE 1-MAINSTORE', 'VC'],
-  ['PACKING MATERIAL-BOX', 'STORE 1-MAINSTORE', 'VPM'],
-  ['PACKING MATERIAL-FOAM', 'STORE 1-MAINSTORE', 'VPM'],
-  ['PACKING MATERIAL-WRAP', 'STORE 1-MAINSTORE', 'VPM'],
-  ['PIPE-MS', 'STORE 1-MAINSTORE', 'VPF'],
-  ['PIPE-SS', 'STORE 1-MAINSTORE', 'VPF'],
-  ['PIPE-HOSE', 'STORE 1-MAINSTORE', 'VPF'],
-  ['FITTING-ELBOW', 'STORE 1-MAINSTORE', 'VPF'],
-  ['FITTING-TEE', 'STORE 1-MAINSTORE', 'VPF'],
-  ['FITTING-UNION', 'STORE 1-MAINSTORE', 'VPF'],
-  ['SAFETY-GLOVES', 'STORE 1-MAINSTORE', 'VSI'],
-  ['SAFETY-HELMET', 'STORE 1-MAINSTORE', 'VSI'],
-  ['SAFETY-SHOES', 'STORE 1-MAINSTORE', 'VSI'],
-  ['WELDING-ELECTRODE', 'STORE 1-MAINSTORE', 'VWI'],
-  ['WELDING-WIRE', 'STORE 1-MAINSTORE', 'VWI'],
-  ['WELDING-GAS', 'STORE 1-MAINSTORE', 'VWI'],
-  ['ASSEMBLY-WHEEL', 'STORE 1-MAINSTORE', 'VAMW'],
-  ['ASSEMBLY-SHAFT', 'STORE 1-MAINSTORE', 'VAMW'],
-  ['ASSEMBLY-COUPLING', 'STORE 1-MAINSTORE', 'VAMW'],
-  ['GEAR BOX-HELICAL', 'STORE 1-MAINSTORE', 'VG'],
-  ['GEAR BOX-WORM', 'STORE 1-MAINSTORE', 'VG'],
-  ['GEAR BOX-BEVEL', 'STORE 1-MAINSTORE', 'VG'],
-  ['HAND TOOL-SPANNER', 'STORE 1-MAINSTORE', 'VHT'],
-  ['HAND TOOL-PLIER', 'STORE 1-MAINSTORE', 'VHT'],
-  ['RAW MATERIAL-MS PLATE', 'STORE 3-PRODUCTION', 'PRM'],
-  ['RAW MATERIAL-SS PLATE', 'STORE 3-PRODUCTION', 'PRM'],
-  ['RAW MATERIAL-ALUMINIUM', 'STORE 3-PRODUCTION', 'PRM'],
-  ['RAW MATERIAL-COPPER', 'STORE 3-PRODUCTION', 'PRM'],
-  ['FINISHED GOODS-PUMP', 'STORE 3-PRODUCTION', 'PFG'],
-  ['FINISHED GOODS-MOTOR', 'STORE 3-PRODUCTION', 'PFG'],
-  ['FINISHED GOODS-CYLINDER', 'STORE 3-PRODUCTION', 'PFG'],
-  ['SEMI FINISHED-BODY', 'STORE 3-PRODUCTION', 'PSF'],
-  ['SEMI FINISHED-SHAFT', 'STORE 3-PRODUCTION', 'PSF'],
-  ['SEMI FINISHED-COVER', 'STORE 3-PRODUCTION', 'PSF'],
-  ['SUB ASSEMBLY-VALVE', 'STORE 3-PRODUCTION', 'PSA'],
-  ['SUB ASSEMBLY-PUMP', 'STORE 3-PRODUCTION', 'PSA'],
-  ['MAIN ASSEMBLY-UNIT', 'STORE 3-PRODUCTION', 'PMA'],
-  ['BOUGHT OUT-SEALS', 'STORE 3-PRODUCTION', 'PBO'],
-  ['BOUGHT OUT-BEARINGS', 'STORE 3-PRODUCTION', 'PBO'],
-  ['WIP-MACHINING', 'STORE 3-PRODUCTION', 'PWIP'],
-  ['SCRAP-MS', 'STORE 3-PRODUCTION', 'PSC'],
-  ['SERVICE PARTS-PUMP', 'STORE 4-SERVICE', 'SSP'],
-  ['SERVICE PARTS-MOTOR', 'STORE 4-SERVICE', 'SSP'],
-  ['SERVICE PARTS-VALVE', 'STORE 4-SERVICE', 'SSP'],
-  ['SPARE PARTS-SEAL', 'STORE 4-SERVICE', 'SSR'],
-  ['SPARE PARTS-BEARING', 'STORE 4-SERVICE', 'SSR'],
-  ['MAINTENANCE-TOOLS', 'STORE 4-SERVICE', 'SMT'],
-  ['AMC-ITEMS', 'STORE 4-SERVICE', 'SAM'],
-  ['PROJECT ITEMS-STRUCTURE', 'STORE 5-PROJECT', 'PRJ'],
-  ['PROJECT ITEMS-PIPING', 'STORE 5-PROJECT', 'PRJ'],
-  ['CAPITAL GOODS-MACHINE', 'STORE 5-PROJECT', 'PCG'],
-]
-
-const SEED = RAW_GROUPS.map((r, i) => ({
-  id: i + 1,
-  groupName: r[0],
-  store: r[1],
-  prefix: r[2],
-}))
+import { useState, useEffect, useCallback } from 'react'
+import axios from 'axios'
+import { X, Save, ArrowLeft, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const PAGE_SIZES = [8, 25, 50, 100]
-
 const emptyForm = { groupName: '', store: '', prefix: '' }
 
 function DetailModal({ row, onClose }) {
@@ -137,7 +36,19 @@ function DetailModal({ row, onClose }) {
 }
 
 export default function ItemGroupMaster() {
-  const [rows, setRows] = useState(SEED)
+  const toast = useToast()
+
+  // ── Dropdown options from API ──────────────────────────────
+  const [storeOptions, setStoreOptions] = useState([])
+  const [prefixOptions, setPrefixOptions] = useState([])
+  const [dropdownLoading, setDropdownLoading] = useState(true)
+
+  // ── Table data ─────────────────────────────────────────────
+  const [rows, setRows] = useState([])
+  const [tableLoading, setTableLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [editId, setEditId] = useState(null)
@@ -145,6 +56,56 @@ export default function ItemGroupMaster() {
   const [pageSize, setPageSize] = useState(8)
   const [page, setPage] = useState(1)
   const [detailRow, setDetailRow] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+
+  // ── Fetch Store options from ReferenceMaster (type = "Store") ──
+  const fetchStores = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/reference-master/Store')
+      const stores = (res.data.data || []).map(r => r.description)
+      setStoreOptions(stores)
+    } catch (err) {
+      console.error('[ItemGroupMaster] fetchStores error:', err)
+      toast.error('Failed to load store options')
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch Prefix options from prefix table ─────────────────
+  const fetchPrefixes = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/prefixes')
+      const prefixes = (res.data.data || []).map(r => r.prefixCode)
+      setPrefixOptions(prefixes)
+    } catch (err) {
+      console.error('[ItemGroupMaster] fetchPrefixes error:', err)
+      toast.error('Failed to load prefix options')
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+
+  // ── Fetch all item groups ──────────────────────────────────
+  const fetchAll = useCallback(async () => {
+    setTableLoading(true)
+    try {
+      const res = await axios.get('/api/item-group-master')
+      setRows(res.data.data || [])
+    } catch (err) {
+      console.error('[ItemGroupMaster] fetchAll error:', err)
+      toast.error('Failed to load item groups')
+    } finally {
+      setTableLoading(false)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const init = async () => {
+      setDropdownLoading(true)
+      await Promise.all([fetchStores(), fetchPrefixes()])
+      setDropdownLoading(false)
+      fetchAll()
+    }
+    init()
+  }, [fetchStores, fetchPrefixes, fetchAll])
 
   const setField = (k, v) => {
     setForm(f => ({ ...f, [k]: v }))
@@ -160,29 +121,63 @@ export default function ItemGroupMaster() {
     return Object.keys(errs).length === 0
   }
 
-  const handleCreate = () => {
+  // ── Save (create / update) ─────────────────────────────────
+  const handleSave = async () => {
     if (!validate()) return
-    if (editId !== null) {
-      setRows(r => r.map(x => x.id === editId ? { ...form, id: editId } : x))
+    setSaving(true)
+    try {
+      if (editId !== null) {
+        await axios.put(`/api/item-group-master/${editId}`, {
+          groupName: form.groupName.trim(),
+          store: form.store,
+          prefix: form.prefix,
+        })
+        toast.success('Item group updated successfully.')
+      } else {
+        await axios.post('/api/item-group-master', {
+          groupName: form.groupName.trim(),
+          store: form.store,
+          prefix: form.prefix,
+        })
+        toast.success('Item group created successfully.')
+      }
+      setForm(emptyForm)
+      setErrors({})
       setEditId(null)
-    } else {
-      const newId = Math.max(0, ...rows.map(r => r.id)) + 1
-      setRows(r => [...r, { ...form, id: newId }])
+      setPage(1)
+      await fetchAll()
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to save item group.'
+      toast.error(msg)
+    } finally {
+      setSaving(false)
     }
-    setForm(emptyForm)
-    setErrors({})
-    setPage(1)
   }
 
-  const handleEdit = row => {
+  const handleEdit = (row) => {
     setForm({ groupName: row.groupName, store: row.store, prefix: row.prefix })
     setErrors({})
     setEditId(row.id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = id => {
-    if (window.confirm('Delete this record?')) setRows(r => r.filter(x => x.id !== id))
+  const handleDeleteConfirm = (id) => setConfirmDelete(id)
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    try {
+      await axios.delete(`/api/item-group-master/${confirmDelete}`)
+      toast.success('Item group deleted.')
+      setConfirmDelete(null)
+      if (editId === confirmDelete) { setForm(emptyForm); setEditId(null) }
+      await fetchAll()
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to delete item group.'
+      toast.error(msg)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const handleBack = () => {
@@ -191,15 +186,15 @@ export default function ItemGroupMaster() {
     setEditId(null)
   }
 
+  // ── Filtering & Pagination ─────────────────────────────────
   const filtered = rows.filter(r =>
     [r.groupName, r.store, r.prefix].some(v =>
-      v.toLowerCase().includes(search.toLowerCase())
+      (v || '').toLowerCase().includes(search.toLowerCase())
     )
   )
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
-  // Compact page numbers with ellipsis
   const pageNums = () => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
     const pages = [1]
@@ -211,11 +206,13 @@ export default function ItemGroupMaster() {
   }
 
   const selCls = (err) =>
-    `w-full border rounded px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 bg-white transition-colors ${err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'
+    `w-full border rounded px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 bg-white transition-colors ${
+      err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'
     }`
 
   const inpCls = (err) =>
-    `w-full border rounded px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 transition-colors ${err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'
+    `w-full border rounded px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 transition-colors ${
+      err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'
     }`
 
   return (
@@ -240,7 +237,9 @@ export default function ItemGroupMaster() {
         <div className="p-5 space-y-3 max-w-2xl">
           {/* Item Group */}
           <div className="flex items-start gap-3">
-            <label className="text-[13px] font-semibold text-slate-700 w-28 shrink-0 pt-1.5">Item Group</label>
+            <label className="text-[13px] font-semibold text-slate-700 w-28 shrink-0 pt-1.5">
+              Item Group <span className="text-red-500">*</span>
+            </label>
             <div className="flex-1">
               <input
                 type="text"
@@ -257,12 +256,28 @@ export default function ItemGroupMaster() {
 
           {/* Store Name */}
           <div className="flex items-start gap-3">
-            <label className="text-[13px] font-semibold text-slate-700 w-28 shrink-0 pt-1.5">Store Name</label>
+            <label className="text-[13px] font-semibold text-slate-700 w-28 shrink-0 pt-1.5">
+              Store Name <span className="text-red-500">*</span>
+            </label>
             <div className="flex-1">
-              <select value={form.store} onChange={e => setField('store', e.target.value)} className={selCls(errors.store)}>
-                <option value="">---Select Store Name---</option>
-                {STORE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="relative">
+                <select
+                  value={form.store}
+                  onChange={e => setField('store', e.target.value)}
+                  disabled={dropdownLoading}
+                  className={selCls(errors.store) + ' disabled:opacity-60'}
+                >
+                  <option value="">
+                    {dropdownLoading ? 'Loading stores...' : '--- Select Store Name ---'}
+                  </option>
+                  {storeOptions.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                {dropdownLoading && (
+                  <Loader2 className="animate-spin absolute right-7 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0097A7] pointer-events-none" />
+                )}
+              </div>
               {errors.store && (
                 <p className="text-[11px] text-red-500 mt-0.5">{errors.store}</p>
               )}
@@ -271,12 +286,28 @@ export default function ItemGroupMaster() {
 
           {/* Prefix */}
           <div className="flex items-start gap-3">
-            <label className="text-[13px] font-semibold text-slate-700 w-28 shrink-0 pt-1.5">Prefix :</label>
+            <label className="text-[13px] font-semibold text-slate-700 w-28 shrink-0 pt-1.5">
+              Prefix <span className="text-red-500">*</span>
+            </label>
             <div className="flex-1">
-              <select value={form.prefix} onChange={e => setField('prefix', e.target.value)} className={selCls(errors.prefix)}>
-                <option value="">---Select Prefix---</option>
-                {PREFIX_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
+              <div className="relative">
+                <select
+                  value={form.prefix}
+                  onChange={e => setField('prefix', e.target.value)}
+                  disabled={dropdownLoading}
+                  className={selCls(errors.prefix) + ' disabled:opacity-60'}
+                >
+                  <option value="">
+                    {dropdownLoading ? 'Loading prefixes...' : '--- Select Prefix ---'}
+                  </option>
+                  {prefixOptions.map((p, i) => (
+                    <option key={i} value={p}>{p}</option>
+                  ))}
+                </select>
+                {dropdownLoading && (
+                  <Loader2 className="animate-spin absolute right-7 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0097A7] pointer-events-none" />
+                )}
+              </div>
               {errors.prefix && (
                 <p className="text-[11px] text-red-500 mt-0.5">{errors.prefix}</p>
               )}
@@ -286,10 +317,12 @@ export default function ItemGroupMaster() {
           {/* Buttons */}
           <div className="flex gap-2 pt-1">
             <button
-              onClick={handleCreate}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm"
+              onClick={handleSave}
+              disabled={saving || dropdownLoading}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Save className="w-4 h-4" /> {editId !== null ? 'Update' : 'Create'}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {editId !== null ? 'Update' : 'Create'}
             </button>
             <button
               onClick={handleBack}
@@ -338,6 +371,7 @@ export default function ItemGroupMaster() {
                 {[
                   { label: 'Group Name', sortable: true },
                   { label: 'Store', sortable: true },
+                  { label: 'Prefix', sortable: true },
                   { label: 'Edit', sortable: false },
                   { label: 'Delete', sortable: false },
                   { label: 'Details', sortable: false },
@@ -354,14 +388,23 @@ export default function ItemGroupMaster() {
               </tr>
             </thead>
             <tbody>
-              {paged.length === 0 ? (
+              {tableLoading ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-slate-400 text-[13px]">No records found</td>
+                  <td colSpan={6} className="text-center py-8 text-slate-400 text-[13px]">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#0097A7]" /> Loading...
+                    </div>
+                  </td>
+                </tr>
+              ) : paged.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-slate-400 text-[13px]">No records found</td>
                 </tr>
               ) : paged.map((row, idx) => (
                 <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
                   <td className="px-4 py-2.5 text-center">{row.groupName}</td>
                   <td className="px-4 py-2.5 text-center">{row.store}</td>
+                  <td className="px-4 py-2.5 text-center font-semibold text-[#0097A7]">{row.prefix}</td>
                   <td className="px-4 py-2.5 text-center">
                     <button
                       onClick={() => handleEdit(row)}
@@ -373,11 +416,14 @@ export default function ItemGroupMaster() {
                   </td>
                   <td className="px-4 py-2.5 text-center">
                     <button
-                      onClick={() => handleDelete(row.id)}
-                      className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors"
+                      onClick={() => handleDeleteConfirm(row.id)}
+                      disabled={deleting}
+                      className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors disabled:opacity-60"
                       title="Delete"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {deleting && confirmDelete === row.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Trash2 className="w-4 h-4" />}
                     </button>
                   </td>
                   <td className="px-4 py-2.5 text-center">
@@ -416,10 +462,11 @@ export default function ItemGroupMaster() {
                 <button
                   key={n}
                   onClick={() => setPage(n)}
-                  className={`w-8 h-8 text-[12px] rounded border transition-colors ${page === n
+                  className={`w-8 h-8 text-[12px] rounded border transition-colors ${
+                    page === n
                       ? 'bg-[#0097A7] text-white border-[#0097A7]'
                       : 'border-slate-300 hover:bg-slate-100 text-slate-600'
-                    }`}
+                  }`}
                 >
                   {n}
                 </button>
@@ -437,6 +484,14 @@ export default function ItemGroupMaster() {
       </div>
 
       {detailRow && <DetailModal row={detailRow} onClose={() => setDetailRow(null)} />}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Confirm Delete"
+        message="Delete this item group? This action cannot be undone."
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }

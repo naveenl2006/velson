@@ -36,8 +36,8 @@ const NAV = [
     id: 'item-masters', label: 'Item Masters', icon: Package,
     children: [
       { id: 'part-number-base', label: 'Part Number Base Master', page: 'PartNumberBase' },
-      { id: 'dropdown-name',    label: 'Drop Down Name Master',   page: 'DropDownName'  },
-      { id: 'dropdown-list',    label: 'Drop Down List Master',   page: 'DropDownList'  },
+      // { id: 'dropdown-name',    label: 'Drop Down Name Master',   page: 'DropDownName'  },
+      // { id: 'dropdown-list',    label: 'Drop Down List Master',   page: 'DropDownList'  },
       { id: 'tax-ledger',       label: 'Tax Ledger A/C Master',   page: 'TaxLedger'     },
       { id: 'tax-master-menu',  label: 'Tax Master',              page: 'TaxMaster'     },
       { id: 'item-group',       label: 'Item Group Master',       page: 'ItemGroup'     },

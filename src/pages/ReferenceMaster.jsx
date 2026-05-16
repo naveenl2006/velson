@@ -1,78 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
-import { ChevronRight, ChevronDown, Search, Save, Edit2, Trash2, X, FileSpreadsheet, ChevronUp, Plus } from 'lucide-react'
+import { ChevronRight, ChevronDown, Search, Save, Edit2, Trash2, X, FileSpreadsheet, ChevronUp, Plus, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
-
-const REF_TYPES_INITIAL = [
-  'Account Type',
-  'App_User',
-  'Area',
-  'Booking_Status',
-  'Booking_Vehicle_Name',
-  'Breakdown_Email',
-  'Conformation_Part_Description',
-  'Conformation_Type',
-  'Currency',
-  'DC_Type',
-  'Department',
-  'Designation',
-  'Discount Type',
-  'Form',
-  'Freight',
-  'GRN_Inward_Type',
-  'Inward_Type',
-  'Item Category',
-  'Item Expiry',
-  'Item Group',
-  'Item Lock',
-  'Item Type',
-  'JOB_Email',
-  'Ledger Type',
-  'Line',
-  'Machine Category',
-  'Material_Grade',
-  'Material_Req_For',
-  'Material_Type',
-  'OUTSOURCE_STATUS_TYPE',
-  'OUTSOURCE_TYPE',
-  'PAYMODE',
-  'PO Status',
-  'PO Type',
-  'Print_Copy',
-  'Priority',
-  'Process_Type',
-  'QC_Inspection_Type',
-  'QC_STATUS',
-  'QC_Type',
-  'Quotation Type',
-  'Quotation_confirmed_Status',
-  'Spare_Issue_Type',
-  'State',
-  'Status',
-  'Store',
-  'Sub Group',
-  'Tax Type',
-  'Team',
-  'Terms',
-  'UOM',
-  'User Role',
-  'Vehicle_Sub_Type',
-  'Vehicle_Type',
-  'Warranty_Type',
-]
-
-const REF_TYPES_KEY = 'velson_ref_types'
 
 export default function ReferenceMaster() {
   const toast = useToast()
 
-  const [tableData,     setTableData]     = useState([])
-  const [refTypes,      setRefTypes]      = useState(() => {
-    const saved = JSON.parse(localStorage.getItem(REF_TYPES_KEY) || 'null')
-    return saved || REF_TYPES_INITIAL
-  })
+  // ── Reference Types (dropdown) ─────────────────────────────
+  const [refTypes,      setRefTypes]      = useState([])
+  const [typesLoading,  setTypesLoading]  = useState(false)
 
+  // ── Table / form state ─────────────────────────────────────
+  const [tableData,     setTableData]     = useState([])
   const [refType,       setRefType]       = useState('')
   const [code,          setCode]          = useState('')
   const [description,   setDescription]   = useState('')
@@ -80,12 +20,34 @@ export default function ReferenceMaster() {
   const [editId,        setEditId]        = useState(null)
   const [tableOpen,     setTableOpen]     = useState(true)
   const [expandedId,    setExpandedId]    = useState(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [showAddType,   setShowAddType]   = useState(false)
-  const [newTypeName,   setNewTypeName]   = useState('')
   const [loading,       setLoading]       = useState(false)
 
-  const fetchReferenceData = async (type) => {
+  // ── Dialogs ────────────────────────────────────────────────
+  const [confirmDelete,  setConfirmDelete]  = useState(false)
+  const [showAddType,    setShowAddType]    = useState(false)
+  const [newTypeName,    setNewTypeName]    = useState('')
+  const [addTypeLoading, setAddTypeLoading] = useState(false)
+
+  // ── Fetch reference types from DB ──────────────────────────
+  const fetchRefTypes = useCallback(async () => {
+    setTypesLoading(true)
+    try {
+      const res = await axios.get('/api/reference-types')
+      setRefTypes(res.data.data || [])
+    } catch (err) {
+      console.error('[ReferenceMaster] fetchRefTypes error:', err)
+      toast.error('Failed to load reference types')
+    } finally {
+      setTypesLoading(false)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchRefTypes()
+  }, [fetchRefTypes])
+
+  // ── Fetch rows for selected type ──────────────────────────
+  const fetchReferenceData = useCallback(async (type) => {
     if (!type) { setTableData([]); setCode(''); return }
     setLoading(true)
     try {
@@ -96,12 +58,12 @@ export default function ReferenceMaster() {
       setEditId(null)
       setExpandedId(null)
     } catch (err) {
-      console.error('[ReferenceMaster] fetch error:', err)
+      console.error('[ReferenceMaster] fetchReferenceData error:', err)
       toast.error('Failed to fetch data')
     } finally {
       setLoading(false)
     }
-  }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let active = true
@@ -141,22 +103,34 @@ export default function ReferenceMaster() {
     setEditId(r.id)
   }
 
-  const handleAddType = () => {
+  // ── Add new Reference Type (saves to DB) ──────────────────
+  const handleAddType = async () => {
     const trimmed = newTypeName.trim()
     if (!trimmed) { toast.warning('Type name is required.'); return }
-    if (refTypes.includes(trimmed)) { toast.warning(`"${trimmed}" already exists.`); return }
-    const updated = [...refTypes, trimmed].sort((a, b) => a.localeCompare(b))
-    setRefTypes(updated)
-    localStorage.setItem(REF_TYPES_KEY, JSON.stringify(updated))
-    handleRefTypeChange(trimmed)
-    setNewTypeName('')
-    setShowAddType(false)
-    toast.success(`"${trimmed}" added to Reference Types.`)
+
+    const duplicate = refTypes.find(t => t.name.toLowerCase() === trimmed.toLowerCase())
+    if (duplicate) { toast.warning(`"${trimmed}" already exists.`); return }
+
+    setAddTypeLoading(true)
+    try {
+      await axios.post('/api/reference-types', { name: trimmed })
+      await fetchRefTypes()
+      handleRefTypeChange(trimmed)
+      setNewTypeName('')
+      setShowAddType(false)
+      toast.success(`"${trimmed}" added to Reference Types.`)
+    } catch (err) {
+      console.error('[ReferenceMaster] addType error:', err)
+      toast.error(err?.response?.data?.error || 'Failed to add reference type.')
+    } finally {
+      setAddTypeLoading(false)
+    }
   }
 
+  // ── Save (create / update) ────────────────────────────────
   const handleSave = async () => {
-    if (!refType)     { toast.warning('Reference Type is required.'); return }
-    if (!code.trim()) { toast.warning('Code is required.'); return }
+    if (!refType)          { toast.warning('Reference Type is required.'); return }
+    if (!code.trim())      { toast.warning('Code is required.'); return }
     if (!description.trim()) { toast.warning('Description is required.'); return }
 
     setLoading(true)
@@ -191,18 +165,12 @@ export default function ReferenceMaster() {
   }
 
   const handleEdit = () => {
-    if (!editId) {
-      toast.warning('Click a row in the table to select a record first.')
-      return
-    }
+    if (!editId) { toast.warning('Click a row in the table to select a record first.'); return }
     toast.info('Edit the fields above and click Save.')
   }
 
   const handleDelete = () => {
-    if (!editId) {
-      toast.warning('Click a row in the table to select a record first.')
-      return
-    }
+    if (!editId) { toast.warning('Click a row in the table to select a record first.'); return }
     setConfirmDelete(true)
   }
 
@@ -239,7 +207,7 @@ export default function ReferenceMaster() {
     return (a.code || '').localeCompare(b.code || '')
   }
 
-  const displayed = tableData
+  const displayed = (tableData || [])
     .filter(r => {
       if (!search) return true
       const q = search.toLowerCase()
@@ -251,7 +219,7 @@ export default function ReferenceMaster() {
     })
     .sort(codeSort)
 
-  const selectedRecord = tableData.find(r => r.id === editId)
+  const selectedRecord = (tableData || []).find(r => r.id === editId)
 
   return (
     <div className="bg-[#f4f6f8] min-h-full pb-6">
@@ -300,14 +268,27 @@ export default function ReferenceMaster() {
                   </td>
                   <td className="pb-2">
                     <div className="flex items-center gap-1.5">
-                      <select
-                        value={refType}
-                        onChange={e => handleRefTypeChange(e.target.value)}
-                        className="px-2 py-[4px] text-[12px] border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7] w-56"
-                      >
-                        <option value="">select option</option>
-                        {refTypes.map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
+                      <div className="relative">
+                        <select
+                          value={refType}
+                          onChange={e => handleRefTypeChange(e.target.value)}
+                          disabled={typesLoading}
+                          className="px-2 py-[4px] text-[12px] border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7] w-56 disabled:opacity-60"
+                        >
+                          <option value="">
+                            {typesLoading ? 'Loading...' : 'select option'}
+                          </option>
+                          {refTypes.map(o => (
+                            <option key={o.id} value={o.name}>{o.name}</option>
+                          ))}
+                        </select>
+                        {typesLoading && (
+                          <Loader2
+                            size={11}
+                            className="animate-spin absolute right-7 top-1/2 -translate-y-1/2 text-[#0097A7] pointer-events-none"
+                          />
+                        )}
+                      </div>
                       <button
                         onClick={() => { setNewTypeName(''); setShowAddType(true) }}
                         title="Add new reference type"
@@ -378,26 +359,28 @@ export default function ReferenceMaster() {
                 <button
                   onClick={handleSave}
                   disabled={loading}
-                  className="flex items-center gap-1 px-3 py-[4px] bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-bold rounded border border-slate-300 transition-all active:scale-95 disabled:opacity-60"
+                  className="flex items-center gap-1 px-3 py-[4px] bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-bold rounded border border-slate-300 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Save size={12} /> Save
+                  {loading ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save
                 </button>
                 <button
                   onClick={handleEdit}
-                  className="flex items-center gap-1 px-3 py-[4px] bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-bold rounded border border-slate-300 transition-all active:scale-95"
+                  disabled={loading}
+                  className="flex items-center gap-1 px-3 py-[4px] bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-bold rounded border border-slate-300 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Edit2 size={12} /> Edit
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={loading}
-                  className="flex items-center gap-1 px-3 py-[4px] bg-white hover:bg-slate-100 text-red-600 text-[11px] font-bold rounded border border-slate-300 transition-all active:scale-95 disabled:opacity-60"
+                  className="flex items-center gap-1 px-3 py-[4px] bg-white hover:bg-slate-100 text-red-600 text-[11px] font-bold rounded border border-slate-300 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Trash2 size={12} /> Delete
                 </button>
                 <button
                   onClick={handleClear}
-                  className="flex items-center gap-1 px-3 py-[4px] bg-white hover:bg-slate-100 text-amber-600 text-[11px] font-bold rounded border border-slate-300 transition-all active:scale-95"
+                  disabled={loading}
+                  className="flex items-center gap-1 px-3 py-[4px] bg-white hover:bg-slate-100 text-amber-600 text-[11px] font-bold rounded border border-slate-300 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <X size={12} /> Clear
                 </button>
@@ -440,7 +423,11 @@ export default function ReferenceMaster() {
                       ) : displayed.length === 0 ? (
                         <tr>
                           <td colSpan={4} className="px-4 py-8 text-center text-[12px] text-slate-400">
-                            {refType ? 'No records found.' : 'Select a Reference Type to load data.'}
+                            {refType
+                              ? search
+                                ? `No records match "${search}".`
+                                : 'No records found. Use Save to add the first entry.'
+                              : 'Select a Reference Type to load data.'}
                           </td>
                         </tr>
                       ) : (
@@ -536,7 +523,7 @@ export default function ReferenceMaster() {
       {showAddType && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-          onClick={e => { if (e.target === e.currentTarget) setShowAddType(false) }}
+          onClick={e => { if (e.target === e.currentTarget && !addTypeLoading) setShowAddType(false) }}
         >
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-80 overflow-hidden">
             <div className="flex items-center justify-between bg-[#0097A7] px-4 py-2.5">
@@ -544,7 +531,11 @@ export default function ReferenceMaster() {
                 <Plus size={13} className="text-white" />
                 <span className="text-[12px] font-bold text-white uppercase tracking-tight">Add Reference Type</span>
               </div>
-              <button onClick={() => setShowAddType(false)} className="text-white/80 hover:text-white transition-all">
+              <button
+                onClick={() => { if (!addTypeLoading) setShowAddType(false) }}
+                disabled={addTypeLoading}
+                className="text-white/80 hover:text-white transition-all disabled:opacity-50"
+              >
                 <X size={14} />
               </button>
             </div>
@@ -558,26 +549,32 @@ export default function ReferenceMaster() {
                   value={newTypeName}
                   onChange={e => setNewTypeName(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter') handleAddType()
-                    if (e.key === 'Escape') setShowAddType(false)
+                    if (e.key === 'Enter' && !addTypeLoading) handleAddType()
+                    if (e.key === 'Escape' && !addTypeLoading) setShowAddType(false)
                   }}
                   autoFocus
+                  disabled={addTypeLoading}
                   placeholder="e.g. Payment_Mode"
-                  className="w-full px-2 py-[5px] text-[12px] border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7]"
+                  className="w-full px-2 py-[5px] text-[12px] border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7] disabled:opacity-60"
                 />
               </div>
               <div className="flex justify-end gap-2 pt-1">
                 <button
                   onClick={() => setShowAddType(false)}
-                  className="px-3 py-[5px] text-[11px] font-bold text-slate-600 border border-slate-300 rounded hover:bg-slate-50 transition-all"
+                  disabled={addTypeLoading}
+                  className="px-3 py-[5px] text-[11px] font-bold text-slate-600 border border-slate-300 rounded hover:bg-slate-50 transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddType}
-                  className="flex items-center gap-1 px-3 py-[5px] text-[11px] font-bold text-white bg-[#0097A7] hover:bg-[#00838f] rounded transition-all active:scale-95"
+                  disabled={addTypeLoading}
+                  className="flex items-center gap-1 px-3 py-[5px] text-[11px] font-bold text-white bg-[#0097A7] hover:bg-[#00838f] rounded transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Plus size={11} /> Create
+                  {addTypeLoading
+                    ? <><Loader2 size={11} className="animate-spin" /> Saving...</>
+                    : <><Plus size={11} /> Create</>
+                  }
                 </button>
               </div>
             </div>

@@ -1,20 +1,11 @@
-import { useState } from 'react'
-import { X, Save, Edit, Trash2, Info, ChevronRight, ArrowLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+import { X, Save, Edit, Trash2, Info, ChevronRight, ArrowLeft, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
-
-const SEED = [
-  { id: 1, taxLedger: 'GST 0%', taxPercent: 0 },
-  { id: 2, taxLedger: 'GST 5%', taxPercent: 5 },
-  { id: 3, taxLedger: 'GST 7%', taxPercent: 7 },
-  { id: 4, taxLedger: 'GST 12%', taxPercent: 12 },
-  { id: 5, taxLedger: 'GST 18%', taxPercent: 18 },
-  { id: 6, taxLedger: 'GST 28%', taxPercent: 28 },
-  { id: 7, taxLedger: 'GST 30%', taxPercent: 30 },
-]
 
 const PAGE_SIZES = [8, 25, 50, 100]
 
-function pct(v) { return Number(v).toFixed(0) + '%' }
+function pct(v) { return Number(v).toFixed(2) + '%' }
 
 function DetailModal({ row, onClose }) {
   return (
@@ -26,8 +17,8 @@ function DetailModal({ row, onClose }) {
         </div>
         <div className="p-6 space-y-2">
           {[
-            ['Tax Ledger Account', row.taxLedger],
-            ['Tax Ledger Account Percent', pct(row.taxPercent)],
+            ['Tax Ledger Account', row.ledgerName],
+            ['Tax Percent', pct(row.taxPercent)],
           ].map(([lbl, val]) => (
             <div key={lbl} className="flex justify-between py-1.5 border-b border-slate-100 last:border-0">
               <span className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">{lbl}</span>
@@ -43,49 +34,86 @@ function DetailModal({ row, onClose }) {
   )
 }
 
+const emptyForm = { ledgerName: '', taxPercent: '' }
+
 export default function TaxLedgerMaster({ onNavigate }) {
   const toast = useToast()
-  const [rows, setRows] = useState(SEED)
-  const [taxLedger, setTaxLedger] = useState('')
+  const [rows, setRows] = useState([])
+  const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState(null)
   const [search, setSearch] = useState('')
   const [pageSize, setPageSize] = useState(8)
   const [page, setPage] = useState(1)
   const [detailRow, setDetailRow] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [tableLoading, setTableLoading] = useState(false)
+  const [deleteId, setDeleteId] = useState(null)
 
-  const handleCreate = () => {
-    if (!taxLedger.trim()) return toast.warning('Tax Ledger A/C is required')
-    
-    // Auto extract percentage from name if possible
-    const match = taxLedger.match(/\d+(\.\d+)?/);
-    const taxPercent = match ? Number(match[0]) : 0;
-
-    if (editId !== null) {
-      setRows(r => r.map(x => x.id === editId
-        ? { id: editId, taxLedger, taxPercent }
-        : x))
-      setEditId(null)
-      toast.success('Updated successfully')
-    } else {
-      const newId = Math.max(0, ...rows.map(r => r.id)) + 1
-      setRows(r => [...r, { id: newId, taxLedger, taxPercent }])
-      toast.success('Created successfully')
+  const fetchAll = async () => {
+    setTableLoading(true)
+    try {
+      const res = await axios.get('/api/tax-ledger')
+      if (res.data.success) setRows(res.data.data)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load tax ledgers')
+    } finally {
+      setTableLoading(false)
     }
-    setTaxLedger('')
-    setPage(1)
   }
 
-  const handleEdit = row => {
-    setTaxLedger(row.taxLedger)
+  useEffect(() => { fetchAll() }, [])
+
+  const handleSubmit = async () => {
+    if (!form.ledgerName.trim()) return toast.warning('Tax Ledger A/C is required')
+
+    const payload = {
+      ledgerName: form.ledgerName.trim(),
+      taxPercent: parseFloat(form.taxPercent || 0),
+    }
+
+    setLoading(true)
+    try {
+      if (editId !== null) {
+        await axios.put(`/api/tax-ledger/${editId}`, payload)
+        toast.success('Updated successfully')
+      } else {
+        await axios.post('/api/tax-ledger', payload)
+        toast.success('Created successfully')
+      }
+      setForm(emptyForm)
+      setEditId(null)
+      setPage(1)
+      await fetchAll()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Operation failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEdit = (row) => {
+    setForm({ ledgerName: row.ledgerName, taxPercent: String(row.taxPercent) })
     setEditId(row.id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = id => {
-    if (window.confirm('Delete this record?')) {
-        setRows(r => r.filter(x => x.id !== id))
-        toast.success('Deleted successfully')
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this record?')) return
+    setDeleteId(id)
+    try {
+      await axios.delete(`/api/tax-ledger/${id}`)
+      toast.success('Deleted successfully')
+      await fetchAll()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Delete failed')
+    } finally {
+      setDeleteId(null)
     }
+  }
+
+  const handleCancel = () => {
+    setForm(emptyForm)
+    setEditId(null)
   }
 
   const filtered = rows.filter(r =>
@@ -105,50 +133,70 @@ export default function TaxLedgerMaster({ onNavigate }) {
         <span className="text-[#0097A7] font-semibold">Tax Ledger A/C Master</span>
       </div>
 
-      {/* ── Create / Edit Form ── */}
-      <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden p-6 space-y-5">
-        <h2 className="text-[#0097A7] text-center font-bold text-[18px]">
-          {editId !== null ? 'Edit - Tax Ledger A/C' : 'Create - Tax Ledger A/C'}
-        </h2>
-
-        <div className="flex items-center gap-4 max-w-4xl">
-          <label className="text-[13px] font-bold text-slate-800 shrink-0">
-            Tax Ledger A/C :
-          </label>
-          <input 
-            type="text" 
-            value={taxLedger} 
-            onChange={e => setTaxLedger(e.target.value)}
-            className="flex-1 border border-slate-300 rounded px-3 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7]" 
-          />
+      {/* Form */}
+      <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-[--color-main] px-4 py-2.5">
+          <h2 className="text-white text-center font-semibold text-[14px]">
+            {editId !== null ? 'Edit - Tax Ledger A/C' : 'Create - Tax Ledger A/C'}
+          </h2>
         </div>
 
-        <div className="flex gap-2 pt-2">
-          <button onClick={handleCreate}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#5cb85c] hover:bg-[#4cae4c] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-            <Save className="w-4 h-4" /> {editId !== null ? 'Update' : 'Create'}
-          </button>
-          {editId !== null ? (
-            <button onClick={() => { setTaxLedger(''); setEditId(null) }}
-              className="px-4 py-1.5 bg-slate-500 hover:bg-slate-600 text-white text-[13px] font-semibold rounded transition-colors">
-              Cancel
+        <div className="p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="text-[13px] font-semibold text-slate-700 w-36 shrink-0">
+              <span className="text-red-500">*</span> Tax Ledger A/C :
+            </label>
+            <input
+              type="text"
+              value={form.ledgerName}
+              onChange={e => setForm(f => ({ ...f, ledgerName: e.target.value }))}
+              className="flex-1 border border-slate-300 rounded px-3 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7]"
+              placeholder="e.g. GST 18%"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="text-[13px] font-semibold text-slate-700 w-36 shrink-0">Tax Percent % :</label>
+            <input
+              type="number"
+              value={form.taxPercent}
+              onChange={e => setForm(f => ({ ...f, taxPercent: e.target.value }))}
+              className="w-48 border border-slate-300 rounded px-3 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7]"
+              placeholder="0"
+              min="0"
+              step="0.01"
+            />
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] disabled:opacity-50 text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {loading ? (editId !== null ? 'Updating...' : 'Creating...') : (editId !== null ? 'Update' : 'Create')}
             </button>
-          ) : (
-            <button onClick={() => onNavigate && onNavigate('TaxMaster')}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#5bc0de] hover:bg-[#46b8da] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-              <ArrowLeft className="w-4 h-4" /> Back to List
-            </button>
-          )}
+            {editId !== null ? (
+              <button onClick={handleCancel}
+                className="px-4 py-1.5 bg-slate-500 hover:bg-slate-600 text-white text-[13px] font-semibold rounded transition-colors">
+                Cancel
+              </button>
+            ) : (
+              <button onClick={() => onNavigate && onNavigate('TaxMaster')}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#5bc0de] hover:bg-[#46b8da] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
+                <ArrowLeft className="w-4 h-4" /> Back to Tax Master
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── Data Table ── */}
-      <div className="bg-white rounded shadow-sm overflow-hidden border border-slate-200">
+      {/* Table */}
+      <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
         <div className="bg-[#337ab7] px-4 py-2.5">
           <h2 className="text-white text-center font-semibold text-[14px]">Tax Ledger Account Details</h2>
         </div>
 
-        {/* Controls */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
           <div className="flex items-center gap-2 text-[13px] text-slate-600">
             Search:
@@ -165,29 +213,25 @@ export default function TaxLedgerMaster({ onNavigate }) {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[13px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                {['Tax Ledger Account', 'Tax Ledger Account Percent', 'Edit', 'Delete', 'Details'].map(h => (
-                  <th key={h} className="text-center px-3 py-2.5 font-semibold text-slate-600 text-[12px] uppercase tracking-wide whitespace-nowrap">
-                    {h}
-                    {['Tax Ledger Account', 'Tax Ledger Account Percent'].includes(h) && (
-                      <svg className="inline w-3 h-3 ml-1 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
-                      </svg>
-                    )}
-                  </th>
+                {['Tax Ledger Account', 'Tax Percent', 'Edit', 'Delete', 'Details'].map(h => (
+                  <th key={h} className="text-center px-3 py-2.5 font-semibold text-slate-600 text-[12px] uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {paged.length === 0 ? (
+              {tableLoading ? (
+                <tr><td colSpan={5} className="text-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0097A7]" />
+                </td></tr>
+              ) : paged.length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-8 text-slate-400 text-[13px]">No records found</td></tr>
               ) : paged.map((row, idx) => (
                 <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
-                  <td className="px-3 py-2.5 text-center">{row.taxLedger}</td>
+                  <td className="px-3 py-2.5 text-center">{row.ledgerName}</td>
                   <td className="px-3 py-2.5 text-center">{pct(row.taxPercent)}</td>
                   <td className="px-3 py-2.5 text-center">
                     <button onClick={() => handleEdit(row)}
@@ -197,8 +241,9 @@ export default function TaxLedgerMaster({ onNavigate }) {
                   </td>
                   <td className="px-3 py-2.5 text-center">
                     <button onClick={() => handleDelete(row.id)}
-                      className="px-3 py-1.5 bg-[#d9534f] hover:bg-[#c9302c] text-white text-[12px] font-semibold rounded transition-colors">
-                      <Trash2 className="w-4 h-4" />
+                      disabled={deleteId === row.id}
+                      className="px-3 py-1.5 bg-[#d9534f] hover:bg-[#c9302c] disabled:opacity-50 text-white text-[12px] font-semibold rounded transition-colors">
+                      {deleteId === row.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </td>
                   <td className="px-3 py-2.5 text-center">
@@ -213,7 +258,6 @@ export default function TaxLedgerMaster({ onNavigate }) {
           </table>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <span className="text-[12px] text-slate-500">
             Showing {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} entries

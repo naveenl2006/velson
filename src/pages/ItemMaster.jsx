@@ -1,10 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   ChevronRight, Package, Store, Settings, Paperclip,
   Pencil, Trash2, Eye, Download, Image as ImageIcon,
-  FileImage, FileX, FileMinus, LayoutList,
+  FileImage, FileX, FileMinus, LayoutList, Loader2,
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
+
+// ── API helper ─────────────────────────────────────────────────────
+const api = {
+  get: (url) => fetch(url).then(r => r.json()),
+  post: (url, data) => fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).then(r => r.json()),
+  put: (url, data) => fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).then(r => r.json()),
+  del: (url) => fetch(url, { method: 'DELETE' }).then(r => r.json()),
+}
 
 // ── Shared UI primitives ─────────────────────────────────────────
 const Label = ({ children, required }) => (
@@ -14,30 +31,37 @@ const Label = ({ children, required }) => (
   </label>
 )
 
-const Input = ({ placeholder, value, onChange, type = 'text' }) => (
+const Input = ({ placeholder, value, onChange, type = 'text', disabled }) => (
   <input
     type={type}
     placeholder={placeholder}
     value={value}
     onChange={onChange}
-    className="w-full px-3 py-[9px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300"
+    disabled={disabled}
+    className="w-full px-3 py-[9px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
   />
 )
 
-const Select = ({ options, placeholder, value, onChange }) => (
+const Select = ({ options = [], placeholder, value, onChange, loading }) => (
   <div className="relative">
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-[9px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer"
+      disabled={loading}
+      className="w-full px-3 py-[9px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
     >
-      <option value="">{placeholder}</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
+      <option value="">{loading ? 'Loading…' : placeholder}</option>
+      {options.map(o => (
+        <option key={o.value} value={String(o.value)}>{o.label}</option>
+      ))}
     </select>
     <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
+      {loading
+        ? <Loader2 className="w-3.5 h-3.5 text-slate-400 animate-spin" />
+        : <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+      }
     </div>
   </div>
 )
@@ -54,76 +78,7 @@ const SectionCard = ({ title, children, icon }) => (
 
 const Row = ({ children }) => <div className="grid grid-cols-2 gap-4">{children}</div>
 
-// ── Dropdown data ─────────────────────────────────────────────────
-const ITEM_GROUPS = [
-  'ASSEMBLY-10 TON WINCH-ASSEMBLE', 'ASSEMBLY-10 TON WINCH-CHILD PART', 'ASSEMBLY-10 TON WINCH-SUB ASSEMBLE',
-  'ASSEMBLY-GRIPPER-SUB ASSEMBLE', 'ASSEMBLY-P14 WATER PUMP-ASSEMBLE', 'ASSEMBLY-P14 WATER PUMP-CHILDPART',
-  'COMMON- COMMON', 'COMMON-BEARING-ARB', 'COMMON-BEARING-BTZ', 'COMMON-BEARING-COMMON',
-  'Raw Materials', 'Finished Goods', 'Bought Out Parts', 'Hand Tools', 'Fasteners', 'Consumables',
-]
-const MODELS = [
-  'AUTO JOB', 'COMMON', 'COMPRESSOR', 'Consumables', 'CORE DRILL', 'EQUALIZER BEAM', 'GEARBOX',
-  'GRADE CONTROL MACHINE', 'GRC', 'GRIPPER', 'HD 300', 'HDE', 'HMD', 'MDD', 'MICROBLAST', 'MINICORE',
-  'MODEL A', 'MODEL B', 'MODEL C', 'MODEL D',
-]
-const SUB_GROUPS = ['Sub Group 1', 'Sub Group 2', 'Sub Group 3', 'Sub Group 4']
-const UOMS = ['NOS', 'KG', 'MTR', 'LTR', 'SET', 'PCS', 'BOX', 'ROLL', 'GM', 'TON']
-const ITEM_TYPES = [
-  'Assembly FG', 'Asset', 'Child Part', 'Fastner', 'FG', 'Fixing Screw', 'Main Assembly FG',
-  'Office Maintainance', 'Printing & Stationary', 'Product', 'Raw Material - Domestic',
-  'Raw Material - Import', 'RM Electricals', 'RM Plant & Machinery', 'Staff Welfare', 'Sub Assembly FG',
-]
-const QC_TYPES = ['QUALITY', 'STORE']
-const STORE_NAMES = ['Main Store', 'Raw Material Store', 'FG Store', 'Rejection Store', 'Tools Store', 'Sub Store']
-const MATERIAL_GRADES = ['Grade A', 'Grade B', 'IS 2062', 'SS 304', 'SS 316', 'EN8', 'SS 202']
-const MATERIAL_TYPES = ['Flat', 'Round Bar', 'Pipe', 'Sheet', 'Channel', 'Angle', 'Hollow Section']
-const RAW_MATERIALS = ['MS Flat', 'SS Round Bar', 'Aluminum Sheet', 'MS Pipe', 'HR Sheet', 'CR Sheet', 'GI Sheet']
-const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED']
-const GST_RATES = ['0%', '5%', '12%', '18%', '28%']
-
-// ── Mock index data (matches screenshot) ─────────────────────────
-const MOCK_ITEMS = [
-  { id: 2203, sno: 1,  partNo: 'VE-70071', osNo: 'VOS4321240', partName: 'Center Slider Sensing plate',          model: '', brand: '', rol: 20, mStock: 10, cStock: 49, rcNo: '',                        imgColor: '#c0392b', drawing: ''            },
-  { id: 2205, sno: 2,  partNo: 'VE-70073', osNo: 'VOS4321390', partName: 'Center Slider Sensing plate 2',        model: '', brand: '', rol: 0,  mStock: 0,  cStock: 0,  rcNo: '',                        imgColor: '#8e44ad', drawing: ''            },
-  { id: 2206, sno: 3,  partNo: 'VE-70074', osNo: 'VOS4321391', partName: 'Center Slider Sensing Shaft 35MM',     model: '', brand: '', rol: 0,  mStock: 0,  cStock: 0,  rcNo: '/Content/pdfs/MM383-11.pdf', imgColor: '#27ae60', drawing: 'MM383-11.pdf' },
-  { id: 2207, sno: 4,  partNo: 'VE-70075', osNo: '',           partName: 'Center Slider Sensing Shaft 48MM',     model: '', brand: '', rol: 0,  mStock: 0,  cStock: 0,  rcNo: 'MM383-10.pdf',           imgColor: '#27ae60', drawing: 'MM383-10.pdf' },
-  { id: 2208, sno: 5,  partNo: 'VE-70076', osNo: '',           partName: 'Center Slider Sensing Shaft 85MM',     model: '', brand: '', rol: 0,  mStock: 0,  cStock: 0,  rcNo: 'MM383-9.pdf',            imgColor: '#27ae60', drawing: 'MM383-9.pdf'  },
-  { id: 2209, sno: 6,  partNo: 'VE-70077', osNo: '',           partName: 'CENTER SLIDER SENSING BAR 50MM',       model: '', brand: '', rol: 0,  mStock: 0,  cStock: 0,  rcNo: '',                        imgColor: '#2980b9', drawing: ''            },
-  { id: 2210, sno: 7,  partNo: 'VE-70078', osNo: '',           partName: 'ELECTRICAL CONTROL BOX BOTTOM BUSH',   model: '', brand: '', rol: 0,  mStock: 0,  cStock: 0,  rcNo: '',                        imgColor: '#2980b9', drawing: ''            },
-  { id: 2211, sno: 8,  partNo: 'VE-70079', osNo: '',           partName: 'CENTER SLIDER SENSING BAR 150MM',      model: '', brand: '', rol: 0,  mStock: 0,  cStock: 0,  rcNo: '',                        imgColor: '#2980b9', drawing: ''            },
-  { id: 2212, sno: 9,  partNo: 'VE-70080', osNo: '',           partName: 'COMMON WIRE SUPPORT PIECE 16MM',       model: '', brand: '', rol: 0,  mStock: 0,  cStock: 0,  rcNo: 'CM05.pdf',               imgColor: '#2980b9', drawing: 'CM05.pdf'    },
-  { id: 2231, sno: 10, partNo: 'VE-70041', osNo: '',           partName: 'V2 I 90° sensor clamp',                model: '', brand: '', rol: 10, mStock: 5,  cStock: 52, rcNo: 'MM383-1.pdf',            imgColor: '#16a085', drawing: 'MM383-1.pdf'  },
-]
-
-const TOTAL_RECORDS = 23125
-
-// ── Default form state ────────────────────────────────────────────
-const emptyForm = {
-  GroupId: '', GroupName: '',
-  IM_Part_No: '', Outsource_Part_No: '',
-  IM_PartName: '', ModelId: '', Brand: '',
-  IM_Description: '', IM_Size: '', IM_WEIGHT: '',
-  UnitId: '', UnitName: '',
-  SubGroupId: '',
-  ItemTypeId: '', ItemTypeName: '',
-  QcTypeId: '',
-  IM_HSN_Code: '',
-  IM_Purchase_Rate: '', IM_Margin_per: '', IM_Rate: '',
-  CurrencyId: 'INR',
-  TaxId: '',
-  StoreId: '', StoreName: '',
-  MaterialGradeId: '', MaterialTypeId: '', RawMaterialId: '',
-  Rack_No: '', Location: '',
-  IM_ReorderLevel: '', IM_Min_Stock: '',
-  RM_length: '', Raw_material_wt: '', FG_material_wt: '',
-  RouteCardNumber: '',
-  Status: 'Active',
-}
-
-const requiredFields = ['GroupName', 'IM_Part_No', 'IM_PartName', 'UnitName', 'ItemTypeName', 'QcTypeId']
-
-// ── Top action button ─────────────────────────────────────────────
-const ActionBtn = ({ icon: Icon, label, onClick, variant = 'teal' }) => {
+const ActionBtn = ({ icon: Icon, label, onClick, variant = 'teal', disabled }) => {
   const styles = {
     teal:   'bg-[#0097A7] hover:bg-[#007a87] text-white',
     green:  'bg-[#2ecc71] hover:bg-[#27ae60] text-white',
@@ -135,7 +90,8 @@ const ActionBtn = ({ icon: Icon, label, onClick, variant = 'teal' }) => {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold rounded-md shadow-sm transition-all duration-150 active:scale-95 ${styles[variant]}`}
+      disabled={disabled}
+      className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold rounded-md shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]}`}
     >
       {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
       {label}
@@ -143,19 +99,145 @@ const ActionBtn = ({ icon: Icon, label, onClick, variant = 'teal' }) => {
   )
 }
 
-// ── Index (table) view ────────────────────────────────────────────
-function IndexView({ onCreate, onView }) {
-  const [search, setSearch] = useState('')
-  const [showEntries, setShowEntries] = useState('10')
-  const [page, setPage] = useState(1)
+// ── useDropdowns hook ─────────────────────────────────────────────
+function useDropdowns() {
+  const toast = useToast()
+  const [dropdowns, setDropdowns] = useState({
+    itemGroups: [], models: [], uoms: [], taxes: [],
+    subGroups: [], stores: [], itemTypes: [], qcTypes: [],
+    materialGrades: [], materialTypes: [], currencies: [],
+  })
+  const [loading, setLoading] = useState(true)
 
-  const filtered = MOCK_ITEMS.filter(item =>
-    !search || item.partName.toLowerCase().includes(search.toLowerCase()) ||
-    item.partNo.toLowerCase().includes(search.toLowerCase())
-  )
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true)
+      try {
+        const results = await Promise.allSettled([
+          api.get('/api/item-group-master'),
+          api.get('/api/reference-master/Vehicle_Type'),
+          api.get('/api/reference-master/UOM'),
+          api.get('/api/tax-master'),
+          api.get('/api/reference-master/Sub%20Group'),
+          api.get('/api/reference-master/Store'),
+          api.get('/api/reference-master/Item%20Type'),
+          api.get('/api/reference-master/QC_Type'),
+          api.get('/api/reference-master/Material_Grade'),
+          api.get('/api/reference-master/Material_Type'),
+          api.get('/api/reference-master/Currency'),
+        ])
+        const [ig, models, uoms, taxes, sg, stores, it, qct, mg, mt, curr] = results.map(r =>
+          r.status === 'fulfilled' ? r.value : { data: [] }
+        )
+        setDropdowns({
+          itemGroups:     ig.data    || [],
+          models:         models.data || [],
+          uoms:           uoms.data   || [],
+          taxes:          taxes.data  || [],
+          subGroups:      sg.data     || [],
+          stores:         stores.data || [],
+          itemTypes:      it.data     || [],
+          qcTypes:        qct.data    || [],
+          materialGrades: mg.data     || [],
+          materialTypes:  mt.data     || [],
+          currencies:     curr.data   || [],
+        })
+      } catch {
+        toast.error('Failed to load dropdown data')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAll()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { dropdowns, dropdownsLoading: loading }
+}
+
+// ── Empty form ────────────────────────────────────────────────────
+const emptyForm = {
+  groupId: '', partNo: '', outsourcePartNo: '', partName: '',
+  modelId: '', brand: '', description: '', size: '', weight: '',
+  unitId: '', hsnCode: '', purchaseRate: '', marginPercent: '', rate: '',
+  currencyId: '', taxId: '', subGroupId: '', storeId: '',
+  rackNo: '', location: '', itemTypeId: '', qcTypeId: '',
+  materialGradeId: '', materialTypeId: '', rawMaterialId: '',
+  rmLength: '', rawMaterialWt: '', fgMaterialWt: '',
+  reorderLevel: '', minStock: '',
+}
+
+const REQUIRED = [
+  { key: 'groupId',    label: 'Item Group' },
+  { key: 'partNo',     label: 'Part Number' },
+  { key: 'partName',   label: 'Part Name' },
+  { key: 'unitId',     label: 'UOM' },
+  { key: 'itemTypeId', label: 'Item Type' },
+  { key: 'qcTypeId',   label: 'QC Type' },
+]
+
+// ── Index (table) view ────────────────────────────────────────────
+function IndexView({ onCreate, onEdit, onView, dropdowns }) {
+  const toast = useToast()
+  const [search, setSearch]           = useState('')
+  const [debSearch, setDebSearch]     = useState('')
+  const [showEntries, setShowEntries] = useState('10')
+  const [page, setPage]               = useState(1)
+  const [items, setItems]             = useState([])
+  const [total, setTotal]             = useState(0)
+  const [loading, setLoading]         = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => { setDebSearch(search); setPage(1) }, 350)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const fetchItems = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ page, limit: showEntries, search: debSearch })
+      const json = await api.get(`/api/item-master?${params}`)
+      if (!json.success) throw new Error(json.message)
+      setItems(json.data)
+      setTotal(json.total)
+    } catch (err) {
+      toast.error(err.message || 'Failed to load items')
+    } finally {
+      setLoading(false)
+    }
+  }, [page, showEntries, debSearch]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { fetchItems() }, [fetchItems])
+
+  const handleDelete = async () => {
+    try {
+      const json = await api.del(`/api/item-master/${deleteTarget.id}`)
+      if (!json.success) throw new Error(json.message)
+      toast.success('Item deleted successfully')
+      setDeleteTarget(null)
+      fetchItems()
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete item')
+      setDeleteTarget(null)
+    }
+  }
+
+  const resolveModel = (id) =>
+    dropdowns.models.find(m => m.id === Number(id))?.description || ''
+
+  const totalPages = Math.max(1, Math.ceil(total / Number(showEntries)))
+  const from = total === 0 ? 0 : (page - 1) * Number(showEntries) + 1
+  const to   = Math.min(page * Number(showEntries), total)
 
   const thCls = 'px-2 py-2.5 text-[11px] font-bold text-white uppercase tracking-wider text-center border-r border-[#00838f] last:border-r-0 whitespace-nowrap'
   const tdCls = 'px-2 py-2 text-[12px] text-slate-700 text-center border-r border-slate-100 last:border-r-0'
+
+  const pageNums = () => {
+    const nums = []
+    for (let p = Math.max(1, page - 1); p <= Math.min(totalPages, page + 1); p++) nums.push(p)
+    return nums
+  }
 
   return (
     <div className="bg-[#f4f6f8] min-h-full">
@@ -163,31 +245,30 @@ function IndexView({ onCreate, onView }) {
 
         {/* ── Top action bar ── */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <ActionBtn icon={Package}    label="Create"                    onClick={onCreate}    variant="green"  />
-          <ActionBtn icon={Download}   label="Export All to Excel"        onClick={() => {}}    variant="teal"   />
-          <ActionBtn icon={FileImage}  label="View All Uploaded Files"    onClick={() => {}}    variant="blue"   />
-          <ActionBtn icon={FileX}      label="View All UnAvailable Images" onClick={() => {}}   variant="indigo" />
-          <ActionBtn icon={FileMinus}  label="View All UnAvailable Pdfs"  onClick={() => {}}    variant="orange" />
-          <ActionBtn icon={LayoutList} label="Display All"                onClick={() => {}}    variant="slate"  />
+          <ActionBtn icon={Package}    label="Create"                     onClick={onCreate}    variant="green"  />
+          <ActionBtn icon={Download}   label="Export All to Excel"         onClick={() => {}}    variant="teal"   />
+          <ActionBtn icon={FileImage}  label="View All Uploaded Files"     onClick={() => {}}    variant="blue"   />
+          <ActionBtn icon={FileX}      label="View All UnAvailable Images" onClick={() => {}}    variant="indigo" />
+          <ActionBtn icon={FileMinus}  label="View All UnAvailable Pdfs"   onClick={() => {}}    variant="orange" />
+          <ActionBtn icon={LayoutList} label="Display All"                 onClick={fetchItems}  variant="slate"  />
         </div>
 
         {/* ── Table card ── */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
 
-          {/* Card header */}
           <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-5 py-2.5">
             <h2 className="text-white text-[13px] font-bold tracking-wider uppercase text-center">
               Item Master Details
             </h2>
           </div>
 
-          {/* Search + Show entries row */}
+          {/* Search + Show entries */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <div className="flex items-center gap-2 text-[12px] text-slate-600">
               <span>Show</span>
               <select
                 value={showEntries}
-                onChange={e => setShowEntries(e.target.value)}
+                onChange={e => { setShowEntries(e.target.value); setPage(1) }}
                 className="border border-slate-200 rounded px-2 py-1 text-[12px] focus:outline-none focus:ring-1 focus:ring-[#0097A7] bg-white"
               >
                 {['10', '25', '50', '100'].map(v => <option key={v} value={v}>{v}</option>)}
@@ -205,8 +286,13 @@ function IndexView({ onCreate, onView }) {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse min-w-[1100px]">
+          <div className="overflow-x-auto relative">
+            {loading && (
+              <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
+                <Loader2 className="w-6 h-6 text-[#0097A7] animate-spin" />
+              </div>
+            )}
+            <table className="w-full border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-gradient-to-r from-[#0097A7] to-[#00ACC1]">
                   <th className={thCls} style={{ width: 52  }}>ID</th>
@@ -219,94 +305,97 @@ function IndexView({ onCreate, onView }) {
                   <th className={thCls} style={{ width: 52  }}>R.O.L.</th>
                   <th className={thCls} style={{ width: 60  }}>M.Stock</th>
                   <th className={thCls} style={{ width: 60  }}>C.Stock</th>
-                  <th className={thCls} style={{ width: 130 }}>R.C.No.</th>
                   <th className={thCls} style={{ width: 62  }}>Image</th>
-                  <th className={thCls} style={{ width: 72  }}>Drawing</th>
                   <th className={thCls} style={{ width: 44  }}>Edit</th>
                   <th className={thCls} style={{ width: 52  }}>Delete</th>
                   <th className={thCls} style={{ width: 56  }}>Details</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item, idx) => (
-                  <tr
-                    key={item.id}
-                    className={idx % 2 === 0 ? 'bg-white hover:bg-[#f0fdfe] transition-colors' : 'bg-slate-50 hover:bg-[#f0fdfe] transition-colors'}
-                  >
-                    <td className={tdCls + ' font-medium text-slate-800'}>{item.id}</td>
-                    <td className={tdCls}>{item.sno}</td>
-                    <td className={tdCls + ' font-medium text-[#0097A7]'}>{item.partNo}</td>
-                    <td className={tdCls + ' text-slate-500'}>{item.osNo}</td>
-                    <td className={`${tdCls} text-left font-medium`}>{item.partName}</td>
-                    <td className={tdCls}>{item.model}</td>
-                    <td className={tdCls}>{item.brand}</td>
-                    <td className={tdCls}>{item.rol}</td>
-                    <td className={tdCls}>{item.mStock}</td>
-                    <td className={`${tdCls} font-semibold ${item.cStock > 0 ? 'text-green-600' : 'text-slate-500'}`}>{item.cStock}</td>
-                    <td className={tdCls + ' text-[11px] text-slate-500 text-left'}>{item.rcNo}</td>
-
-                    {/* Image thumbnail */}
-                    <td className={tdCls}>
-                      <div className="flex items-center justify-center">
-                        <div
-                          className="w-8 h-8 rounded flex items-center justify-center shadow-sm"
-                          style={{ backgroundColor: item.imgColor }}
-                          title="Product image"
-                        >
-                          <ImageIcon className="w-4 h-4 text-white/80" />
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Drawing */}
-                    <td className={tdCls}>
-                      {item.drawing ? (
-                        <button className="flex items-center gap-1 mx-auto text-[11px] text-[#0097A7] hover:text-[#007a87] font-semibold border border-[#0097A7]/30 rounded px-2 py-0.5 hover:bg-[#0097A7]/5 transition-colors">
-                          <Eye className="w-3 h-3" />
-                          View
-                        </button>
-                      ) : null}
-                    </td>
-
-                    {/* Edit */}
-                    <td className={tdCls}>
-                      <button className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#3498db] hover:bg-[#2980b9] text-white transition-colors shadow-sm">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-
-                    {/* Delete */}
-                    <td className={tdCls}>
-                      <button className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#e74c3c] hover:bg-[#c0392b] text-white transition-colors shadow-sm">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-
-                    {/* Details */}
-                    <td className={tdCls}>
-                      <button 
-                        onClick={() => onView(item)}
-                        className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#0097A7] hover:bg-[#007a87] text-white transition-colors shadow-sm"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
+                {items.length === 0 && !loading ? (
+                  <tr>
+                    <td colSpan={14} className="py-8 text-center text-slate-400 text-[13px]">
+                      No items found
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  items.map((item, idx) => (
+                    <tr
+                      key={item.id}
+                      className={idx % 2 === 0 ? 'bg-white hover:bg-[#f0fdfe] transition-colors' : 'bg-slate-50 hover:bg-[#f0fdfe] transition-colors'}
+                    >
+                      <td className={tdCls + ' font-medium text-slate-800'}>{item.id}</td>
+                      <td className={tdCls}>{from + idx}</td>
+                      <td className={tdCls + ' font-medium text-[#0097A7]'}>{item.partNo}</td>
+                      <td className={tdCls + ' text-slate-500'}>{item.outsourcePartNo || ''}</td>
+                      <td className={`${tdCls} text-left font-medium`}>{item.partName}</td>
+                      <td className={tdCls}>{resolveModel(item.modelId)}</td>
+                      <td className={tdCls}>{item.brand || ''}</td>
+                      <td className={tdCls}>{item.reorderLevel ?? 0}</td>
+                      <td className={tdCls}>{item.minStock ?? 0}</td>
+                      <td className={`${tdCls} font-semibold text-slate-500`}>0</td>
+
+                      {/* Image placeholder */}
+                      <td className={tdCls}>
+                        <div className="flex items-center justify-center">
+                          <div className="w-8 h-8 rounded bg-[#0097A7]/20 flex items-center justify-center shadow-sm">
+                            <ImageIcon className="w-4 h-4 text-[#0097A7]/60" />
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Edit */}
+                      <td className={tdCls}>
+                        <button
+                          onClick={() => onEdit(item)}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#3498db] hover:bg-[#2980b9] text-white transition-colors shadow-sm"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+
+                      {/* Delete */}
+                      <td className={tdCls}>
+                        <button
+                          onClick={() => setDeleteTarget(item)}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#e74c3c] hover:bg-[#c0392b] text-white transition-colors shadow-sm"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+
+                      {/* Details */}
+                      <td className={tdCls}>
+                        <button
+                          onClick={() => onView(item)}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#0097A7] hover:bg-[#007a87] text-white transition-colors shadow-sm"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
-          {/* Footer: info + pagination */}
+          {/* Footer */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50/50">
             <p className="text-[12px] text-slate-500">
-              Showing 1 to {filtered.length} of {TOTAL_RECORDS.toLocaleString()} entries
+              {total === 0
+                ? 'No entries'
+                : `Showing ${from} to ${to} of ${total.toLocaleString()} entries`}
             </p>
             <div className="flex items-center gap-1">
-              <button className="px-3 py-1.5 text-[12px] border border-slate-200 rounded-l text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-40" disabled>
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+                className="px-3 py-1.5 text-[12px] border border-slate-200 rounded-l text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-40"
+              >
                 Previous
               </button>
-              {[1, 2, 3].map(p => (
+              {pageNums().map(p => (
                 <button
                   key={p}
                   onClick={() => setPage(p)}
@@ -315,34 +404,84 @@ function IndexView({ onCreate, onView }) {
                   {p}
                 </button>
               ))}
-              <button className="px-3 py-1.5 text-[12px] border border-slate-200 rounded-r text-slate-600 hover:bg-slate-100 transition-colors">
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage(p => p + 1)}
+                className="px-3 py-1.5 text-[12px] border border-slate-200 rounded-r text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40"
+              >
                 Next
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Item"
+        message={`Delete "${deleteTarget?.partName}"? This cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }
 
-// ── Create form view ──────────────────────────────────────────────
-function CreateView({ onBack }) {
+// ── Create / Edit form view ───────────────────────────────────────
+function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, onSaved }) {
   const toast = useToast()
   const [form, setForm] = useState(emptyForm)
+  const [saving, setSaving] = useState(false)
+
+  // Pre-fill on edit
+  useEffect(() => {
+    if (editItem) {
+      const f = {}
+      Object.keys(emptyForm).forEach(k => {
+        const v = editItem[k]
+        f[k] = (v !== null && v !== undefined) ? String(v) : ''
+      })
+      setForm(f)
+    } else {
+      setForm({ ...emptyForm })
+    }
+  }, [editItem])
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
-  const handleGroup    = e => setForm(f => ({ ...f, GroupName: e.target.value, GroupId: '' }))
-  const handleUOM      = e => setForm(f => ({ ...f, UnitName: e.target.value, UnitId: '' }))
-  const handleItemType = e => setForm(f => ({ ...f, ItemTypeName: e.target.value, ItemTypeId: '' }))
-  const handleStore    = e => setForm(f => ({ ...f, StoreName: e.target.value, StoreId: '' }))
-  const handleClear    = () => setForm({ ...emptyForm })
 
-  const handleCreate = () => {
-    const missing = requiredFields.filter(k => !form[k])
-    if (missing.length) { toast.warning('Please fill required fields: ' + missing.join(', ')); return }
-    toast.success('Item Created Successfully!')
-    onBack()
+  const handleSubmit = async () => {
+    const missing = REQUIRED.filter(r => !form[r.key]).map(r => r.label)
+    if (missing.length) {
+      toast.warning('Please fill required fields: ' + missing.join(', '))
+      return
+    }
+    setSaving(true)
+    try {
+      const url    = editItem ? `/api/item-master/${editItem.id}` : '/api/item-master'
+      const method = editItem ? 'put' : 'post'
+      const json   = await api[method](url, { ...form, updatedBy: 'ADMIN', createdBy: 'ADMIN' })
+      if (!json.success) throw new Error(json.message)
+      toast.success(editItem ? 'Item updated successfully!' : 'Item created successfully!')
+      onSaved()
+    } catch (err) {
+      toast.error(err.message || 'Failed to save item')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const opts = {
+    itemGroups:     dropdowns.itemGroups.map(g => ({ value: g.id, label: g.groupName })),
+    models:         dropdowns.models.map(m => ({ value: m.id, label: m.description })),
+    uoms:           dropdowns.uoms.map(u => ({ value: u.id, label: u.description })),
+    taxes:          dropdowns.taxes.map(t => ({ value: t.id, label: `${t.taxPercent}%` })),
+    subGroups:      dropdowns.subGroups.map(s => ({ value: s.id, label: s.description })),
+    stores:         dropdowns.stores.map(s => ({ value: s.id, label: s.description })),
+    itemTypes:      dropdowns.itemTypes.map(i => ({ value: i.id, label: i.description })),
+    qcTypes:        dropdowns.qcTypes.map(q => ({ value: q.id, label: q.description })),
+    materialGrades: dropdowns.materialGrades.map(m => ({ value: m.id, label: m.description })),
+    materialTypes:  dropdowns.materialTypes.map(m => ({ value: m.id, label: m.description })),
+    currencies:     dropdowns.currencies.map(c => ({ value: c.id, label: c.description })),
   }
 
   return (
@@ -354,7 +493,7 @@ function CreateView({ onBack }) {
           <ChevronRight className="w-3 h-3" />
           <span className="hover:text-[#0097A7] cursor-pointer transition-colors" onClick={onBack}>Item Masters</span>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-[#0097A7] font-semibold">New Item Master</span>
+          <span className="text-[#0097A7] font-semibold">{editItem ? 'Edit Item Master' : 'New Item Master'}</span>
         </div>
 
         <div className="grid grid-cols-3 gap-5">
@@ -363,78 +502,78 @@ function CreateView({ onBack }) {
           <SectionCard title="Item Information" icon={<Package className="w-4 h-4" />}>
             <div>
               <Label required>Item Group</Label>
-              <Select options={ITEM_GROUPS} placeholder="---Select Group Name---" value={form.GroupName} onChange={handleGroup} />
+              <Select options={opts.itemGroups} placeholder="---Select Group---" value={form.groupId} onChange={u('groupId')} loading={dropdownsLoading} />
             </div>
             <div>
               <Label required>Part Number</Label>
-              <Input placeholder="Enter Part Number" value={form.IM_Part_No} onChange={u('IM_Part_No')} />
+              <Input placeholder="Enter Part Number" value={form.partNo} onChange={u('partNo')} />
             </div>
             <div>
               <Label>OutSource Part No</Label>
               <div className="flex gap-2">
-                <Input placeholder="OutSource Part No" value={form.Outsource_Part_No} onChange={u('Outsource_Part_No')} />
+                <Input placeholder="OutSource Part No" value={form.outsourcePartNo} onChange={u('outsourcePartNo')} />
                 <button className="flex-shrink-0 w-9 h-[38px] bg-[#0097A7] hover:bg-[#007a87] text-white rounded-lg flex items-center justify-center transition-colors shadow-sm font-bold text-xl leading-none">+</button>
               </div>
             </div>
             <div>
               <Label required>Part Name</Label>
-              <Input placeholder="Type to search for Part Name..." value={form.IM_PartName} onChange={u('IM_PartName')} />
+              <Input placeholder="Part Name" value={form.partName} onChange={u('partName')} />
             </div>
             <Row>
               <div>
-                <Label required>Model</Label>
-                <Select options={MODELS} placeholder="---Select Model---" value={form.ModelId} onChange={u('ModelId')} />
+                <Label>Model</Label>
+                <Select options={opts.models} placeholder="---Select Model---" value={form.modelId} onChange={u('modelId')} loading={dropdownsLoading} />
               </div>
               <div>
                 <Label>Brand</Label>
-                <Input placeholder="Type to search..." value={form.Brand} onChange={u('Brand')} />
+                <Input placeholder="Brand" value={form.brand} onChange={u('brand')} />
               </div>
             </Row>
             <div>
               <Label>Description</Label>
-              <Input placeholder="Description" value={form.IM_Description} onChange={u('IM_Description')} />
+              <Input placeholder="Description" value={form.description} onChange={u('description')} />
             </div>
             <Row>
               <div>
                 <Label>Size</Label>
-                <Input placeholder="Size" value={form.IM_Size} onChange={u('IM_Size')} />
+                <Input placeholder="Size" value={form.size} onChange={u('size')} />
               </div>
               <div>
-                <Label required>Weight</Label>
-                <Input placeholder="Weight" value={form.IM_WEIGHT} onChange={u('IM_WEIGHT')} type="number" />
+                <Label>Weight</Label>
+                <Input placeholder="Weight" value={form.weight} onChange={u('weight')} type="number" />
               </div>
             </Row>
             <div>
               <Label required>UOM</Label>
-              <Select options={UOMS} placeholder="---Select UOM---" value={form.UnitName} onChange={handleUOM} />
+              <Select options={opts.uoms} placeholder="---Select UOM---" value={form.unitId} onChange={u('unitId')} loading={dropdownsLoading} />
             </div>
             <div>
               <Label>HSN Code</Label>
-              <Input placeholder="HSN Code" value={form.IM_HSN_Code} onChange={u('IM_HSN_Code')} />
+              <Input placeholder="HSN Code" value={form.hsnCode} onChange={u('hsnCode')} />
             </div>
             <Row>
               <div>
                 <Label>Purchase Rate</Label>
-                <Input placeholder="Purchase Rate" value={form.IM_Purchase_Rate} onChange={u('IM_Purchase_Rate')} type="number" />
+                <Input placeholder="Purchase Rate" value={form.purchaseRate} onChange={u('purchaseRate')} type="number" />
               </div>
               <div>
                 <Label>Margin (%)</Label>
-                <Input placeholder="Margin (%)" value={form.IM_Margin_per} onChange={u('IM_Margin_per')} type="number" />
+                <Input placeholder="Margin (%)" value={form.marginPercent} onChange={u('marginPercent')} type="number" />
               </div>
             </Row>
             <Row>
               <div>
                 <Label>Rate</Label>
-                <Input placeholder="Rate" value={form.IM_Rate} onChange={u('IM_Rate')} type="number" />
+                <Input placeholder="Rate" value={form.rate} onChange={u('rate')} type="number" />
               </div>
               <div>
                 <Label>Currency</Label>
-                <Select options={CURRENCIES} placeholder="" value={form.CurrencyId} onChange={u('CurrencyId')} />
+                <Select options={opts.currencies} placeholder="---Select---" value={form.currencyId} onChange={u('currencyId')} loading={dropdownsLoading} />
               </div>
             </Row>
             <div>
-              <Label required>GST %</Label>
-              <Select options={GST_RATES} placeholder="---Select GST %---" value={form.TaxId} onChange={u('TaxId')} />
+              <Label>GST %</Label>
+              <Select options={opts.taxes} placeholder="---Select GST %---" value={form.taxId} onChange={u('taxId')} loading={dropdownsLoading} />
             </div>
           </SectionCard>
 
@@ -442,41 +581,41 @@ function CreateView({ onBack }) {
           <div className="space-y-5">
             <SectionCard title="Store & Classification" icon={<Store className="w-4 h-4" />}>
               <div>
-                <Label required>Sub Group</Label>
-                <Select options={SUB_GROUPS} placeholder="---Select Sub Group---" value={form.SubGroupId} onChange={u('SubGroupId')} />
+                <Label>Sub Group</Label>
+                <Select options={opts.subGroups} placeholder="---Select Sub Group---" value={form.subGroupId} onChange={u('subGroupId')} loading={dropdownsLoading} />
               </div>
               <Row>
                 <div>
                   <Label>Reorder Level</Label>
-                  <Input placeholder="Reorder Level" value={form.IM_ReorderLevel} onChange={u('IM_ReorderLevel')} type="number" />
+                  <Input placeholder="Reorder Level" value={form.reorderLevel} onChange={u('reorderLevel')} type="number" />
                 </div>
                 <div>
                   <Label>Min Stock</Label>
-                  <Input placeholder="Min Stock" value={form.IM_Min_Stock} onChange={u('IM_Min_Stock')} type="number" />
+                  <Input placeholder="Min Stock" value={form.minStock} onChange={u('minStock')} type="number" />
                 </div>
               </Row>
               <div>
-                <Label required>Store Name</Label>
-                <Select options={STORE_NAMES} placeholder="---Select Store Name---" value={form.StoreName} onChange={handleStore} />
+                <Label>Store Name</Label>
+                <Select options={opts.stores} placeholder="---Select Store---" value={form.storeId} onChange={u('storeId')} loading={dropdownsLoading} />
               </div>
               <Row>
                 <div>
                   <Label>Rack Number</Label>
-                  <Input placeholder="Rack Number" value={form.Rack_No} onChange={u('Rack_No')} />
+                  <Input placeholder="Rack Number" value={form.rackNo} onChange={u('rackNo')} />
                 </div>
                 <div>
                   <Label>Location</Label>
-                  <Input placeholder="Location" value={form.Location} onChange={u('Location')} />
+                  <Input placeholder="Location" value={form.location} onChange={u('location')} />
                 </div>
               </Row>
               <Row>
                 <div>
                   <Label required>Item Type</Label>
-                  <Select options={ITEM_TYPES} placeholder="---Select Item Type---" value={form.ItemTypeName} onChange={handleItemType} />
+                  <Select options={opts.itemTypes} placeholder="---Select Item Type---" value={form.itemTypeId} onChange={u('itemTypeId')} loading={dropdownsLoading} />
                 </div>
                 <div>
                   <Label required>QC Type</Label>
-                  <Select options={QC_TYPES} placeholder="---Select QC Type---" value={form.QcTypeId} onChange={u('QcTypeId')} />
+                  <Select options={opts.qcTypes} placeholder="---Select QC Type---" value={form.qcTypeId} onChange={u('qcTypeId')} loading={dropdownsLoading} />
                 </div>
               </Row>
             </SectionCard>
@@ -485,29 +624,25 @@ function CreateView({ onBack }) {
               <Row>
                 <div>
                   <Label>Material Grade</Label>
-                  <Select options={MATERIAL_GRADES} placeholder="---Select Material Grade---" value={form.MaterialGradeId} onChange={u('MaterialGradeId')} />
+                  <Select options={opts.materialGrades} placeholder="---Select---" value={form.materialGradeId} onChange={u('materialGradeId')} loading={dropdownsLoading} />
                 </div>
                 <div>
                   <Label>Material Type</Label>
-                  <Select options={MATERIAL_TYPES} placeholder="---Select Material Type---" value={form.MaterialTypeId} onChange={u('MaterialTypeId')} />
+                  <Select options={opts.materialTypes} placeholder="---Select---" value={form.materialTypeId} onChange={u('materialTypeId')} loading={dropdownsLoading} />
                 </div>
               </Row>
               <div>
-                <Label>Raw Material</Label>
-                <Select options={RAW_MATERIALS} placeholder="---Select Raw Material---" value={form.RawMaterialId} onChange={u('RawMaterialId')} />
-              </div>
-              <div>
                 <Label>Length</Label>
-                <Input placeholder="Length (e.g. 6m)" value={form.RM_length} onChange={u('RM_length')} />
+                <Input placeholder="Length (e.g. 6m)" value={form.rmLength} onChange={u('rmLength')} />
               </div>
               <Row>
                 <div>
                   <Label>RM. Weight</Label>
-                  <Input placeholder="RM. Weight" value={form.Raw_material_wt} onChange={u('Raw_material_wt')} type="number" />
+                  <Input placeholder="RM. Weight" value={form.rawMaterialWt} onChange={u('rawMaterialWt')} type="number" />
                 </div>
                 <div>
                   <Label>FG. Weight</Label>
-                  <Input placeholder="FG. Weight" value={form.FG_material_wt} onChange={u('FG_material_wt')} type="number" />
+                  <Input placeholder="FG. Weight" value={form.fgMaterialWt} onChange={u('fgMaterialWt')} type="number" />
                 </div>
               </Row>
             </SectionCard>
@@ -551,21 +686,49 @@ function CreateView({ onBack }) {
               <div className="border-t border-slate-100 pt-4">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Actions</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: 'Create',     icon: 'M12 4v16m8-8H4',                                     bg: 'bg-green-500 hover:bg-green-600',     action: handleCreate },
-                    { label: 'Clear',      icon: 'M6 18L18 6M6 6l12 12',                               bg: 'bg-rose-500 hover:bg-rose-600',       action: handleClear  },
-                    { label: 'Display All',icon: 'M4 6h16M4 10h16M4 14h16M4 18h16',                    bg: 'bg-[#0097A7] hover:bg-[#007a87]',    action: onBack       },
-                    { label: 'Search',     icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',       bg: 'bg-slate-700 hover:bg-slate-800',     action: () => {}     },
-                  ].map(({ label, icon, bg, action }) => (
-                    <button key={label} onClick={action}
-                      className={`px-3 py-2.5 ${bg} active:scale-95 text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5`}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={icon} />
-                      </svg>
-                      {label}
-                    </button>
-                  ))}
+                  <button
+                    onClick={handleSubmit}
+                    disabled={saving}
+                    className="px-3 py-2.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 active:scale-95 text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5"
+                  >
+                    {saving
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                        </svg>
+                    }
+                    {editItem ? 'Update' : 'Create'}
+                  </button>
+                  <button
+                    onClick={() => setForm(editItem ? (() => {
+                      const f = {}
+                      Object.keys(emptyForm).forEach(k => { const v = editItem[k]; f[k] = (v !== null && v !== undefined) ? String(v) : '' })
+                      return f
+                    })() : { ...emptyForm })}
+                    className="px-3 py-2.5 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Clear
+                  </button>
+                  <button
+                    onClick={onBack}
+                    className="px-3 py-2.5 bg-[#0097A7] hover:bg-[#007a87] active:scale-95 text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                    Display All
+                  </button>
+                  <button
+                    className="px-3 py-2.5 bg-slate-700 hover:bg-slate-800 active:scale-95 text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Search
+                  </button>
                 </div>
               </div>
             </SectionCard>
@@ -577,61 +740,60 @@ function CreateView({ onBack }) {
 }
 
 // ── Preview view ──────────────────────────────────────────────────
-function PreviewView({ item, onBack, onCreate, onViewUploads }) {
-  if (!item) return null;
+function PreviewView({ item, dropdowns, onBack, onCreate, onViewUploads }) {
+  if (!item) return null
+
+  const resolve = (list, id, key = 'description') =>
+    list.find(r => r.id === Number(id))?.[key] || '—'
 
   const infoRows = [
-    { label: 'Item Group', value: 'ELECTRICAL-SENSING CLAMP' },
-    { label: 'Part Number', value: item.partNo },
-    { label: 'Out Source Part No.', value: item.osNo || 'VOS4321390' },
-    { label: 'Part Name', value: item.partName },
-    { label: 'Model', value: item.model || 'AUTO JOB' },
-    { label: 'Brand', value: item.brand || '' },
-    { label: 'Description', value: '' },
-    { label: 'Size', value: '' },
-    { label: 'Weight', value: '0.00' },
-    { label: 'UOM', value: 'No' },
-    { label: 'HSN Code', value: '' },
-    { label: 'Purchase Rate', value: '450.00' },
-    { label: 'Margin (%)', value: '20.00' },
-    { label: 'Rate', value: '540.00' },
-    { label: 'Currency', value: 'CNRY' },
-    { label: 'GST Per', value: '18.00' },
-    { label: 'Sub Group', value: 'Production' },
-    { label: 'Store Name', value: 'STORE 1-MAINSTORE' },
-    { label: 'Rack Number', value: '' },
-    { label: 'Location', value: '' },
-    { label: 'Remarks', value: '' },
-    { label: 'Item Type', value: 'Child Part' },
-    { label: 'QC Type', value: '' },
-    { label: 'Material Grade', value: '' },
-    { label: 'Material Type', value: '' },
-    { label: 'Raw Material', value: '' },
-    { label: 'Length', value: '0' },
-    { label: 'RM. Weight', value: '0.00' },
-    { label: 'FG. Weight', value: '0.00' },
-    { label: 'Status', value: 'A' },
-    { label: 'Reorder Level', value: item.rol },
-    { label: 'Min Stock', value: item.mStock },
-    { label: 'Current Stock', value: item.cStock },
-    { label: 'Route Card Number', value: item.rcNo },
-    { label: 'Created Date', value: '09/11/2020 11:31:48' },
-    { label: 'Created By', value: 'ADMIN' },
-    { label: 'Updated Date', value: '11/07/2025 14:43:56' },
-    { label: 'Updated By', value: 'SATHISH' },
-  ];
+    { label: 'Item Group',       value: resolve(dropdowns.itemGroups, item.groupId, 'groupName') },
+    { label: 'Part Number',      value: item.partNo },
+    { label: 'Out Source Part No.', value: item.outsourcePartNo || '—' },
+    { label: 'Part Name',        value: item.partName },
+    { label: 'Model',            value: resolve(dropdowns.models, item.modelId) },
+    { label: 'Brand',            value: item.brand || '—' },
+    { label: 'Description',      value: item.description || '—' },
+    { label: 'Size',             value: item.size || '—' },
+    { label: 'Weight',           value: item.weight != null ? item.weight : '—' },
+    { label: 'UOM',              value: resolve(dropdowns.uoms, item.unitId) },
+    { label: 'HSN Code',         value: item.hsnCode || '—' },
+    { label: 'Purchase Rate',    value: item.purchaseRate != null ? item.purchaseRate : '—' },
+    { label: 'Margin (%)',       value: item.marginPercent != null ? item.marginPercent : '—' },
+    { label: 'Rate',             value: item.rate != null ? item.rate : '—' },
+    { label: 'Currency',         value: resolve(dropdowns.currencies, item.currencyId) },
+    { label: 'GST %',            value: resolve(dropdowns.taxes, item.taxId, 'taxPercent') !== '—' ? `${resolve(dropdowns.taxes, item.taxId, 'taxPercent')}%` : '—' },
+    { label: 'Sub Group',        value: resolve(dropdowns.subGroups, item.subGroupId) },
+    { label: 'Store Name',       value: resolve(dropdowns.stores, item.storeId) },
+    { label: 'Rack Number',      value: item.rackNo || '—' },
+    { label: 'Location',         value: item.location || '—' },
+    { label: 'Item Type',        value: resolve(dropdowns.itemTypes, item.itemTypeId) },
+    { label: 'QC Type',          value: resolve(dropdowns.qcTypes, item.qcTypeId) },
+    { label: 'Material Grade',   value: resolve(dropdowns.materialGrades, item.materialGradeId) },
+    { label: 'Material Type',    value: resolve(dropdowns.materialTypes, item.materialTypeId) },
+    { label: 'Length',           value: item.rmLength || '—' },
+    { label: 'RM. Weight',       value: item.rawMaterialWt != null ? item.rawMaterialWt : '—' },
+    { label: 'FG. Weight',       value: item.fgMaterialWt != null ? item.fgMaterialWt : '—' },
+    { label: 'Reorder Level',    value: item.reorderLevel != null ? item.reorderLevel : '—' },
+    { label: 'Min Stock',        value: item.minStock != null ? item.minStock : '—' },
+    { label: 'Current Stock',    value: 0 },
+    { label: 'Created Date',     value: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—' },
+    { label: 'Created By',       value: item.createdBy || '—' },
+    { label: 'Updated Date',     value: item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—' },
+    { label: 'Updated By',       value: item.updatedBy || '—' },
+  ]
 
   return (
     <div className="bg-[#f4f6f8] min-h-full">
       <div className="px-4 py-4 max-w-[1200px] mx-auto">
-        <div className="bg-[#0097A7] text-white text-sm font-semibold tracking-wide text-center py-2.5 mb-4 rounded shadow-sm border border-[#2e6da4]">
+        <div className="bg-[#0097A7] text-white text-sm font-semibold tracking-wide text-center py-2.5 mb-4 rounded shadow-sm">
           Preview Of Selected Item Master Details
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Left Column */}
+          {/* Left: info table */}
           <div className="bg-[#0097A7] rounded border border-[#2e6da4] shadow-sm overflow-hidden flex flex-col">
-            <div className="bg-[#0097A7] text-white text-[13px] text-center py-2.5 font-bold border-b border-white/20">
+            <div className="text-white text-[13px] text-center py-2.5 font-bold border-b border-white/20">
               Item Basic Information
             </div>
             <div className="text-white p-4 flex-1 text-[12px]">
@@ -639,15 +801,15 @@ function PreviewView({ item, onBack, onCreate, onViewUploads }) {
                 {infoRows.map((row, idx) => (
                   <div key={idx} className="contents">
                     <div className="text-left pl-3 font-bold tracking-wide">{row.label}</div>
-                    <div className="text-center font-bold tracking-wide">:</div>
-                    <div className="text-left pl-2 break-words">{row.value}</div>
+                    <div className="text-center font-bold">:</div>
+                    <div className="text-left pl-2 break-words">{String(row.value)}</div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Right Column */}
+          {/* Right: image + actions */}
           <div className="flex flex-col gap-4">
             <div className="bg-white rounded border border-[#0097A7] shadow-sm overflow-hidden">
               <div className="bg-[#0097A7] text-white text-[13px] text-center py-2.5 font-bold border-b border-[#2e6da4]">
@@ -655,41 +817,32 @@ function PreviewView({ item, onBack, onCreate, onViewUploads }) {
               </div>
               <div className="p-6">
                 <div className="flex mb-8">
-                   <div className="w-[30%] text-right pr-4 font-bold text-slate-800 text-[13px] mt-2">Image :</div>
-                   <div className="w-[70%]">
-                     <div 
-                       className="w-full max-w-[340px] aspect-[16/10] rounded-lg shadow-inner flex items-center justify-center border-[6px] border-white drop-shadow-md relative overflow-hidden" 
-                       style={{ backgroundColor: item.imgColor || '#16a085' }}
-                     >
-                       <div className="w-[80%] h-[75%] border border-white/10 bg-black/10 rounded-lg flex items-center justify-center shadow-inner">
-                         <div className="w-20 h-20 bg-white rounded-full shadow-inner border border-slate-200 flex items-center justify-center">
-                            <div className="w-16 h-16 bg-slate-50 rounded-full shadow-inner inset-0"></div>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
+                  <div className="w-[30%] text-right pr-4 font-bold text-slate-800 text-[13px] mt-2">Image :</div>
+                  <div className="w-[70%]">
+                    <div className="w-full max-w-[340px] aspect-[16/10] rounded-lg shadow-inner flex items-center justify-center border-[6px] border-white drop-shadow-md relative overflow-hidden bg-[#0097A7]/20">
+                      <ImageIcon className="w-16 h-16 text-[#0097A7]/40" />
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center">
-                   <div className="w-[30%] text-right pr-4 font-bold text-slate-800 text-[13px]">Drawing PDF :</div>
-                   <div className="w-[70%] text-[13px] text-slate-700">
-                     {item.drawing ? item.drawing : 'No PDF Uploaded For Drawing.'}
-                   </div>
+                  <div className="w-[30%] text-right pr-4 font-bold text-slate-800 text-[13px]">Drawing PDF :</div>
+                  <div className="w-[70%] text-[13px] text-slate-500">No PDF Uploaded For Drawing.</div>
                 </div>
               </div>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="flex items-center gap-2 px-1">
-              <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5bc0de] hover:bg-[#46b8da] text-white text-[13px] font-semibold rounded shadow-sm transition-colors border border-[#46b8da]">
+              <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5bc0de] hover:bg-[#46b8da] text-white text-[13px] font-semibold rounded shadow-sm transition-colors">
                 <LayoutList className="w-3.5 h-3.5" /> Display All
               </button>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#337ab7] hover:bg-[#286090] text-white text-[13px] font-semibold rounded shadow-sm transition-colors border border-[#2e6da4]">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#337ab7] hover:bg-[#286090] text-white text-[13px] font-semibold rounded shadow-sm transition-colors">
                 <Pencil className="w-3.5 h-3.5" /> Edit
               </button>
-              <button onClick={onCreate} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5cb85c] hover:bg-[#4cae4c] text-white text-[13px] font-semibold rounded shadow-sm transition-colors border border-[#4cae4c]">
+              <button onClick={onCreate} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5cb85c] hover:bg-[#4cae4c] text-white text-[13px] font-semibold rounded shadow-sm transition-colors">
                 <span className="text-base leading-none mt-[-2px]">+</span> Create New
               </button>
-              <button onClick={onViewUploads} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#337ab7] hover:bg-[#286090] text-white text-[13px] font-semibold rounded shadow-sm transition-colors border border-[#2e6da4]">
+              <button onClick={onViewUploads} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#337ab7] hover:bg-[#286090] text-white text-[13px] font-semibold rounded shadow-sm transition-colors">
                 <LayoutList className="w-3.5 h-3.5" /> View All Uploaded
               </button>
             </div>
@@ -700,23 +853,12 @@ function PreviewView({ item, onBack, onCreate, onViewUploads }) {
   )
 }
 
-// ── Image PDF Details View ─────────────────────────────────────────
+// ── Image PDF Details View ────────────────────────────────────────
 function ImagePdfDetailsView({ item, onBack }) {
-  if (!item) return null;
+  if (!item) return null
 
-  const mockUploads = [
-    { sno: 1, updatedBy: '', updatedDate: '11/07/2025 10:00:29' },
-    { sno: 2, updatedBy: '', updatedDate: '11/07/2025 10:05:41' },
-    { sno: 3, updatedBy: 'RAVI KUMAR', updatedDate: '11/07/2025 10:10:02' },
-    { sno: 4, updatedBy: 'RAVI KUMAR', updatedDate: '11/07/2025 10:10:20' },
-    { sno: 5, updatedBy: 'SATHISH', updatedDate: '11/07/2025 12:09:32' },
-    { sno: 6, updatedBy: 'SATHISH', updatedDate: '11/07/2025 12:11:02' },
-    { sno: 7, updatedBy: 'SATHISH', updatedDate: '11/07/2025 12:12:01' },
-    { sno: 8, updatedBy: '', updatedDate: '11/07/2025 14:05:10' },
-  ];
-
-  const thCls = 'px-4 py-3 text-[13px] font-bold text-slate-800 text-left border-b border-r border-slate-200 last:border-r-0 bg-white';
-  const tdCls = 'px-4 py-3 text-[13px] text-slate-600 border-b border-r border-slate-200 last:border-r-0 align-middle';
+  const thCls = 'px-4 py-3 text-[13px] font-bold text-slate-800 text-left border-b border-r border-slate-200 last:border-r-0 bg-white'
+  const tdCls = 'px-4 py-3 text-[13px] text-slate-600 border-b border-r border-slate-200 last:border-r-0 align-middle'
 
   return (
     <div className="bg-white min-h-full">
@@ -724,24 +866,19 @@ function ImagePdfDetailsView({ item, onBack }) {
         <button onClick={onBack} className="mb-4 text-[#0097A7] hover:underline text-sm flex items-center gap-1">
           &larr; Back to Preview
         </button>
-        
         <h1 className="text-[26px] font-normal text-slate-700 mb-6">Item Details</h1>
-        
         <h2 className="text-[17px] font-normal text-slate-800 mb-6">{item.partName}</h2>
-        
         <div className="flex flex-col gap-1 mb-10 ml-8 text-[13px] font-bold text-slate-800">
           <div className="flex items-center">
-             <span className="w-28 text-right pr-3">Part Number :</span>
-             <span className="font-normal">{item.partNo}</span>
+            <span className="w-28 text-right pr-3">Part Number :</span>
+            <span className="font-normal">{item.partNo}</span>
           </div>
           <div className="flex items-center">
-             <span className="w-28 text-right pr-3">Description :</span>
-             <span className="font-normal"></span>
+            <span className="w-28 text-right pr-3">Description :</span>
+            <span className="font-normal">{item.description || ''}</span>
           </div>
         </div>
-
         <h3 className="text-[20px] font-normal text-slate-700 mb-4">Images and PDF Documents</h3>
-        
         <div className="border border-slate-200 rounded-sm overflow-hidden">
           <table className="w-full border-collapse">
             <thead>
@@ -754,26 +891,11 @@ function ImagePdfDetailsView({ item, onBack }) {
               </tr>
             </thead>
             <tbody>
-              {mockUploads.map((row) => (
-                <tr key={row.sno} className="hover:bg-slate-50 transition-colors">
-                  <td className={`${tdCls} font-medium`}>{row.sno}</td>
-                  <td className={tdCls}>
-                    <div 
-                      className="w-[84px] h-[52px] rounded border-2 border-white shadow flex items-center justify-center relative overflow-hidden" 
-                      style={{ backgroundColor: item.imgColor || '#16a085' }}
-                    >
-                      <div className="w-[60%] h-[75%] border border-white/10 bg-black/10 rounded flex items-center justify-center shadow-inner">
-                        <div className="w-5 h-5 bg-white rounded-full shadow-inner border border-slate-200 flex items-center justify-center">
-                           <div className="w-3 h-3 bg-slate-50 rounded-full shadow-inner inset-0"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className={tdCls}></td>
-                  <td className={tdCls}>{row.updatedBy}</td>
-                  <td className={tdCls}>{row.updatedDate}</td>
-                </tr>
-              ))}
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-slate-400 text-[13px]">
+                  No uploads found for this item.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -784,12 +906,51 @@ function ImagePdfDetailsView({ item, onBack }) {
 
 // ── Root export ───────────────────────────────────────────────────
 export default function ItemMaster() {
-  const [view, setView] = useState('index')
+  const [view, setView]               = useState('index')
   const [selectedItem, setSelectedItem] = useState(null)
+  const [editItem, setEditItem]       = useState(null)
 
-  if (view === 'create') return <CreateView onBack={() => setView('index')} />
-  if (view === 'preview' && selectedItem) return <PreviewView item={selectedItem} onBack={() => setView('index')} onCreate={() => setView('create')} onViewUploads={() => setView('image-pdf-details')} />
-  if (view === 'image-pdf-details' && selectedItem) return <ImagePdfDetailsView item={selectedItem} onBack={() => setView('preview')} />
-  
-  return <IndexView onCreate={() => setView('create')} onView={(item) => { setSelectedItem(item); setView('preview'); }} />
+  const { dropdowns, dropdownsLoading } = useDropdowns()
+
+  const goIndex  = () => { setView('index');  setEditItem(null) }
+  const goCreate = () => { setView('create'); setEditItem(null) }
+  const goEdit   = (item) => { setEditItem(item); setView('create') }
+  const goView   = (item) => { setSelectedItem(item); setView('preview') }
+
+  if (view === 'create') {
+    return (
+      <CreateView
+        onBack={goIndex}
+        editItem={editItem}
+        dropdowns={dropdowns}
+        dropdownsLoading={dropdownsLoading}
+        onSaved={goIndex}
+      />
+    )
+  }
+
+  if (view === 'preview' && selectedItem) {
+    return (
+      <PreviewView
+        item={selectedItem}
+        dropdowns={dropdowns}
+        onBack={goIndex}
+        onCreate={goCreate}
+        onViewUploads={() => setView('image-pdf-details')}
+      />
+    )
+  }
+
+  if (view === 'image-pdf-details' && selectedItem) {
+    return <ImagePdfDetailsView item={selectedItem} onBack={() => setView('preview')} />
+  }
+
+  return (
+    <IndexView
+      onCreate={goCreate}
+      onEdit={goEdit}
+      onView={goView}
+      dropdowns={dropdowns}
+    />
+  )
 }
