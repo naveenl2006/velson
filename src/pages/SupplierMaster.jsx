@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
-import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import axios from 'axios'
+import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
-// ── Data ────────────────────────────────────────────────────────────────────
-
-const SUPPLIER_TYPES = ['Manufacturer','Dealer','Distributor','Trader','Service Provider']
-const PAGE_SIZES = [5,10,25,50]
+const PAGE_SIZES = [5, 10, 25, 50]
 
 const INDIA_STATES = [
   'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
@@ -80,34 +80,15 @@ const INDIA_BANKS = [
   'Tamil Nadu Grama Bank','Karnataka Vikas Grameena Bank','Saraswat Bank','Cosmos Bank',
 ]
 
-// Branch names per bank — IFSC auto-fills from Razorpay API when entered
 const BANK_BRANCHES = {
-  'State Bank of India':['Tiruchengode','Coimbatore Main','Coimbatore RS Puram','Chennai Anna Salai','Chennai T Nagar','Chennai Adyar','Salem Main','Erode','Namakkal','Karur','Tiruppur','Madurai','Bengaluru MG Road','Bengaluru Koramangala','Hyderabad','Mumbai Fort','Delhi Main','Kolkata','Pune','Ahmedabad','Jaipur','Lucknow'],
-  'HDFC Bank':['Coimbatore','Chennai Anna Nagar','Chennai Nungambakkam','Salem','Erode','Bengaluru Koramangala','Bengaluru Indiranagar','Mumbai Fort','Delhi Connaught Place','Hyderabad Banjara Hills','Pune Baner','Ahmedabad','Kolkata','Jaipur','Lucknow'],
-  'ICICI Bank':['Coimbatore','Chennai Anna Salai','Chennai Nungambakkam','Salem','Bengaluru','Mumbai','Delhi','Hyderabad','Pune','Ahmedabad','Kolkata'],
-  'Axis Bank':['Coimbatore','Chennai','Bengaluru','Mumbai','Delhi','Hyderabad','Pune','Ahmedabad','Kolkata'],
-  'Canara Bank':['Coimbatore','Chennai','Salem','Erode','Namakkal','Bengaluru','Mumbai','Delhi','Hyderabad','Kolkata'],
-  'Indian Bank':['Tiruchengode','Coimbatore','Chennai Rajaji Salai','Salem','Namakkal','Erode','Karur','Bengaluru','Mumbai'],
-  'Union Bank of India':['Chennai','Coimbatore','Salem','Bengaluru','Mumbai','Delhi','Hyderabad','Kolkata'],
-  'Punjab National Bank':['Chennai','Coimbatore','Bengaluru','Mumbai','Delhi Main','Hyderabad','Jaipur','Lucknow'],
-  'Bank of Baroda':['Chennai','Coimbatore','Mumbai Main','Delhi Main','Bengaluru','Ahmedabad','Hyderabad'],
-  'Bank of India':['Chennai','Mumbai Main','Delhi','Bengaluru','Hyderabad','Kolkata'],
-  'Indian Overseas Bank':['Chennai Central','Coimbatore','Salem','Namakkal','Tiruchengode','Erode','Bengaluru','Mumbai'],
-  'Karur Vysya Bank':['Tiruchengode','Karur Main','Coimbatore','Chennai','Salem','Erode','Namakkal','Bengaluru','Hosur'],
-  'City Union Bank':['Kumbakonam Main','Chennai','Coimbatore','Salem','Erode','Namakkal','Tiruchengode','Karur','Thanjavur'],
-  'Tamilnad Mercantile Bank':['Thoothukudi Main','Chennai','Coimbatore','Salem','Madurai','Erode','Tirunelveli'],
-  'South Indian Bank':['Thrissur Main','Chennai','Coimbatore','Bengaluru','Mumbai','Delhi','Hyderabad'],
-  'Federal Bank':['Aluva Main','Chennai','Coimbatore','Bengaluru','Mumbai','Delhi','Hyderabad'],
-  'Kotak Mahindra Bank':['Mumbai','Chennai','Bengaluru','Delhi','Hyderabad','Pune','Ahmedabad','Coimbatore'],
-  'Yes Bank':['Mumbai','Chennai','Bengaluru','Delhi','Hyderabad','Pune','Coimbatore'],
-  'IndusInd Bank':['Mumbai','Chennai','Bengaluru','Delhi','Hyderabad','Coimbatore','Pune'],
-  'IDFC FIRST Bank':['Mumbai','Chennai','Bengaluru','Delhi','Hyderabad','Pune'],
-  'Bandhan Bank':['Kolkata','Mumbai','Delhi','Bengaluru','Chennai','Hyderabad'],
-  'AU Small Finance Bank':['Jaipur','Mumbai','Delhi','Bengaluru','Chennai','Pune'],
-  'Central Bank of India':['Chennai','Mumbai Main','Delhi','Bengaluru','Hyderabad','Kolkata'],
-  'UCO Bank':['Chennai','Coimbatore','Mumbai','Delhi','Kolkata','Bengaluru'],
-  'Saraswat Bank':['Mumbai','Pune','Bengaluru','Goa','Delhi'],
-  'Karnataka Bank':['Mangaluru Main','Bengaluru','Chennai','Mumbai','Hyderabad','Udupi'],
+  'State Bank of India':['Tiruchengode','Coimbatore Main','Chennai Anna Salai','Salem Main','Erode','Namakkal','Bengaluru MG Road','Mumbai Fort','Delhi Main'],
+  'HDFC Bank':['Coimbatore','Chennai Anna Nagar','Salem','Bengaluru Koramangala','Mumbai Fort','Delhi Connaught Place'],
+  'ICICI Bank':['Coimbatore','Chennai Anna Salai','Salem','Bengaluru','Mumbai','Delhi'],
+  'Axis Bank':['Coimbatore','Chennai','Bengaluru','Mumbai','Delhi'],
+  'Canara Bank':['Coimbatore','Chennai','Salem','Bengaluru','Mumbai','Delhi'],
+  'Indian Bank':['Tiruchengode','Coimbatore','Chennai Rajaji Salai','Salem','Namakkal'],
+  'Karur Vysya Bank':['Tiruchengode','Karur Main','Coimbatore','Chennai','Salem','Erode','Namakkal'],
+  'City Union Bank':['Kumbakonam Main','Chennai','Coimbatore','Salem','Erode','Namakkal','Tiruchengode'],
 }
 
 // ── SearchableSelect ────────────────────────────────────────────────────────
@@ -157,18 +138,6 @@ function SearchableSelect({ value, onChange, options = [], placeholder = 'Search
   )
 }
 
-// ── Seed & empty form ───────────────────────────────────────────────────────
-
-const SEED = [
-  {id:1,lCode:'014',sCode:'SUP100',supplierType:'Manufacturer',supplierName:'INDIA HYDRAULICS',address:'TIRUCHENGODE (TK)',address2:'',address3:'',address4:'',city:'Tiruchengode',country:'India',state:'Tamil Nadu',stateCode:'TN',pinCode:'637001',contactPerson:'RAMASAMY',mobile:'9443189164',phone:'',email:'info@indiahydraulics.net',website:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:''},
-  {id:2,lCode:'015',sCode:'SUP101',supplierType:'Dealer',supplierName:'TAMILNADU STEEL & TRADING',address:'TIRUCHENGODE (TK)',address2:'',address3:'',address4:'',city:'Tiruchengode',country:'India',state:'Tamil Nadu',stateCode:'TN',pinCode:'',contactPerson:'',mobile:'',phone:'',email:'',website:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:''},
-  {id:3,lCode:'',sCode:'SUP108',supplierType:'Trader',supplierName:'OPENING STOCK',address:'',address2:'',address3:'',address4:'',city:'',country:'India',state:'Tamil Nadu',stateCode:'TN',pinCode:'',contactPerson:'',mobile:'',phone:'',email:'',website:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:''},
-  {id:4,lCode:'',sCode:'SUP137',supplierType:'Distributor',supplierName:'HYDRAULICS & PNEUMATICS CO',address:'COIMBATORE',address2:'',address3:'',address4:'',city:'Coimbatore',country:'India',state:'Tamil Nadu',stateCode:'TN',pinCode:'',contactPerson:'SHABIR',mobile:'9894339642',phone:'',email:'',website:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:''},
-  {id:5,lCode:'',sCode:'SUP138',supplierType:'Manufacturer',supplierName:'S.N. ENGINEERS',address:'BANGALORE',address2:'',address3:'',address4:'',city:'Bengaluru',country:'India',state:'Karnataka',stateCode:'KA',pinCode:'',contactPerson:'MADHI',mobile:'9640589658',phone:'',email:'',website:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:''},
-]
-
-const emptyForm = {supplierType:'',sCode:'',supplierName:'',address:'',address2:'',address3:'',address4:'',city:'',country:'India',state:'',stateCode:'',pinCode:'',contactPerson:'',mobile:'',phone:'',email:'',website:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:''}
-
 // ── Detail Modal ────────────────────────────────────────────────────────────
 
 function DetailModal({ row, onClose }) {
@@ -180,10 +149,29 @@ function DetailModal({ row, onClose }) {
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5"/></button>
         </div>
         <div className="p-5 grid grid-cols-2 gap-x-6 gap-y-1.5 max-h-[70vh] overflow-y-auto">
-          {[['Supplier Type',row.supplierType],['Supplier Code',row.sCode],['Supplier Name',row.supplierName],['GST No',row.gstNo],['City',row.city],['State',row.state],['State Code',row.stateCode],['Pin Code',row.pinCode],['Contact Person',row.contactPerson],['Mobile',row.mobile],['Phone',row.phone],['Email',row.email],['Bank Name',row.bankName],['Branch Name',row.branchName],['Account Name',row.accountName],['Account Number',row.accountNumber],['IFSC Code',row.ifscCode],['MICR Code',row.micrCode]].map(([l,v])=>(
+          {[
+            ['Supplier Type', row.supplierType],
+            ['Supplier Code', row.sCode],
+            ['Supplier Name', row.supplierName],
+            ['GST No', row.gstNo],
+            ['City', row.city],
+            ['State', row.state],
+            ['State Code', row.stateCode],
+            ['Pin Code', row.pinCode],
+            ['Contact Person', row.contactPerson],
+            ['Mobile', row.mobile],
+            ['Phone', row.phone],
+            ['Email', row.email],
+            ['Bank Name', row.bankName],
+            ['Branch Name', row.branchName],
+            ['Account Name', row.accountName],
+            ['Account Number', row.accountNumber],
+            ['IFSC Code', row.ifscCode],
+            ['MICR Code', row.micrCode],
+          ].map(([l, v]) => (
             <div key={l} className="flex flex-col py-1 border-b border-slate-100">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{l}</span>
-              <span className="text-[13px] text-slate-800 font-medium">{v||'—'}</span>
+              <span className="text-[13px] text-slate-800 font-medium">{v || '—'}</span>
             </div>
           ))}
         </div>
@@ -195,10 +183,30 @@ function DetailModal({ row, onClose }) {
   )
 }
 
+// ── Empty form ──────────────────────────────────────────────────────────────
+
+const emptyForm = {
+  supplierType: '', sCode: '', supplierName: '',
+  address: '', address2: '', address3: '', address4: '',
+  city: '', country: 'India', state: '', stateCode: '', pinCode: '',
+  contactPerson: '', mobile: '', phone: '', email: '', website: '',
+  gstNo: '', panNo: '',
+  bankName: '', branchName: '', accountName: '', accountNumber: '', ifscCode: '', micrCode: '',
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export default function SupplierMaster() {
-  const [rows, setRows] = useState(SEED)
+  const toast = useToast()
+
+  const [supplierTypes, setSupplierTypes] = useState([])
+  const [dropdownLoading, setDropdownLoading] = useState(true)
+
+  const [rows, setRows] = useState([])
+  const [tableLoading, setTableLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [editId, setEditId] = useState(null)
@@ -206,10 +214,57 @@ export default function SupplierMaster() {
   const [pageSize, setPageSize] = useState(5)
   const [page, setPage] = useState(1)
   const [detailRow, setDetailRow] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const [ifscLoading, setIfscLoading] = useState(false)
 
   const cityOptions = STATE_CITIES[form.state] || []
   const branchOptions = BANK_BRANCHES[form.bankName] || []
+
+  // ── Fetch supplier types via reference_type table (Supplier_Type → values) ──
+  const fetchSupplierTypes = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/reference-types/values/Supplier_Type')
+      const types = (res.data.data || []).map(r => r.description)
+      setSupplierTypes(types)
+    } catch (err) {
+      console.error('[SupplierMaster] fetchSupplierTypes error:', err)
+      toast.error('Failed to load supplier types')
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch all suppliers ────────────────────────────────────────────────────
+  const fetchAll = useCallback(async () => {
+    setTableLoading(true)
+    try {
+      const res = await axios.get('/api/supplier-master')
+      setRows(res.data.data || [])
+    } catch (err) {
+      console.error('[SupplierMaster] fetchAll error:', err)
+      toast.error('Failed to load supplier records')
+    } finally {
+      setTableLoading(false)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch next sCode for display in form ──────────────────────────────────
+  const fetchNextCode = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/supplier-master/next-code')
+      setForm(f => ({ ...f, sCode: res.data.nextSCode || '' }))
+    } catch (err) {
+      console.error('[SupplierMaster] fetchNextCode error:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    const init = async () => {
+      setDropdownLoading(true)
+      await fetchSupplierTypes()
+      setDropdownLoading(false)
+      await Promise.all([fetchAll(), fetchNextCode()])
+    }
+    init()
+  }, [fetchSupplierTypes, fetchAll, fetchNextCode])
 
   const setField = (k, v) => {
     let extra = {}
@@ -219,7 +274,6 @@ export default function SupplierMaster() {
     setErrors(e => ({ ...e, [k]: '' }))
   }
 
-  // When IFSC reaches 11 chars, auto-fetch bank details from Razorpay
   const handleIfscChange = async (val) => {
     const clean = val.toUpperCase().replace(/\s/g, '')
     setForm(f => ({ ...f, ifscCode: clean }))
@@ -237,8 +291,11 @@ export default function SupplierMaster() {
             branchName: f.branchName || data.BRANCH || '',
           }))
         }
-      } catch { /* network error — ignore */ }
-      setIfscLoading(false)
+      } catch (err) {
+        console.error('[SupplierMaster] IFSC lookup error:', err)
+      } finally {
+        setIfscLoading(false)
+      }
     }
   }
 
@@ -250,25 +307,97 @@ export default function SupplierMaster() {
     return Object.keys(errs).length === 0
   }
 
-  const handleCreate = () => {
+  // ── Save (create / update) ─────────────────────────────────────────────────
+  const handleSave = async () => {
     if (!validate()) return
-    if (editId !== null) {
-      setRows(r => r.map(x => x.id === editId ? { ...form, id: editId } : x))
+    setSaving(true)
+    try {
+      if (editId !== null) {
+        await axios.put(`/api/supplier-master/${editId}`, form)
+        toast.success('Supplier updated successfully.')
+      } else {
+        await axios.post('/api/supplier-master', form)
+        toast.success('Supplier created successfully.')
+      }
+      setForm(emptyForm)
+      setErrors({})
       setEditId(null)
-    } else {
-      const newId = Math.max(0, ...rows.map(r => r.id)) + 1
-      setRows(r => [...r, { ...form, id: newId, sCode: form.sCode || 'SUP' + String(newId + 100) }])
+      setPage(1)
+      await fetchAll()
+      await fetchNextCode()
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to save supplier.'
+      console.error('[SupplierMaster] handleSave error:', err)
+      toast.error(msg)
+    } finally {
+      setSaving(false)
     }
-    setForm(emptyForm); setErrors({}); setPage(1)
   }
 
-  const handleEdit = row => { setForm({ ...row }); setErrors({}); setEditId(row.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }
-  const handleDelete = id => { if (window.confirm('Delete this supplier?')) setRows(r => r.filter(x => x.id !== id)) }
-  const handleClear = () => { setForm(emptyForm); setErrors({}); setEditId(null) }
+  const handleEdit = row => {
+    setForm({
+      supplierType: row.supplierType || '',
+      sCode: row.sCode || '',
+      supplierName: row.supplierName || '',
+      address: row.address || '',
+      address2: row.address2 || '',
+      address3: row.address3 || '',
+      address4: row.address4 || '',
+      city: row.city || '',
+      country: row.country || 'India',
+      state: row.state || '',
+      stateCode: row.stateCode || '',
+      pinCode: row.pinCode || '',
+      contactPerson: row.contactPerson || '',
+      mobile: row.mobile || '',
+      phone: row.phone || '',
+      email: row.email || '',
+      website: row.website || '',
+      gstNo: row.gstNo || '',
+      panNo: row.panNo || '',
+      bankName: row.bankName || '',
+      branchName: row.branchName || '',
+      accountName: row.accountName || '',
+      accountNumber: row.accountNumber || '',
+      ifscCode: row.ifscCode || '',
+      micrCode: row.micrCode || '',
+    })
+    setErrors({})
+    setEditId(row.id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
+  const handleDeleteConfirm = id => setConfirmDelete(id)
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    try {
+      await axios.delete(`/api/supplier-master/${confirmDelete}`)
+      toast.success('Supplier deleted.')
+      setConfirmDelete(null)
+      if (editId === confirmDelete) { setForm(emptyForm); setEditId(null) }
+      await fetchAll()
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to delete supplier.'
+      console.error('[SupplierMaster] handleDelete error:', err)
+      toast.error(msg)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleClear = async () => {
+    setForm(emptyForm)
+    setErrors({})
+    setEditId(null)
+    await fetchNextCode()
+  }
+
+  // ── Filtering & Pagination ─────────────────────────────────────────────────
   const filtered = rows.filter(r =>
     [r.sCode, r.supplierName, r.city, r.state, r.contactPerson, r.mobile, r.email]
-      .some(v => String(v).toLowerCase().includes(search.toLowerCase()))
+      .some(v => String(v || '').toLowerCase().includes(search.toLowerCase()))
   )
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
@@ -283,11 +412,15 @@ export default function SupplierMaster() {
     return ps
   }
 
-  const inp = (err) => `w-full border rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 transition-colors bg-white ${err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'}`
+  const inp = (err) =>
+    `w-full border rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 transition-colors bg-white ${
+      err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'
+    }`
   const lbl = 'text-[12.5px] font-semibold text-slate-600 whitespace-nowrap'
 
   return (
     <div className="p-4 space-y-4 w-full min-w-0">
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-slate-400">
         <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span>
         <ChevronRight className="w-3 h-3"/>
@@ -296,6 +429,7 @@ export default function SupplierMaster() {
         <span className="text-[#0097A7] font-semibold">Supplier Master</span>
       </div>
 
+      {/* ── Form ── */}
       <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
         <div className="bg-[--color-main] px-4 py-2.5">
           <h2 className="text-white text-center font-semibold text-[14px]">
@@ -307,22 +441,39 @@ export default function SupplierMaster() {
 
             {/* ── Col 1 ── */}
             <div className="space-y-2">
+              {/* Supplier Type — from ReferenceMaster */}
               <div className="flex items-center gap-2">
-                <label className={`${lbl} w-28 shrink-0`}>Supplier Type :</label>
-                <div className="flex-1">
-                  <select value={form.supplierType} onChange={e => setField('supplierType', e.target.value)} className={inp(errors.supplierType)}>
-                    <option value="">---Select---</option>
-                    {SUPPLIER_TYPES.map(t => <option key={t}>{t}</option>)}
+                <label className={`${lbl} w-28 shrink-0`}><span className="text-red-500">*</span> Supplier Type :</label>
+                <div className="flex-1 relative">
+                  <select
+                    value={form.supplierType}
+                    onChange={e => setField('supplierType', e.target.value)}
+                    disabled={dropdownLoading}
+                    className={`${inp(errors.supplierType)} disabled:opacity-60`}
+                  >
+                    <option value="">
+                      {dropdownLoading ? 'Loading...' : '--- Select ---'}
+                    </option>
+                    {supplierTypes.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
+                  {dropdownLoading && (
+                    <Loader2 className="animate-spin absolute right-7 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0097A7] pointer-events-none" />
+                  )}
                   {errors.supplierType && <p className="text-[11px] text-red-500 mt-0.5">{errors.supplierType}</p>}
                 </div>
               </div>
+
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Supplier Code :</label>
-                <input value={form.sCode} onChange={e => setField('sCode', e.target.value)} className={`${inp(false)} bg-slate-50`} placeholder="Auto-generated"/>
+                <input
+                  value={form.sCode}
+                  onChange={e => setField('sCode', e.target.value)}
+                  className={`${inp(false)} bg-slate-50`}
+                  placeholder="Auto-generated"
+                />
               </div>
               <div className="flex items-center gap-2">
-                <label className={`${lbl} w-28 shrink-0`}><span className="text-red-500">*</span>Supplier Name :</label>
+                <label className={`${lbl} w-28 shrink-0`}><span className="text-red-500">*</span> Supplier Name :</label>
                 <div className="flex-1">
                   <input value={form.supplierName} onChange={e => setField('supplierName', e.target.value)} className={inp(errors.supplierName)}/>
                   {errors.supplierName && <p className="text-[11px] text-red-500 mt-0.5">{errors.supplierName}</p>}
@@ -331,14 +482,11 @@ export default function SupplierMaster() {
               <div className="flex items-start gap-2">
                 <label className={`${lbl} w-28 shrink-0 pt-1`}>Address :</label>
                 <div className="flex-1 space-y-1">
-                  <input value={form.address} onChange={e => setField('address', e.target.value)} className={inp(false)}/>
-                  <input value={form.address2} onChange={e => setField('address2', e.target.value)} className={inp(false)}/>
-                  <input value={form.address3} onChange={e => setField('address3', e.target.value)} className={inp(false)}/>
-                  <input value={form.address4} onChange={e => setField('address4', e.target.value)} className={inp(false)}/>
+                  
+                  <textarea rows={3} value={form.address} onChange={e => setField('address', e.target.value)} className={inp(false)}></textarea>
+                 
                 </div>
               </div>
-
-              {/* City — dependent on State */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>City :</label>
                 <SearchableSelect
@@ -358,8 +506,6 @@ export default function SupplierMaster() {
                 <label className={`${lbl} w-28 shrink-0`}>Country :</label>
                 <input value={form.country} onChange={e => setField('country', e.target.value)} className={inp(false)}/>
               </div>
-
-              {/* State */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>State :</label>
                 <SearchableSelect
@@ -370,7 +516,6 @@ export default function SupplierMaster() {
                   className={inp(false)}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>State Code :</label>
                 <input value={form.stateCode} readOnly className={`${inp(false)} bg-slate-50`}/>
@@ -411,8 +556,6 @@ export default function SupplierMaster() {
                 <label className={`${lbl} w-28 shrink-0`}>Pan No :</label>
                 <input value={form.panNo} onChange={e => setField('panNo', e.target.value)} className={inp(false)}/>
               </div>
-
-              {/* Bank Name */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Bank Name :</label>
                 <SearchableSelect
@@ -423,8 +566,6 @@ export default function SupplierMaster() {
                   className={inp(false)}
                 />
               </div>
-
-              {/* Branch — dependent on Bank */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Branch Name :</label>
                 <SearchableSelect
@@ -436,7 +577,6 @@ export default function SupplierMaster() {
                   className={inp(false)}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Account Name :</label>
                 <input value={form.accountName} onChange={e => setField('accountName', e.target.value)} className={inp(false)}/>
@@ -445,8 +585,6 @@ export default function SupplierMaster() {
                 <label className={`${lbl} w-28 shrink-0`}>Account Number :</label>
                 <input value={form.accountNumber} onChange={e => setField('accountNumber', e.target.value)} className={inp(false)}/>
               </div>
-
-              {/* IFSC — auto-fetches MICR on 11-char entry */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>IFSC Code :</label>
                 <div className="flex-1 relative">
@@ -458,18 +596,13 @@ export default function SupplierMaster() {
                     className={`${inp(false)} uppercase pr-6`}
                   />
                   {ifscLoading && (
-                    <svg className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin h-3.5 w-3.5 text-[#0097A7]" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                    </svg>
+                    <Loader2 className="animate-spin absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0097A7]" />
                   )}
                   {!ifscLoading && form.ifscCode.length === 11 && (
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-[11px]">✓</span>
                   )}
                 </div>
               </div>
-
-              {/* MICR — auto-filled from Razorpay when IFSC is entered */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>MICR Code :</label>
                 <input
@@ -480,15 +613,30 @@ export default function SupplierMaster() {
                 />
               </div>
 
+              {/* Action Buttons */}
               <div className="flex gap-2 pt-2 justify-end">
-                <button onClick={handleCreate} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-                  <Save className="w-4 h-4"/> {editId !== null ? 'Update' : 'Create'}
+                <button
+                  onClick={handleSave}
+                  disabled={saving || dropdownLoading}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4"/>}
+                  {editId !== null ? 'Update' : 'Create'}
                 </button>
-                <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
+                <button
+                  onClick={handleClear}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60"
+                >
                   <RotateCcw className="w-4 h-4"/> Clear
                 </button>
-                <button onClick={() => setPage(1)} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-                  <List className="w-4 h-4"/> Display All
+                <button
+                  onClick={() => { fetchAll(); setPage(1) }}
+                  disabled={tableLoading}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60"
+                >
+                  {tableLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : <List className="w-4 h-4"/>}
+                  Display All
                 </button>
               </div>
             </div>
@@ -505,11 +653,19 @@ export default function SupplierMaster() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
           <div className="flex items-center gap-2 text-[13px] text-slate-600">
             Search:
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} className="border border-slate-300 rounded px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7] w-40"/>
+            <input
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              className="border border-slate-300 rounded px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7] w-40"
+            />
           </div>
           <div className="flex items-center gap-2 text-[13px] text-slate-600">
             Show
-            <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }} className="border border-slate-300 rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7]">
+            <select
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
+              className="border border-slate-300 rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7]"
+            >
               {PAGE_SIZES.map(s => <option key={s}>{s}</option>)}
             </select>
             entries
@@ -519,36 +675,66 @@ export default function SupplierMaster() {
           <table className="min-w-full text-[13px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                {['S.No','S.Code','Name','City','State','Con. Person','Mobile','EMail Id','Edit','Delete','Details'].map(h => (
+                {['S.No', 'S.Code', 'Name', 'City', 'State', 'Con. Person', 'Mobile', 'Email Id', 'Edit', 'Delete', 'Details'].map(h => (
                   <th key={h} className="text-center px-3 py-2.5 font-semibold text-slate-600 text-[12px] uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {paged.length === 0
-                ? <tr><td colSpan={12} className="text-center py-8 text-slate-400 text-[13px]">No records found</td></tr>
-                : paged.map((row, idx) => (
-                  <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
-                    <td className="px-3 py-2 text-center">{(page - 1) * pageSize + idx + 1}</td>
-                    <td className="px-3 py-2 text-center">{row.sCode}</td>
-                    <td className="px-3 py-2 text-center font-medium">{row.supplierName}</td>
-                    <td className="px-3 py-2 text-center">{row.city}</td>
-                    <td className="px-3 py-2 text-center">{row.state}</td>
-                    <td className="px-3 py-2 text-center">{row.contactPerson}</td>
-                    <td className="px-3 py-2 text-center">{row.mobile}</td>
-                    <td className="px-3 py-2 text-center">{row.email}</td>
-                    <td className="px-3 py-2 text-center">
-                      <button onClick={() => handleEdit(row)} className="px-3 py-1.5 bg-[--color-main] hover:bg-[#3498db] text-white text-[12px] rounded transition-colors"><Edit className="w-4 h-4"/></button>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button onClick={() => handleDelete(row.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors"><Trash2 className="w-4 h-4"/></button>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button onClick={() => setDetailRow(row)} className="px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] rounded transition-colors"><Info className="w-4 h-4"/></button>
-                    </td>
-                  </tr>
-                ))
-              }
+              {tableLoading ? (
+                <tr>
+                  <td colSpan={11} className="text-center py-8 text-slate-400 text-[13px]">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#0097A7]"/> Loading...
+                    </div>
+                  </td>
+                </tr>
+              ) : paged.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="text-center py-8 text-slate-400 text-[13px]">No records found</td>
+                </tr>
+              ) : paged.map((row, idx) => (
+                <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
+                  <td className="px-3 py-2 text-center">{(page - 1) * pageSize + idx + 1}</td>
+                  <td className="px-3 py-2 text-center">{row.sCode}</td>
+                  <td className="px-3 py-2 text-center font-medium">{row.supplierName}</td>
+                  <td className="px-3 py-2 text-center">{row.city}</td>
+                  <td className="px-3 py-2 text-center">{row.state}</td>
+                  <td className="px-3 py-2 text-center">{row.contactPerson}</td>
+                  <td className="px-3 py-2 text-center">{row.mobile}</td>
+                  <td className="px-3 py-2 text-center">{row.email}</td>
+                  <td className="px-3 py-2 text-center">
+                    <button
+                      onClick={() => handleEdit(row)}
+                      className="px-3 py-1.5 bg-[--color-main] hover:bg-[#3498db] text-white text-[12px] rounded transition-colors"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4"/>
+                    </button>
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <button
+                      onClick={() => handleDeleteConfirm(row.id)}
+                      disabled={deleting}
+                      className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors disabled:opacity-60"
+                      title="Delete"
+                    >
+                      {deleting && confirmDelete === row.id
+                        ? <Loader2 className="w-4 h-4 animate-spin"/>
+                        : <Trash2 className="w-4 h-4"/>}
+                    </button>
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <button
+                      onClick={() => setDetailRow(row)}
+                      className="px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] rounded transition-colors"
+                      title="Details"
+                    >
+                      <Info className="w-4 h-4"/>
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -557,17 +743,42 @@ export default function SupplierMaster() {
             Showing {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} entries
           </span>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Previous</button>
-            {pageNums().map((n, i) => n === '...'
-              ? <span key={`e${i}`} className="px-2 text-slate-400 text-[12px]">…</span>
-              : <button key={n} onClick={() => setPage(n)} className={`w-8 h-8 text-[12px] rounded border transition-colors ${page === n ? 'bg-[#0097A7] text-white border-[#0097A7]' : 'border-slate-300 hover:bg-slate-100 text-slate-600'}`}>{n}</button>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            {pageNums().map((n, i) =>
+              n === '...'
+                ? <span key={`e${i}`} className="px-2 text-slate-400 text-[12px]">…</span>
+                : <button
+                    key={n}
+                    onClick={() => setPage(n)}
+                    className={`w-8 h-8 text-[12px] rounded border transition-colors ${page === n ? 'bg-[#0097A7] text-white border-[#0097A7]' : 'border-slate-300 hover:bg-slate-100 text-slate-600'}`}
+                  >{n}</button>
             )}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next</button>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
 
       {detailRow && <DetailModal row={detailRow} onClose={() => setDetailRow(null)}/>}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Confirm Delete"
+        message="Delete this supplier? This action cannot be undone."
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }

@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
-import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import axios from 'axios'
+import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
 
-// ── Data ────────────────────────────────────────────────────────────────────
+// ── Static lookup data ───────────────────────────────────────────────────────
 
-const CUSTOMER_TYPES = ['Regular','Dealer','Distributor','Retailer','OEM','Government','Institutional']
-const PAGE_SIZES = [4,10,25,50]
+const PAGE_SIZES = [4, 10, 25, 50]
 
 const INDIA_STATES = [
   'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
@@ -109,7 +109,7 @@ const BANK_BRANCHES = {
   'Karnataka Bank':['Mangaluru Main','Bengaluru','Chennai','Mumbai','Hyderabad','Udupi'],
 }
 
-// ── SearchableSelect ────────────────────────────────────────────────────────
+// ── SearchableSelect ─────────────────────────────────────────────────────────
 
 function SearchableSelect({ value, onChange, options = [], placeholder = 'Search...', disabled = false, className = '' }) {
   const [query, setQuery] = useState(value || '')
@@ -156,18 +156,17 @@ function SearchableSelect({ value, onChange, options = [], placeholder = 'Search
   )
 }
 
-// ── Seed & empty form ───────────────────────────────────────────────────────
+// ── Empty form ───────────────────────────────────────────────────────────────
 
-const SEED = [
-  {id:1,cCode:'CUS97',customerType:'Regular',customerName:'SM DRILLING COMPANY',address:'',address2:'',address3:'',address4:'',city:'',country:'India',state:'',stateCode:'',pinCode:'',contactPerson:'',mobile:'',phone:'',email:'',website:'',aadharNo:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:'',remarks:''},
-  {id:2,cCode:'CUS98',customerType:'Dealer',customerName:'APC DRILLING AND CONSTRUCTION PVT LTD',address:'',address2:'',address3:'',address4:'',city:'',country:'India',state:'',stateCode:'',pinCode:'',contactPerson:'',mobile:'',phone:'',email:'',website:'',aadharNo:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:'',remarks:''},
-  {id:3,cCode:'CUS102',customerType:'Regular',customerName:'VELSON',address:'',address2:'',address3:'',address4:'',city:'',country:'India',state:'',stateCode:'',pinCode:'',contactPerson:'',mobile:'7402649977',phone:'',email:'',website:'',aadharNo:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:'',remarks:''},
-  {id:4,cCode:'CUS103',customerType:'Regular',customerName:'ABHISHEK SONI',address:'',address2:'',address3:'',address4:'',city:'',country:'India',state:'',stateCode:'',pinCode:'',contactPerson:'',mobile:'',phone:'',email:'',website:'',aadharNo:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:'',remarks:''},
-]
+const emptyForm = {
+  customerType: '', cCode: '', customerName: '', address: '', address2: '',
+  address3: '', address4: '', city: '', country: 'India', state: '', stateCode: '',
+  pinCode: '', contactPerson: '', mobile: '', phone: '', email: '', website: '',
+  aadharNo: '', gstNo: '', panNo: '', bankName: '', branchName: '', accountName: '',
+  accountNumber: '', ifscCode: '', micrCode: '', remarks: '',
+}
 
-const emptyForm = {customerType:'',cCode:'',customerName:'',address:'',address2:'',address3:'',address4:'',city:'',country:'India',state:'',stateCode:'',pinCode:'',contactPerson:'',mobile:'',phone:'',email:'',website:'',aadharNo:'',gstNo:'',panNo:'',bankName:'',branchName:'',accountName:'',accountNumber:'',ifscCode:'',micrCode:'',remarks:''}
-
-// ── Detail Modal ────────────────────────────────────────────────────────────
+// ── Detail Modal ─────────────────────────────────────────────────────────────
 
 function DetailModal({ row, onClose }) {
   return (
@@ -178,10 +177,22 @@ function DetailModal({ row, onClose }) {
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5"/></button>
         </div>
         <div className="p-5 grid grid-cols-2 gap-x-6 gap-y-1.5 max-h-[70vh] overflow-y-auto">
-          {[['Customer Type',row.customerType],['Customer Code',row.cCode],['Customer Name',row.customerName],['GST No',row.gstNo],['Pan No',row.panNo],['City',row.city],['State',row.state],['State Code',row.stateCode],['Pin Code',row.pinCode],['Contact Person',row.contactPerson],['Mobile',row.mobile],['Phone',row.phone],['Email',row.email],['Aadhar No',row.aadharNo],['Bank Name',row.bankName],['Branch Name',row.branchName],['Account Name',row.accountName],['Account Number',row.accountNumber],['IFSC Code',row.ifscCode],['MICR Code',row.micrCode],['Remarks',row.remarks]].map(([l,v])=>(
+          {[
+            ['Customer Type', row.customerType], ['Customer Code', row.cCode],
+            ['Customer Name', row.customerName], ['GST No', row.gstNo],
+            ['Pan No', row.panNo], ['City', row.city],
+            ['State', row.state], ['State Code', row.stateCode],
+            ['Pin Code', row.pinCode], ['Contact Person', row.contactPerson],
+            ['Mobile', row.mobile], ['Phone', row.phone],
+            ['Email', row.email], ['Aadhar No', row.aadharNo],
+            ['Bank Name', row.bankName], ['Branch Name', row.branchName],
+            ['Account Name', row.accountName], ['Account Number', row.accountNumber],
+            ['IFSC Code', row.ifscCode], ['MICR Code', row.micrCode],
+            ['Remarks', row.remarks],
+          ].map(([l, v]) => (
             <div key={l} className="flex flex-col py-1 border-b border-slate-100">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{l}</span>
-              <span className="text-[13px] text-slate-800 font-medium">{v||'—'}</span>
+              <span className="text-[13px] text-slate-800 font-medium">{v || '—'}</span>
             </div>
           ))}
         </div>
@@ -193,10 +204,38 @@ function DetailModal({ row, onClose }) {
   )
 }
 
-// ── Main Component ──────────────────────────────────────────────────────────
+// ── Confirm Delete Modal ─────────────────────────────────────────────────────
+
+function ConfirmDeleteModal({ customerName, onConfirm, onCancel, loading }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="bg-red-500 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-white font-bold text-[15px]">Confirm Delete</h2>
+          <button onClick={onCancel} disabled={loading} className="text-white/80 hover:text-white"><X className="w-5 h-5"/></button>
+        </div>
+        <div className="p-6">
+          <p className="text-[13px] text-slate-700">
+            Are you sure you want to delete <span className="font-semibold">{customerName}</span>? This action cannot be undone.
+          </p>
+        </div>
+        <div className="px-6 pb-5 flex justify-end gap-2">
+          <button onClick={onCancel} disabled={loading} className="px-4 py-2 text-[13px] font-semibold text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
+          <button onClick={onConfirm} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50">
+            {loading && <Loader2 className="w-3.5 h-3.5 animate-spin"/>}
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Component ───────────────────────────────────────────────────────────
 
 export default function CustomerMaster() {
-  const [rows, setRows] = useState(SEED)
+  const [rows, setRows] = useState([])
+  const [customerTypes, setCustomerTypes] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [editId, setEditId] = useState(null)
@@ -204,10 +243,59 @@ export default function CustomerMaster() {
   const [pageSize, setPageSize] = useState(4)
   const [page, setPage] = useState(1)
   const [detailRow, setDetailRow] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  // Loading states
+  const [loadingList, setLoadingList] = useState(false)
+  const [loadingTypes, setLoadingTypes] = useState(false)
+  const [loadingSave, setLoadingSave] = useState(false)
+  const [loadingDelete, setLoadingDelete] = useState(false)
   const [ifscLoading, setIfscLoading] = useState(false)
+
+  // Error banner
+  const [apiError, setApiError] = useState('')
 
   const cityOptions = STATE_CITIES[form.state] || []
   const branchOptions = BANK_BRANCHES[form.bankName] || []
+
+  // ── Fetch customer types from reference master ──
+
+  const fetchCustomerTypes = useCallback(async () => {
+    setLoadingTypes(true)
+    try {
+      const res = await axios.get('/api/reference-master/Customer_Type')
+      const types = (res.data?.data || []).map(r => r.description).filter(Boolean)
+      setCustomerTypes(types)
+    } catch (err) {
+      console.error('[CustomerMaster] fetchCustomerTypes error:', err)
+      setApiError('Failed to load customer types from reference master.')
+    } finally {
+      setLoadingTypes(false)
+    }
+  }, [])
+
+  // ── Fetch all customers ──
+
+  const fetchCustomers = useCallback(async () => {
+    setLoadingList(true)
+    setApiError('')
+    try {
+      const res = await axios.get('/api/customer-master')
+      setRows(res.data?.data || [])
+    } catch (err) {
+      console.error('[CustomerMaster] fetchCustomers error:', err)
+      setApiError('Failed to load customer records.')
+    } finally {
+      setLoadingList(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCustomerTypes()
+    fetchCustomers()
+  }, [fetchCustomerTypes, fetchCustomers])
+
+  // ── Form helpers ──
 
   const setField = (k, v) => {
     let extra = {}
@@ -234,8 +322,11 @@ export default function CustomerMaster() {
             branchName: f.branchName || data.BRANCH || '',
           }))
         }
-      } catch { /* network error — ignore */ }
-      setIfscLoading(false)
+      } catch (err) {
+        console.error('[CustomerMaster] IFSC lookup error:', err)
+      } finally {
+        setIfscLoading(false)
+      }
     }
   }
 
@@ -247,25 +338,94 @@ export default function CustomerMaster() {
     return Object.keys(errs).length === 0
   }
 
-  const handleCreate = () => {
+  // ── Create / Update ──
+
+  const handleSave = async () => {
     if (!validate()) return
-    if (editId !== null) {
-      setRows(r => r.map(x => x.id === editId ? { ...form, id: editId } : x))
-      setEditId(null)
-    } else {
-      const newId = Math.max(0, ...rows.map(r => r.id)) + 1
-      setRows(r => [...r, { ...form, id: newId, cCode: form.cCode || 'CUS' + String(newId + 100) }])
+    setLoadingSave(true)
+    setApiError('')
+    try {
+      if (editId !== null) {
+        const res = await axios.put(`/api/customer-master/${editId}`, form)
+        setRows(r => r.map(x => x.id === editId ? res.data.data : x))
+        setEditId(null)
+      } else {
+        const res = await axios.post('/api/customer-master', form)
+        setRows(r => [...r, res.data.data])
+        setPage(1)
+      }
+      setForm(emptyForm)
+      setErrors({})
+    } catch (err) {
+      console.error('[CustomerMaster] save error:', err)
+      const msg = err.response?.data?.message || 'Failed to save customer record.'
+      setApiError(msg)
+    } finally {
+      setLoadingSave(false)
     }
-    setForm(emptyForm); setErrors({}); setPage(1)
   }
 
-  const handleEdit = row => { setForm({ ...row }); setErrors({}); setEditId(row.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }
-  const handleDelete = id => { if (window.confirm('Delete this customer?')) setRows(r => r.filter(x => x.id !== id)) }
-  const handleClear = () => { setForm(emptyForm); setErrors({}); setEditId(null) }
+  // ── Delete ──
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setLoadingDelete(true)
+    setApiError('')
+    try {
+      await axios.delete(`/api/customer-master/${deleteTarget.id}`)
+      setRows(r => r.filter(x => x.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch (err) {
+      console.error('[CustomerMaster] delete error:', err)
+      const msg = err.response?.data?.message || 'Failed to delete customer record.'
+      setApiError(msg)
+    } finally {
+      setLoadingDelete(false)
+    }
+  }
+
+  const handleEdit = row => {
+    setForm({
+      customerType: row.customerType || '',
+      cCode: row.cCode || '',
+      customerName: row.customerName || '',
+      address: row.address || '',
+      address2: row.address2 || '',
+      address3: row.address3 || '',
+      address4: row.address4 || '',
+      city: row.city || '',
+      country: row.country || 'India',
+      state: row.state || '',
+      stateCode: row.stateCode || '',
+      pinCode: row.pinCode || '',
+      contactPerson: row.contactPerson || '',
+      mobile: row.mobile || '',
+      phone: row.phone || '',
+      email: row.email || '',
+      website: row.website || '',
+      aadharNo: row.aadharNo || '',
+      gstNo: row.gstNo || '',
+      panNo: row.panNo || '',
+      bankName: row.bankName || '',
+      branchName: row.branchName || '',
+      accountName: row.accountName || '',
+      accountNumber: row.accountNumber || '',
+      ifscCode: row.ifscCode || '',
+      micrCode: row.micrCode || '',
+      remarks: row.remarks || '',
+    })
+    setErrors({})
+    setEditId(row.id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleClear = () => { setForm(emptyForm); setErrors({}); setEditId(null); setApiError('') }
+
+  // ── Filtering & pagination ──
 
   const filtered = rows.filter(r =>
     [r.cCode, r.customerName, r.city, r.state, r.contactPerson, r.mobile, r.email]
-      .some(v => String(v).toLowerCase().includes(search.toLowerCase()))
+      .some(v => String(v || '').toLowerCase().includes(search.toLowerCase()))
   )
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
@@ -285,6 +445,7 @@ export default function CustomerMaster() {
 
   return (
     <div className="p-4 space-y-4 w-full min-w-0">
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-slate-400">
         <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span>
         <ChevronRight className="w-3 h-3"/>
@@ -293,6 +454,15 @@ export default function CustomerMaster() {
         <span className="text-[#0097A7] font-semibold">Customer Master</span>
       </div>
 
+      {/* API Error Banner */}
+      {apiError && (
+        <div className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 rounded px-4 py-2.5 text-[13px]">
+          <span>{apiError}</span>
+          <button onClick={() => setApiError('')} className="text-red-400 hover:text-red-600 ml-4"><X className="w-4 h-4"/></button>
+        </div>
+      )}
+
+      {/* ── Form Card ── */}
       <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
         <div className="bg-[--color-main] px-4 py-2.5">
           <h2 className="text-white text-center font-semibold text-[14px]">
@@ -307,10 +477,16 @@ export default function CustomerMaster() {
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Customer Type :</label>
                 <div className="flex-1">
-                  <select value={form.customerType} onChange={e => setField('customerType', e.target.value)} className={inp(errors.customerType)}>
-                    <option value="">---Select---</option>
-                    {CUSTOMER_TYPES.map(t => <option key={t}>{t}</option>)}
-                  </select>
+                  {loadingTypes ? (
+                    <div className="flex items-center gap-1.5 h-7 text-[12px] text-slate-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin"/> Loading types...
+                    </div>
+                  ) : (
+                    <select value={form.customerType} onChange={e => setField('customerType', e.target.value)} className={inp(errors.customerType)}>
+                      <option value="">---Select---</option>
+                      {customerTypes.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  )}
                   {errors.customerType && <p className="text-[11px] text-red-500 mt-0.5">{errors.customerType}</p>}
                 </div>
               </div>
@@ -319,7 +495,7 @@ export default function CustomerMaster() {
                 <input value={form.cCode} onChange={e => setField('cCode', e.target.value)} className={`${inp(false)} bg-slate-50`} placeholder="Auto-generated"/>
               </div>
               <div className="flex items-center gap-2">
-                <label className={`${lbl} w-28 shrink-0`}><span className="text-red-500">*</span>Customer Name :</label>
+                <label className={`${lbl} w-28 shrink-0`}><span className="text-red-500">*</span> Customer Name :</label>
                 <div className="flex-1">
                   <input value={form.customerName} onChange={e => setField('customerName', e.target.value)} className={inp(errors.customerName)}/>
                   {errors.customerName && <p className="text-[11px] text-red-500 mt-0.5">{errors.customerName}</p>}
@@ -328,14 +504,12 @@ export default function CustomerMaster() {
               <div className="flex items-start gap-2">
                 <label className={`${lbl} w-28 shrink-0 pt-1`}>Address :</label>
                 <div className="flex-1 space-y-1">
-                  <input value={form.address} onChange={e => setField('address', e.target.value)} className={inp(false)}/>
-                  <input value={form.address2} onChange={e => setField('address2', e.target.value)} className={inp(false)}/>
+                  <textarea rows={3} value={form.address} onChange={e => setField('address', e.target.value)} className={inp(false)}></textarea>
+                  {/* <input value={form.address2} onChange={e => setField('address2', e.target.value)} className={inp(false)}/>
                   <input value={form.address3} onChange={e => setField('address3', e.target.value)} className={inp(false)}/>
-                  <input value={form.address4} onChange={e => setField('address4', e.target.value)} className={inp(false)}/>
+                  <input value={form.address4} onChange={e => setField('address4', e.target.value)} className={inp(false)}/> */}
                 </div>
               </div>
-
-              {/* City — dependent on State */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>City :</label>
                 <SearchableSelect
@@ -347,7 +521,6 @@ export default function CustomerMaster() {
                   className={inp(false)}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Country :</label>
                 <input value={form.country} onChange={e => setField('country', e.target.value)} className={inp(false)}/>
@@ -356,7 +529,6 @@ export default function CustomerMaster() {
 
             {/* ── Col 2 ── */}
             <div className="space-y-2">
-              {/* State */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>State :</label>
                 <SearchableSelect
@@ -367,7 +539,6 @@ export default function CustomerMaster() {
                   className={inp(false)}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>State Code :</label>
                 <input value={form.stateCode} readOnly className={`${inp(false)} bg-slate-50`}/>
@@ -412,8 +583,6 @@ export default function CustomerMaster() {
                 <label className={`${lbl} w-28 shrink-0`}>Pan No. :</label>
                 <input value={form.panNo} onChange={e => setField('panNo', e.target.value)} className={inp(false)}/>
               </div>
-
-              {/* Bank Name */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Bank Name :</label>
                 <SearchableSelect
@@ -424,8 +593,6 @@ export default function CustomerMaster() {
                   className={inp(false)}
                 />
               </div>
-
-              {/* Branch — dependent on Bank */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Branch Name :</label>
                 <SearchableSelect
@@ -437,7 +604,6 @@ export default function CustomerMaster() {
                   className={inp(false)}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Account Name :</label>
                 <input value={form.accountName} onChange={e => setField('accountName', e.target.value)} className={inp(false)}/>
@@ -446,8 +612,6 @@ export default function CustomerMaster() {
                 <label className={`${lbl} w-28 shrink-0`}>Account Number :</label>
                 <input value={form.accountNumber} onChange={e => setField('accountNumber', e.target.value)} className={inp(false)}/>
               </div>
-
-              {/* IFSC — auto-fetches MICR on 11-char entry */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>IFSC Code :</label>
                 <div className="flex-1 relative">
@@ -469,8 +633,6 @@ export default function CustomerMaster() {
                   )}
                 </div>
               </div>
-
-              {/* MICR — auto-filled from Razorpay when IFSC is entered */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>MICR Code :</label>
                 <input
@@ -480,21 +642,34 @@ export default function CustomerMaster() {
                   placeholder="Auto-filled from IFSC"
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-28 shrink-0`}>Remarks :</label>
                 <input value={form.remarks} onChange={e => setField('remarks', e.target.value)} className={inp(false)}/>
               </div>
 
               <div className="flex gap-2 pt-2 justify-end">
-                <button onClick={handleCreate} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-                  <Save className="w-4 h-4"/> {editId !== null ? 'Update' : 'Create'}
+                <button
+                  onClick={handleSave}
+                  disabled={loadingSave}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] disabled:opacity-60 text-white text-[13px] font-semibold rounded transition-colors shadow-sm"
+                >
+                  {loadingSave ? <Loader2 className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4"/>}
+                  {editId !== null ? 'Update' : 'Create'}
                 </button>
-                <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
+                <button
+                  onClick={handleClear}
+                  disabled={loadingSave}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white text-[13px] font-semibold rounded transition-colors shadow-sm"
+                >
                   <RotateCcw className="w-4 h-4"/> Clear
                 </button>
-                <button onClick={() => setPage(1)} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-                  <List className="w-4 h-4"/> Display All
+                <button
+                  onClick={() => { fetchCustomers(); setPage(1) }}
+                  disabled={loadingList}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] disabled:opacity-60 text-white text-[13px] font-semibold rounded transition-colors shadow-sm"
+                >
+                  {loadingList ? <Loader2 className="w-4 h-4 animate-spin"/> : <List className="w-4 h-4"/>}
+                  Display All
                 </button>
               </div>
             </div>
@@ -503,7 +678,7 @@ export default function CustomerMaster() {
         </div>
       </div>
 
-      {/* ── Table ── */}
+      {/* ── Table Card ── */}
       <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
         <div className="bg-[--color-main] px-4 py-2.5">
           <h2 className="text-white text-center font-semibold text-[14px]">Customer Master Details</h2>
@@ -521,48 +696,62 @@ export default function CustomerMaster() {
             entries
           </div>
         </div>
+
         <div className="overflow-x-auto w-full">
-          <table className="min-w-full text-[13px]">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                {['S.No','C.Code','Name','City','State','Con. Person','Mobile','EMail Id','Edit','Delete','Details'].map(h => (
-                  <th key={h} className="text-center px-3 py-2.5 font-semibold text-slate-600 text-[12px] uppercase tracking-wide whitespace-nowrap">
-                    {h}
-                    {['C.Code','Name','City','State','Con. Person','Mobile','EMail Id'].includes(h) && (
-                      <svg className="inline w-3 h-3 ml-1 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paged.length === 0
-                ? <tr><td colSpan={11} className="text-center py-8 text-slate-400 text-[13px]">No records found</td></tr>
-                : paged.map((row, idx) => (
-                  <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
-                    <td className="px-3 py-2 text-center">{(page - 1) * pageSize + idx + 1}</td>
-                    <td className="px-3 py-2 text-center">{row.cCode}</td>
-                    <td className="px-3 py-2 text-center font-medium">{row.customerName}</td>
-                    <td className="px-3 py-2 text-center">{row.city}</td>
-                    <td className="px-3 py-2 text-center">{row.state}</td>
-                    <td className="px-3 py-2 text-center">{row.contactPerson}</td>
-                    <td className="px-3 py-2 text-center">{row.mobile}</td>
-                    <td className="px-3 py-2 text-center">{row.email}</td>
-                    <td className="px-3 py-2 text-center">
-                      <button onClick={() => handleEdit(row)} className="px-3 py-1.5 bg-[--color-main] hover:bg-[#3498db] text-white text-[12px] rounded transition-colors"><Edit className="w-4 h-4"/></button>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button onClick={() => handleDelete(row.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors"><Trash2 className="w-4 h-4"/></button>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button onClick={() => setDetailRow(row)} className="px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] rounded transition-colors"><Info className="w-4 h-4"/></button>
-                    </td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </table>
+          {loadingList ? (
+            <div className="flex items-center justify-center py-12 gap-2 text-slate-400 text-[13px]">
+              <Loader2 className="w-5 h-5 animate-spin"/> Loading customers...
+            </div>
+          ) : (
+            <table className="min-w-full text-[13px]">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  {['S.No', 'C.Code', 'Name', 'City', 'State', 'Con. Person', 'Mobile', 'Email Id', 'Edit', 'Delete', 'Details'].map(h => (
+                    <th key={h} className="text-center px-3 py-2.5 font-semibold text-slate-600 text-[12px] uppercase tracking-wide whitespace-nowrap">
+                      {h}
+                      {['C.Code', 'Name', 'City', 'State', 'Con. Person', 'Mobile', 'Email Id'].includes(h) && (
+                        <svg className="inline w-3 h-3 ml-1 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paged.length === 0
+                  ? <tr><td colSpan={11} className="text-center py-8 text-slate-400 text-[13px]">No records found</td></tr>
+                  : paged.map((row, idx) => (
+                    <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
+                      <td className="px-3 py-2 text-center">{(page - 1) * pageSize + idx + 1}</td>
+                      <td className="px-3 py-2 text-center">{row.cCode}</td>
+                      <td className="px-3 py-2 text-center font-medium">{row.customerName}</td>
+                      <td className="px-3 py-2 text-center">{row.city || '—'}</td>
+                      <td className="px-3 py-2 text-center">{row.state || '—'}</td>
+                      <td className="px-3 py-2 text-center">{row.contactPerson || '—'}</td>
+                      <td className="px-3 py-2 text-center">{row.mobile || '—'}</td>
+                      <td className="px-3 py-2 text-center">{row.email || '—'}</td>
+                      <td className="px-3 py-2 text-center">
+                        <button onClick={() => handleEdit(row)} className="px-3 py-1.5 bg-[--color-main] hover:bg-[#3498db] text-white text-[12px] rounded transition-colors">
+                          <Edit className="w-4 h-4"/>
+                        </button>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button onClick={() => setDeleteTarget(row)} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors">
+                          <Trash2 className="w-4 h-4"/>
+                        </button>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button onClick={() => setDetailRow(row)} className="px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] rounded transition-colors">
+                          <Info className="w-4 h-4"/>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          )}
         </div>
+
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <span className="text-[12px] text-slate-500">
             Showing {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} entries
@@ -579,6 +768,15 @@ export default function CustomerMaster() {
       </div>
 
       {detailRow && <DetailModal row={detailRow} onClose={() => setDetailRow(null)}/>}
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          customerName={deleteTarget.customerName}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+          loading={loadingDelete}
+        />
+      )}
     </div>
   )
 }

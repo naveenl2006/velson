@@ -245,13 +245,19 @@ const PAGES = {
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false)
-  const [page, setPage] = useState('Dashboard')
+  const [page, setPage]         = useState('Dashboard')
+  const [pageData, setPageData] = useState(null)
+
+  const handleNavigate = (pageName, data = null) => {
+    setPageData(data)
+    setPage(pageName)
+  }
 
   if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />
 
   return (
-    <Layout currentPage={page} onNavigate={setPage}>
-      {React.cloneElement(PAGES[page] ?? <DashboardPage />, { onNavigate: setPage })}
+    <Layout currentPage={page} onNavigate={handleNavigate}>
+      {React.cloneElement(PAGES[page] ?? <DashboardPage />, { onNavigate: handleNavigate, pageData })}
     </Layout>
   )
 }
