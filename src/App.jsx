@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState, cloneElement } from 'react'
 import Layout from './components/Layout'
 import ItemMaster from './pages/ItemMaster'
 import PartNumberBaseMaster from './pages/PartNumberBaseMaster'
@@ -13,13 +13,16 @@ import QuotationEntry from './pages/QuotationEntry'
 import QuotationDetails from './pages/QuotationDetails'
 import PurchaseOrderEntry from './pages/PurchaseOrderEntry'
 import PurchaseOrderDetails from './pages/PurchaseOrderDetails'
+import PurchaseRequestEntry from './pages/PurchaseRequestEntry'
+import PrintPurchaseRequest from './pages/PrintPurchaseRequest'
 import MaterialRequestEntry from './pages/MaterialRequestEntry'
 import PrintMaterialRequest from './pages/PrintMaterialRequest'
 import GateEntry from './pages/GateEntry'
+import GateEntryReport from './pages/GateEntryReport'
 import GRNEntry from './pages/GRNEntry'
 import GRNEntryReport from './pages/GRNEntryReport'
-import { DashboardPage } from './pages/OtherPages'
 import TaxLedgerMaster from './pages/TaxLedgerMaster'
+import { DashboardPage } from './pages/OtherPages'
 // ── New Master Pages ──
 import CompanyMaster from './pages/CompanyMaster'
 import EmployeeMaster from './pages/EmployeeMaster'
@@ -136,9 +139,12 @@ const PAGES = {
   QuotationDetails: <QuotationDetails />,
   PurchaseOrderEntry: <PurchaseOrderEntry />,
   PurchaseOrderDetails: <PurchaseOrderDetails />,
+  PurchaseRequestEntry: <PurchaseRequestEntry />,
+  PrintPurchaseRequest: <PrintPurchaseRequest />,
   MaterialRequestEntry: <MaterialRequestEntry />,
   PrintMaterialRequest: <PrintMaterialRequest />,
   GateEntry: <GateEntry />,
+  GateEntryReport: <GateEntryReport />,
   GRNEntry: <GRNEntry />,
   GRNEntryReport: <GRNEntryReport />,
   // ── New Master Pages ──
@@ -245,19 +251,21 @@ const PAGES = {
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false)
-  const [page, setPage]         = useState('Dashboard')
+  const [page, setPage] = useState('Dashboard')
   const [pageData, setPageData] = useState(null)
 
   const handleNavigate = (pageName, data = null) => {
-    setPageData(data)
     setPage(pageName)
+    setPageData(data)
   }
 
   if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />
 
+  const pageEl = PAGES[page] ?? <DashboardPage />
+
   return (
     <Layout currentPage={page} onNavigate={handleNavigate}>
-      {React.cloneElement(PAGES[page] ?? <DashboardPage />, { onNavigate: handleNavigate, pageData })}
+      {cloneElement(pageEl, { onNavigate: handleNavigate, pageData })}
     </Layout>
   )
 }

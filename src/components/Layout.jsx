@@ -8,40 +8,40 @@ import {
 import { ClipboardList } from 'lucide-react'
 import { Truck } from 'lucide-react'
 const NAV = [
-  { id: 'dashboard-top', label: 'Dashboard',     icon: LayoutDashboard, page: 'Dashboard' },
-  { id: 'user-masters',  label: 'User Masters',  icon: UserCog,         children: [] },
-  { id: 'users',         label: 'Users',          icon: Users,           children: [] },
+  { id: 'dashboard-top', label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+  { id: 'user-masters', label: 'User Masters', icon: UserCog, children: [] },
+  { id: 'users', label: 'Users', icon: Users, children: [] },
   {
     id: 'masters', label: 'Masters', icon: Database,
     children: [
-      { id: 'company-master',          label: 'Company Master',                page: 'CompanyMaster'       },
-      { id: 'employee-master',         label: 'Employee Master',               page: 'EmployeeMaster'      },
-      { id: 'ledger-group-master',     label: 'Ledger Group Master',           page: 'LedgerGroupMaster'   },
-      { id: 'machine-master',          label: 'Machine Master',                page: 'MachineMaster'       },
-      { id: 'vehicle-service-master',  label: 'Vehicle Service Master',        page: 'VehicleServiceMaster'},
-      { id: 'contractor-master',       label: 'Contractor Master',             page: 'ContractorMaster'    },
-      { id: 'process-master',          label: 'Process Master',                page: 'ProcessMaster'       },
-      { id: 'reference-master',        label: 'Reference Master',              page: 'ReferenceMaster'     },
-      { id: 'part-usage-list',         label: 'Part Usage List Display',       page: 'PartUsageList'       },
-      { id: 'qc-check-method',         label: 'QC Check Method Master',        page: 'QCCheckMethod'       },
-      { id: 'qc-inspection-char',      label: 'QC Inspection Character Master',page: 'QCInspectionChar'    },
-      { id: 'qc-standard-master',      label: 'QC Standard Master',            page: 'QCStandardMaster'    },
-      { id: 'auto-po',                 label: 'Auto PO',                       page: 'AutoPO'              },
-      { id: 'system-info-master',      label: 'System Info Master',            page: 'SystemInfoMaster'    },
-      { id: 'db-copy',                 label: 'DB Copy',                       page: 'DBCopy'              },
-      { id: 'restore-db',              label: 'Restore DB',                    page: 'RestoreDB'           },
+      { id: 'company-master', label: 'Company Master', page: 'CompanyMaster' },
+      { id: 'employee-master', label: 'Employee Master', page: 'EmployeeMaster' },
+      { id: 'ledger-group-master', label: 'Ledger Group Master', page: 'LedgerGroupMaster' },
+      { id: 'machine-master', label: 'Machine Master', page: 'MachineMaster' },
+      { id: 'vehicle-service-master', label: 'Vehicle Service Master', page: 'VehicleServiceMaster' },
+      { id: 'contractor-master', label: 'Contractor Master', page: 'ContractorMaster' },
+      { id: 'process-master', label: 'Process Master', page: 'ProcessMaster' },
+      { id: 'reference-master', label: 'Reference Master', page: 'ReferenceMaster' },
+      { id: 'part-usage-list', label: 'Part Usage List Display', page: 'PartUsageList' },
+      { id: 'qc-check-method', label: 'QC Check Method Master', page: 'QCCheckMethod' },
+      { id: 'qc-inspection-char', label: 'QC Inspection Character Master', page: 'QCInspectionChar' },
+      { id: 'qc-standard-master', label: 'QC Standard Master', page: 'QCStandardMaster' },
+      { id: 'auto-po', label: 'Auto PO', page: 'AutoPO' },
+      { id: 'system-info-master', label: 'System Info Master', page: 'SystemInfoMaster' },
+      { id: 'db-copy', label: 'DB Copy', page: 'DBCopy' },
+      { id: 'restore-db', label: 'Restore DB', page: 'RestoreDB' },
     ],
   },
   {
     id: 'item-masters', label: 'Item Masters', icon: Package,
     children: [
       { id: 'part-number-base', label: 'Part Number Base Master', page: 'PartNumberBase' },
-      // { id: 'dropdown-name',    label: 'Drop Down Name Master',   page: 'DropDownName'  },
-      // { id: 'dropdown-list',    label: 'Drop Down List Master',   page: 'DropDownList'  },
-      { id: 'tax-ledger',       label: 'Tax Ledger A/C Master',   page: 'TaxLedger'     },
-      { id: 'tax-master-menu',  label: 'Tax Master',              page: 'TaxMaster'     },
-      { id: 'item-group',       label: 'Item Group Master',       page: 'ItemGroup'     },
-      { id: 'item-master',      label: 'Item Master',             page: 'ItemMaster'    },
+      { id: 'dropdown-name', label: 'Drop Down Name Master', page: 'DropDownName' },
+      { id: 'dropdown-list', label: 'Drop Down List Master', page: 'DropDownList' },
+      { id: 'tax-ledger', label: 'Tax Ledger A/C Master', page: 'TaxLedger' },
+      { id: 'tax-master-menu', label: 'Tax Master', page: 'TaxMaster' },
+      { id: 'item-group', label: 'Item Group Master', page: 'ItemGroup' },
+      { id: 'item-master', label: 'Item Master', page: 'ItemMaster' },
     ],
   },
   {
@@ -51,31 +51,32 @@ const NAV = [
       { id: 'customer-master', label: 'Customer Master', page: 'CustomerMaster' },
     ],
   },
-  { id: 'service',        label: 'Service',         icon: Wrench,         children: [ { id: 'vehicle-master',  label: 'Vehicle Master',  page: 'VehicleMaster'  }] },
+  { id: 'service', label: 'Service', icon: Wrench, children: [{ id: 'vehicle-master', label: 'Vehicle Master', page: 'VehicleMaster' }] },
   {
     id: 'quotation', label: 'Quotation', icon: FileText,
     children: [
-      { id: 'quotation-entry',   label: 'Quotation Entry',   page: 'QuotationEntry'   },
+      { id: 'quotation-entry', label: 'Quotation Entry', page: 'QuotationEntry' },
       { id: 'quotation-details', label: 'Quotation Details', page: 'QuotationDetails' },
     ],
   },
   {
     id: 'purchase', label: 'Purchase', icon: ShoppingCart,
     children: [
-      { id: 'purchase-order',         label: 'Purchase Order',         page: 'PurchaseOrderEntry'   },
+      { id: 'purchase-order', label: 'Purchase Order', page: 'PurchaseOrderEntry' },
       { id: 'purchase-order-details', label: 'Purchase Order Details', page: 'PurchaseOrderDetails' },
-      { id: 'purchase-request',       label: 'Purchase Request',       page: 'PurchaseOrderDetails' },
-      { id: 'print-purchase-request', label: 'Print Purchase Request', page: 'PurchaseOrderDetails' },
+      { id: 'purchase-request', label: 'Purchase Request', page: 'PurchaseRequestEntry' },
+      { id: 'print-purchase-request', label: 'Print Purchase Request', page: 'PrintPurchaseRequest' },
     ],
   },
   {
     id: 'stores', label: 'Stores', icon: Warehouse,
     children: [
-      { id: 'material-request',       label: 'Material Request',       page: 'MaterialRequestEntry' },
+      { id: 'material-request', label: 'Material Request', page: 'MaterialRequestEntry' },
       { id: 'print-material-request', label: 'Print Material Request', page: 'PrintMaterialRequest' },
-      { id: 'gate-entry',             label: 'Gate Entry',             page: 'GateEntry'            },
-      { id: 'grn-entry',              label: 'GRN Entry',              page: 'GRNEntry'             },
-      { id: 'grn-entry-report',       label: 'GRN Entry Report',       page: 'GRNEntryReport'       },
+      { id: 'gate-entry', label: 'Gate Entry', page: 'GateEntry' },
+      { id: 'gate-entry-report', label: 'Gate Entry Report', page: 'GateEntryReport' },
+      { id: 'grn-entry', label: 'GRN Entry', page: 'GRNEntry' },
+      { id: 'grn-entry-report', label: 'GRN Entry Report', page: 'GRNEntryReport' },
     ],
   },
   {
@@ -94,10 +95,10 @@ const NAV = [
       { id: 'journal-entry', label: 'Journal Entry', page: 'JournalEntry' },
     ],
   },
-  { 
-    id: 'bom', 
-    label: 'BOM', 
-    icon: FileText, 
+  {
+    id: 'bom',
+    label: 'BOM',
+    icon: FileText,
     children: [
       { id: 'bom-upload', label: 'BOM Upload', page: 'BOMUpload' },
       { id: 'customerwise-bom-report', label: 'Customerwise BOM Report', page: 'CustomerwiseBOMReport' },
@@ -107,52 +108,52 @@ const NAV = [
       { id: 'main-index', label: 'Main Index', page: 'MainIndex' },
       { id: 'main-index-report', label: 'Main Index Report', page: 'MainIndexReport' },
       { id: 'view-model', label: 'View Model', page: 'ViewModel' },
-    ] 
+    ]
   },
-  { 
-    id: 'ccms', 
-    label: 'CCMS', 
-    icon: ClipboardList, 
+  {
+    id: 'ccms',
+    label: 'CCMS',
+    icon: ClipboardList,
     children: [
       { id: 'customer-complaint-entry', label: 'Customer Complaint Entry', page: 'CustomerComplaintEntry' },
-    ] 
+    ]
   },
-  { 
-    id: 'dc', 
-    label: 'DC', 
-    icon: Truck, 
+  {
+    id: 'dc',
+    label: 'DC',
+    icon: Truck,
     children: [
       { id: 'dc-entry', label: 'DC Entry', page: 'DCEntry' },
       { id: 'dc-details-report', label: 'DC Details', page: 'DCDetailsReport' },
-    ] 
+    ]
   },
-  { 
-    id: 'maintainance', 
-    label: 'Maintainance', 
-    icon: Wrench, 
+  {
+    id: 'maintainance',
+    label: 'Maintainance',
+    icon: Wrench,
     children: [
       { id: 'machine-breakdown', label: 'BreakDown Entry', page: 'MachineBreakDown' },
       { id: 'breakdown-clearence', label: 'Waiting for Clearence', page: 'BreakDownClearence' },
       { id: 'breakdown-acceptance', label: 'Waiting for Acceptance', page: 'BreakDownAcceptance' },
       { id: 'breakdown-approval-list', label: 'Acceptance Breakdown', page: 'BreakDownApprovalList' },
-    ] 
+    ]
   },
-  { 
-    id: 'nc', 
-    label: 'NC', 
-    icon: ShieldAlert, 
+  {
+    id: 'nc',
+    label: 'NC',
+    icon: ShieldAlert,
     children: [
       { id: 'qc-rejection-details', label: 'NC Details', page: 'QCRejectionDetails' },
       { id: 'nc-approval', label: 'NC Approval', page: 'NCApproval' },
       { id: 'nc-job-created', label: 'NC Job Created', page: 'NCJobCreated' },
       { id: 'nc-dc-entry', label: 'DC NC Entry', page: 'NCDCEntry' },
       { id: 'nc-dc-details', label: 'NC DC Details', page: 'NCDCDetails' },
-    ] 
+    ]
   },
-  { 
-    id: 'production', 
-    label: 'Production', 
-    icon: LayoutGrid, 
+  {
+    id: 'production',
+    label: 'Production',
+    icon: LayoutGrid,
     children: [
       { id: 'job-list', label: 'Job List', page: 'JobList' },
       { id: 'barcode-details', label: 'Print Barcode', page: 'BarcodeDetails' },
@@ -164,12 +165,12 @@ const NAV = [
       { id: 'raw-material-issue', label: 'Rawmaterial Issue Job', page: 'RawMaterialIssue' },
       { id: 'raw-material-issued-details', label: 'Rawmaterial Issue Details', page: 'RawMaterialIssuedDetails' },
       { id: 'prod-machine-breakdown', label: 'BreakDown Entry', page: 'MachineBreakDown' },
-    ] 
+    ]
   },
-  { 
-    id: 'technical',      
-    label: 'Technical',        
-    icon: Settings,       
+  {
+    id: 'technical',
+    label: 'Technical',
+    icon: Settings,
     children: [
       { id: 'drawing-upload', label: 'Drawing Upload', page: 'DrawingUpload' },
       { id: 'job-card-entry', label: 'Job Card Entry', page: 'JobCardEntry' },
@@ -190,7 +191,7 @@ const NAV = [
       { id: 'job-qty-mismatch', label: 'Job Qty Mismatch', page: 'JobQtyMismatch' },
       { id: 'process-card-close', label: 'Process Card Close', page: 'ProcessCardClose' },
       { id: 'job-qc-entry', label: 'Job QC Entry', page: 'JobQCEntry' },
-    ] 
+    ]
   },
   {
     id: 'sales',
@@ -208,7 +209,7 @@ const NAV = [
       { id: 'service-bill-details', label: 'Service Bill Details', page: 'ServiceBillDetails' },
       { id: 'service-labour-bill-details', label: 'Service Labour Details', page: 'ServiceLabourBillDetails' },
       { id: 'temp-service-bill-details', label: 'Temp Ser Bill Details', page: 'TempServiceBillDetails' },
-    ] 
+    ]
 
 
 

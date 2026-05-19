@@ -270,7 +270,7 @@ export default function QuotationEntry({ pageData }) {
         itemName:    item.partName    || '',
         description: item.description || '',
         hsnCode:     item.hsnCode     || '',
-        uom:         r.uom,                         // no unit name from API; keep existing
+        uom:         item.uomName     || '',
         unitPrice:   String(unitPrice),
         amount:      (qty * unitPrice).toFixed(2),
       }
@@ -742,22 +742,22 @@ export default function QuotationEntry({ pageData }) {
                     </td>
 
                     <td className="px-1 py-1">
-                      <input value={row.itemName} onChange={e => setItemField(idx, 'itemName', e.target.value)} className={inp()} />
+                      <input value={row.itemName} readOnly className={`${inp()} bg-slate-50`} />
                     </td>
                     <td className="px-1 py-1">
-                      <input value={row.description} onChange={e => setItemField(idx, 'description', e.target.value)} className={inp()} />
+                      <input value={row.description} readOnly className={`${inp()} bg-slate-50`} />
                     </td>
                     <td className="px-1 py-1">
-                      <input value={row.hsnCode} onChange={e => setItemField(idx, 'hsnCode', e.target.value)} className={inp()} />
+                      <input value={row.hsnCode} readOnly className={`${inp()} bg-slate-50`} />
                     </td>
                     <td className="px-1 py-1">
-                      <input value={row.uom} onChange={e => setItemField(idx, 'uom', e.target.value)} className={inp()} />
+                      <input value={row.uom} readOnly className={`${inp()} bg-slate-50`} />
                     </td>
                     <td className="px-1 py-1">
                       <input value={row.qty} onChange={e => setItemField(idx, 'qty', e.target.value)} className={inp()} />
                     </td>
                     <td className="px-1 py-1">
-                      <input value={row.unitPrice} onChange={e => setItemField(idx, 'unitPrice', e.target.value)} className={inp()} />
+                      <input value={row.unitPrice} readOnly className={`${inp()} bg-slate-50`} />
                     </td>
                     <td className="px-1 py-1">
                       <input value={row.amount} readOnly className={`${inp()} bg-slate-50`} />
