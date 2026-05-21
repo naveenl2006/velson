@@ -64,8 +64,8 @@ const NAV = [
     children: [
       { id: 'purchase-order',         label: 'Purchase Order',         page: 'PurchaseOrderEntry'   },
       { id: 'purchase-order-details', label: 'Purchase Order Details', page: 'PurchaseOrderDetails' },
-      { id: 'purchase-request',       label: 'Purchase Request',       page: 'PurchaseOrderDetails' },
-      { id: 'print-purchase-request', label: 'Print Purchase Request', page: 'PurchaseOrderDetails' },
+      { id: 'purchase-request',       label: 'Purchase Request',       page: 'PurchaseRequestEntry' },
+      { id: 'print-purchase-request', label: 'Print Purchase Request', page: 'PrintPurchaseRequest' },
     ],
   },
   {
@@ -74,6 +74,7 @@ const NAV = [
       { id: 'material-request',       label: 'Material Request',       page: 'MaterialRequestEntry' },
       { id: 'print-material-request', label: 'Print Material Request', page: 'PrintMaterialRequest' },
       { id: 'gate-entry',             label: 'Gate Entry',             page: 'GateEntry'            },
+      { id: 'gate-entry-report',      label: 'Gate Entry Report',      page: 'GateEntryReport'      },
       { id: 'grn-entry',              label: 'GRN Entry',              page: 'GRNEntry'             },
       { id: 'grn-entry-report',       label: 'GRN Entry Report',       page: 'GRNEntryReport'       },
     ],

@@ -270,7 +270,7 @@ export default function QuotationEntry({ pageData }) {
         itemName:    item.partName    || '',
         description: item.description || '',
         hsnCode:     item.hsnCode     || '',
-        uom:         r.uom,                         // no unit name from API; keep existing
+        uom:         item.uom,                         // no unit name from API; keep existing
         unitPrice:   String(unitPrice),
         amount:      (qty * unitPrice).toFixed(2),
       }

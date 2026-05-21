@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+
+import { useState, useEffect } from 'react'
 import Layout from './components/Layout'
 import ItemMaster from './pages/ItemMaster'
 import PartNumberBaseMaster from './pages/PartNumberBaseMaster'
-import DropDownNameMaster from './pages/DropDownNameMaster'
-import DropDownListMaster from './pages/DropDownListMaster'
+// import DropDownNameMaster from './pages/DropDownNameMaster'
+// import DropDownListMaster from './pages/DropDownListMaster'
 import TaxMaster from './pages/TaxMaster'
 import ItemGroupMaster from './pages/ItemGroupMaster'
 import SupplierMaster from './pages/SupplierMaster'
@@ -13,13 +14,16 @@ import QuotationEntry from './pages/QuotationEntry'
 import QuotationDetails from './pages/QuotationDetails'
 import PurchaseOrderEntry from './pages/PurchaseOrderEntry'
 import PurchaseOrderDetails from './pages/PurchaseOrderDetails'
+import PrintPurchaseOrder from './pages/PrintPurchaseOrder'
+import PurchaseRequestEntry from './pages/PurchaseRequestEntry'
+import PrintPurchaseRequest from './pages/PrintPurchaseRequest'
 import MaterialRequestEntry from './pages/MaterialRequestEntry'
 import PrintMaterialRequest from './pages/PrintMaterialRequest'
 import GateEntry from './pages/GateEntry'
+import GateEntryReport from './pages/GateEntryReport'
 import GRNEntry from './pages/GRNEntry'
 import GRNEntryReport from './pages/GRNEntryReport'
-import { DashboardPage } from './pages/OtherPages'
-import TaxLedgerMaster from './pages/TaxLedgerMaster'
+import { TaxLedgerMaster, DashboardPage } from './pages/OtherPages'
 // ── New Master Pages ──
 import CompanyMaster from './pages/CompanyMaster'
 import EmployeeMaster from './pages/EmployeeMaster'
@@ -121,81 +125,85 @@ import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
 import TempServiceBillDetails from './pages/TempServiceBillDetails'
 
 const PAGES = {
-  Dashboard: <DashboardPage />,
+  Dashboard:      <DashboardPage />,
   PartNumberBase: <PartNumberBaseMaster />,
-  DropDownName: <DropDownNameMaster />,
-  DropDownList: <DropDownListMaster />,
-  TaxLedger: <TaxLedgerMaster />,
-  TaxMaster: <TaxMaster />,
-  ItemGroup: <ItemGroupMaster />,
-  ItemMaster: <ItemMaster />,
+  // DropDownName:   <DropDownNameMaster />,
+  // DropDownList:   <DropDownListMaster />,
+  TaxLedger:      <TaxLedgerMaster />,
+  TaxMaster:      <TaxMaster />,
+  ItemGroup:      <ItemGroupMaster />,
+  ItemMaster:     <ItemMaster />,
   SupplierMaster: <SupplierMaster />,
-  CustomerMaster: <CustomerMaster />,
-  VehicleMaster: <VehicleMaster />,
-  QuotationEntry: <QuotationEntry />,
-  QuotationDetails: <QuotationDetails />,
-  PurchaseOrderEntry: <PurchaseOrderEntry />,
+  CustomerMaster:    <CustomerMaster />,
+  VehicleMaster:     <VehicleMaster />,
+  QuotationEntry:    <QuotationEntry />,
+  QuotationDetails:     <QuotationDetails />,
+  PurchaseOrderEntry:   <PurchaseOrderEntry />,
   PurchaseOrderDetails: <PurchaseOrderDetails />,
+  PrintPurchaseOrder:   <PrintPurchaseOrder />,
+  PurchaseRequestEntry: <PurchaseRequestEntry />,
+  PrintPurchaseRequest: <PrintPurchaseRequest />,
   MaterialRequestEntry: <MaterialRequestEntry />,
-  PrintMaterialRequest: <PrintMaterialRequest />,
-  GateEntry: <GateEntry />,
-  GRNEntry: <GRNEntry />,
-  GRNEntryReport: <GRNEntryReport />,
+  PrintMaterialRequest:  <PrintMaterialRequest />,
+  GateEntry:             <GateEntry />,
+  GateEntryReport:       <GateEntryReport />,
+  GRNEntry:              <GRNEntry />,
+  GRNEntryReport:        <GRNEntryReport />,
   // ── New Master Pages ──
-  CompanyMaster: <CompanyMaster />,
-  EmployeeMaster: <EmployeeMaster />,
-  LedgerGroupMaster: <LedgerGroupMaster />,
-  MachineMaster: <MachineMaster />,
-  VehicleServiceMaster: <VehicleServiceMaster />,
-  ContractorMaster: <ContractorMaster />,
-  ProcessMaster: <ProcessMaster />,
-  ReferenceMaster: <ReferenceMaster />,
-  PartUsageList: <PartUsageList />,
-  QCCheckMethod: <QCCheckMethod />,
-  QCInspectionChar: <QCInspectionChar />,
-  QCStandardMaster: <QCStandardMaster />,
-  AutoPO: <AutoPO />,
-  SystemInfoMaster: <SystemInfoMaster />,
-  DBCopy: <DBCopy />,
-  RestoreDB: <RestoreDB />,
-  ReceiptEntry: <ReceiptEntry />,
-  ReceiptDetails: <ReceiptDetails />,
-  VoucherEntry: <VoucherEntry />,
-  DayReport: <DayReport />,
-  DayBook: <DayBook />,
-  LedgerBalance: <LedgerBalance />,
+  CompanyMaster:       <CompanyMaster />,
+  EmployeeMaster:      <EmployeeMaster />,
+  LedgerGroupMaster:   <LedgerGroupMaster />,
+  MachineMaster:       <MachineMaster />,
+  VehicleServiceMaster:<VehicleServiceMaster />,
+  ContractorMaster:    <ContractorMaster />,
+  ProcessMaster:       <ProcessMaster />,
+  ReferenceMaster:     <ReferenceMaster />,
+  PartUsageList:       <PartUsageList />,
+  QCCheckMethod:       <QCCheckMethod />,
+  QCInspectionChar:    <QCInspectionChar />,
+  QCStandardMaster:    <QCStandardMaster />,
+  AutoPO:              <AutoPO />,
+  SystemInfoMaster:    <SystemInfoMaster />,
+  DBCopy:              <DBCopy />,
+  RestoreDB:           <RestoreDB />,
+  ReceiptEntry:        <ReceiptEntry />,
+  ReceiptDetails:      <ReceiptDetails />,
+  VoucherEntry:        <VoucherEntry />,
+  DayReport:           <DayReport />,
+  DayBook:             <DayBook />,
+  LedgerBalance:       <LedgerBalance />,
   MonthlyLedgerBalance: <MonthlyLedgerBalance />,
   OutstandingReceiptReport: <OutstandingReceiptReport />,
-  PaymentEntry: <PaymentEntry />,
-  PaymentDetails: <PaymentDetails />,
-  JournalEntry: <JournalEntry />,
-  BOMUpload: <BOMUpload />,
+  PaymentEntry:         <PaymentEntry />,
+  PaymentDetails:       <PaymentDetails />,
+  JournalEntry:         <JournalEntry />,
+  BOMUpload:            <BOMUpload />,
   CustomerwiseBOMReport: <CustomerwiseBOMReport />,
-  IndexCreation: <IndexCreation />,
-  IndexCreationReport: <IndexCreationReport />,
-  UploadBOM: <UploadBOM />,
-  MainIndex: <MainIndex />,
-  MainIndexReport: <MainIndexReport />,
-  ViewModel: <ViewModel />,
+  IndexCreation:         <IndexCreation />,
+  IndexCreationReport:   <IndexCreationReport />,
+  UploadBOM:             <UploadBOM />,
+  MainIndex:             <MainIndex />,
+  MainIndexReport:       <MainIndexReport />,
+  ViewModel:             <ViewModel />,
   CustomerComplaintEntry: <CustomerComplaintEntry />,
-  DCEntry: <DCEntry />,
-  MachineBreakDown: <MachineBreakDown />,
-  BreakDownClearence: <BreakDownClearence />,
-  BreakDownAcceptance: <BreakDownAcceptance />,
+  DCEntry:               <DCEntry />,
+  MachineBreakDown:      <MachineBreakDown />,
+  BreakDownClearence:    <BreakDownClearence />,
+  BreakDownAcceptance:   <BreakDownAcceptance />,
   BreakDownApprovalList: <BreakDownApprovalList />,
-  QCRejectionDetails: <QCRejectionDetails />,
-  NCApproval: <NCApproval />,
-  NCJobCreated: <NCJobCreated />,
-  NCDCEntry: <NCDCEntry />,
-  NCDCDetails: <NCDCDetails />,
-  JobList: <JobList />,
-  BarcodeDetails: <BarcodeDetails />,
-  AutoJobEntry: <AutoJobEntry />,
+  QCRejectionDetails:    <QCRejectionDetails />,
+  NCApproval:            <NCApproval />,
+  NCJobCreated:          <NCJobCreated />,
+  NCDCEntry:             <NCDCEntry />,
+  NCDCDetails:           <NCDCDetails />,
+  JobList:               <JobList />,
+  BarcodeDetails:        <BarcodeDetails />,
+  AutoJobEntry:          <AutoJobEntry />,
   ServiceJobEntryDetails: <ServiceJobEntryDetails />,
-  ConformationList: <ConformationList />,
+  ConformationList:      <ConformationList />,
   ConformationEntryDetails: <ConformationEntryDetails />,
-  ProcessCard: <ProcessCard />,
-  RawMaterialIssue: <RawMaterialIssue />,
+  ProcessCard:           <ProcessCard />,
+  RawMaterialIssue:      <RawMaterialIssue />,
   RawMaterialIssuedDetails: <RawMaterialIssuedDetails />,
   MaterialRequestRejectionList: <MaterialRequestRejectionList />,
   InwardReports: <InwardReports />,
@@ -245,19 +253,19 @@ const PAGES = {
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false)
-  const [page, setPage]         = useState('Dashboard')
-  const [pageData, setPageData] = useState(null)
+  const [page, setPage] = useState('Dashboard')
 
-  const handleNavigate = (pageName, data = null) => {
-    setPageData(data)
-    setPage(pageName)
-  }
+  useEffect(() => {
+    const handler = e => setPage(e.detail?.page ?? e.detail)
+    window.addEventListener('velson:navigate', handler)
+    return () => window.removeEventListener('velson:navigate', handler)
+  }, [])
 
   if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />
 
   return (
-    <Layout currentPage={page} onNavigate={handleNavigate}>
-      {React.cloneElement(PAGES[page] ?? <DashboardPage />, { onNavigate: handleNavigate, pageData })}
+    <Layout currentPage={page} onNavigate={setPage}>
+      {PAGES[page] ?? <DashboardPage />}
     </Layout>
   )
 }

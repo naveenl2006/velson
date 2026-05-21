@@ -20,6 +20,7 @@ function ComingSoon({ title }) {
 }
 
 export function DropDownNameMaster() { return <ComingSoon title="Drop Down Name Master" /> }
+export function TaxLedgerMaster()    { return <ComingSoon title="Tax Ledger A/C Master" /> }
 export function DashboardPage() {
   return (
     <div className="p-6">
