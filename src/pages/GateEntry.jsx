@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronRight, Search, Send, X, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 
@@ -9,7 +9,7 @@ const emptyForm = () => ({
   poNo: '', prqNo: '', supplierName: '', supplierAddress: '',
   gateNo: '', carrierName: '', vehicleNo: '', user: 'superadmin',
   gateEntryNo: '', financialYear: '', gateEntryDate: today,
-  invoiceNo: '', invoiceDate: today,
+  invoiceNo: '', invoiceDate: today, taxType: '',
 })
 
 const emptyItem = () => ({ poNo:'', itemCode:'', itemName:'', supplierPartNo:'', description:'', hsnCode:'', unit:'', qty:'', recQty:'' })
@@ -19,7 +19,6 @@ const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 export default function GateEntry() {
   const toast = useToast()
-  const dropRef = useRef(null)
 
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
@@ -28,8 +27,9 @@ export default function GateEntry() {
 
   const [allPOs, setAllPOs] = useState([])
   const [suppliers, setSuppliers] = useState([])
+  const [taxTypeOptions, setTaxTypeOptions] = useState([])
   const [poSearch, setPoSearch] = useState('')
-  const [showPoDrop, setShowPoDrop] = useState(false)
+  const [showPoModal, setShowPoModal] = useState(false)
   const [selectedPoId, setSelectedPoId] = useState(null)
 
   const [loadingInit, setLoadingInit] = useState(false)
@@ -37,27 +37,22 @@ export default function GateEntry() {
   const [submitting, setSubmitting] = useState(false)
   const [recQtyErrors, setRecQtyErrors] = useState({})
 
-  /* ── close dropdown on outside click ── */
-  useEffect(() => {
-    const handler = e => { if (dropRef.current && !dropRef.current.contains(e.target)) setShowPoDrop(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
   /* ── on mount: next GE no + all POs ── */
   useEffect(() => {
     const init = async () => {
       setLoadingInit(true)
       try {
-        const [noRes, poRes, supRes] = await Promise.all([
+        const [noRes, poRes, supRes, taxRes] = await Promise.all([
           fetch(`${BASE}/api/gate-master/next-no`),
           fetch(`${BASE}/api/purchase-master`),
           fetch(`${BASE}/api/supplier-master`),
+          fetch(`${BASE}/api/reference-master/${encodeURIComponent('Tax Type')}`),
         ])
-        const [noJson, poJson, supJson] = await Promise.all([noRes.json(), poRes.json(), supRes.json()])
+        const [noJson, poJson, supJson, taxJson] = await Promise.all([noRes.json(), poRes.json(), supRes.json(), taxRes.json()])
         if (noJson.success) setForm(f => ({ ...f, gateEntryNo: noJson.gateEntryNo, financialYear: noJson.financialYear || '' }))
         if (poJson.success) setAllPOs(poJson.data)
         if (supJson.success) setSuppliers(supJson.data)
+        if (taxJson.data) setTaxTypeOptions(taxJson.data)
       } catch { toast.error('Failed to load data') }
       finally { setLoadingInit(false) }
     }
@@ -75,14 +70,16 @@ export default function GateEntry() {
   const loadForEdit = async (id) => {
     setLoadingInit(true)
     try {
-      const [entryRes, poRes, supRes] = await Promise.all([
+      const [entryRes, poRes, supRes, taxRes] = await Promise.all([
         fetch(`${BASE}/api/gate-master/${id}`),
         fetch(`${BASE}/api/purchase-master`),
         fetch(`${BASE}/api/supplier-master`),
+        fetch(`${BASE}/api/reference-master/${encodeURIComponent('Tax Type')}`),
       ])
-      const [entryJson, poJson, supJson] = await Promise.all([entryRes.json(), poRes.json(), supRes.json()])
+      const [entryJson, poJson, supJson, taxJson] = await Promise.all([entryRes.json(), poRes.json(), supRes.json(), taxRes.json()])
       if (poJson.success) setAllPOs(poJson.data)
       if (supJson.success) setSuppliers(supJson.data)
+      if (taxJson.data) setTaxTypeOptions(taxJson.data)
       if (entryJson.success) {
         const e = entryJson.data
         setEditId(e.id)
@@ -94,6 +91,7 @@ export default function GateEntry() {
           gateEntryNo: e.gateEntryNo, financialYear: e.financialYear || '',
           gateEntryDate: e.gateEntryDate ? e.gateEntryDate.split('T')[0] : today,
           invoiceNo: e.invoiceNo || '', invoiceDate: e.invoiceDate ? e.invoiceDate.split('T')[0] : today,
+          taxType: e.taxType || '',
         })
         setPoSearch(e.poNo || '')
         setSelectedPoId(e.poId || null)
@@ -119,8 +117,7 @@ export default function GateEntry() {
   }
 
   const selectPO = async (po) => {
-    setPoSearch(po.poNo)
-    setShowPoDrop(false)
+    setShowPoModal(false)
     setSelectedPoId(po.id)
 
     // Reset fields immediately so stale values never linger
@@ -267,38 +264,12 @@ export default function GateEntry() {
           <div className="grid grid-cols-3 gap-4">
             {/* Col 1 */}
             <div className="space-y-2">
-              {/* PO No with searchable dropdown */}
+              {/* PO No with modal search */}
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[130px] shrink-0`}>PO No :</label>
-                <div className="flex-1 relative" ref={dropRef}>
-                  <input
-                    value={poSearch}
-                    onChange={e => { setPoSearch(e.target.value); setShowPoDrop(true) }}
-                    onFocus={() => setShowPoDrop(true)}
-                    placeholder={loadingInit ? 'Loading...' : 'Search PO No...'}
-                    disabled={loadingInit}
-                    className={`${inp()} pr-6`}
-                  />
-                  {loadingInit && <Loader2 className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 animate-spin pointer-events-none"/>}
-                  {showPoDrop && !loadingInit && filteredPOs.length > 0 && (
-                    <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white border border-slate-200 rounded shadow-lg max-h-44 overflow-y-auto">
-                      {filteredPOs.map(po => (
-                        <div key={po.id} onMouseDown={() => selectPO(po)}
-                          className="px-3 py-1.5 text-[12px] hover:bg-[#e0f7fa] cursor-pointer border-b border-slate-100 last:border-0">
-                          <span className="font-semibold text-[#0097A7]">{po.poNo}</span>
-                          {po.supplier?.supplierName && <span className="text-slate-500 ml-2">— {po.supplier.supplierName}</span>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {showPoDrop && !loadingInit && poSearch && filteredPOs.length === 0 && (
-                    <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white border border-slate-200 rounded shadow-lg">
-                      <div className="px-3 py-2 text-[12px] text-slate-400">No PO found</div>
-                    </div>
-                  )}
-                </div>
+                <input value={form.poNo} readOnly placeholder="Select PO..." className={`${inp()} flex-1 bg-slate-50`}/>
                 <button
-                  onClick={() => setShowPoDrop(v => !v)}
+                  onClick={() => { setPoSearch(''); setShowPoModal(true) }}
                   disabled={loadingInit}
                   className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-[12px] rounded transition-colors shrink-0 flex items-center gap-1"
                 >
@@ -360,6 +331,13 @@ export default function GateEntry() {
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Invoice Date :</label>
                 <input type="date" value={form.invoiceDate} onChange={e=>setField('invoiceDate',e.target.value)} className={inp()}/>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className={`${lbl} w-[120px] shrink-0`}>Tax Type :</label>
+                <select value={form.taxType} onChange={e=>setField('taxType',e.target.value)} className={inp()}>
+                  <option value="">Select Tax Type</option>
+                  {taxTypeOptions.map(t=><option key={t.id} value={t.description}>{t.description}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -433,6 +411,60 @@ export default function GateEntry() {
           </div>
         </div>
       </div>
+      {/* PO Search Modal */}
+      {showPoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded shadow-xl w-[700px] max-h-[80vh] flex flex-col">
+            <div className="bg-[--color-main] px-4 py-2.5 flex items-center justify-between rounded-t">
+              <h3 className="text-white font-semibold text-[14px]">Select Purchase Order</h3>
+              <button onClick={() => setShowPoModal(false)} className="text-white hover:text-white/70"><X className="w-4 h-4"/></button>
+            </div>
+            <div className="p-3 border-b border-slate-200">
+              <input
+                autoFocus
+                value={poSearch}
+                onChange={e => setPoSearch(e.target.value)}
+                placeholder="Search by PO No, Supplier..."
+                className={`${inp()} w-full`}
+              />
+            </div>
+            <div className="overflow-auto flex-1">
+              {filteredPOs.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-[13px]">No purchase orders found.</div>
+              ) : (
+                <table className="min-w-full text-[12.5px]">
+                  <thead className="sticky top-0">
+                    <tr className="bg-[#4472C4] text-white">
+                      {['PO No','PO Date','Supplier Name','Status'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPOs.map((po, i) => (
+                      <tr
+                        key={po.id}
+                        onClick={() => selectPO(po)}
+                        className={`cursor-pointer border-b border-slate-100 hover:bg-[#0097A7]/10 ${i%2===1?'bg-slate-50/50':''}`}
+                      >
+                        <td className="px-3 py-1.5 font-medium text-[#0097A7]">{po.poNo}</td>
+                        <td className="px-3 py-1.5">{po.poDate ? po.poDate.split('T')[0] : '-'}</td>
+                        <td className="px-3 py-1.5">{po.supplier?.supplierName || '-'}</td>
+                        <td className="px-3 py-1.5">
+                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-green-100 text-green-700">{po.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="px-4 py-2 border-t border-slate-200 text-[11px] text-slate-400 text-right">
+              {filteredPOs.length} record{filteredPOs.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

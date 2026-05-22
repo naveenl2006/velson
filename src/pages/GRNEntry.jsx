@@ -1,15 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 import { ChevronRight, Plus, Trash2, Send, X } from 'lucide-react'
 import { useToast } from '../components/Toast'
 
 const SUPPLIERS = ['VENKATESWARA ASSOCIATES','APS ENTERPRISES','SM DRILLING COMPANY','ABHISHEK SONI']
-const GRN_TYPES = ['GRN Against PO','GRN Without PO','GRN Against Job Work']
-const PURCHASE_LEDGERS = ['apple tech','purchase ledger','raw materials']
-const PURCHASE_TYPES = ['CASH','CREDIT']
-const CURRENCIES = ['INR','USD','EUR']
+// Purchase Ledger, Purchase Type fetched from reference master
+// Currencies fetched from reference master
 const CURRENCY_TYPES = ['EXPORT','DOMESTIC']
-const TAX_TYPES = ['INTER','INTRA','NO TAX']
-const QC_TYPES = ['QUALITY','NO QC','SKIP QC']
+// Tax Types are fetched dynamically from reference master (see useEffect below)
+// Default tax % per Tax Type description (case-insensitive match)
+const TAX_RATE_MAP = { 'LOCAL': 18, 'INTER': 28 }
+// QC Types fetched from reference master
 
 const today = new Date().toISOString().split('T')[0]
 const genGRNNo = () => { const yr = new Date().getFullYear(); return `${(yr-1).toString().slice(-2)}-${yr.toString().slice(-2)}/GRN00001` }
@@ -21,11 +22,68 @@ const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 export default function GRNEntry() {
   const toast = useToast()
+  const [grnTypes, setGrnTypes] = useState([])
+  const [taxTypes, setTaxTypes] = useState([])
+  const [purchaseLedgers, setPurchaseLedgers] = useState([])
+  const [purchaseTypes, setPurchaseTypes] = useState([])
+  const [qcTypes, setQcTypes] = useState([])
+  const [currencies, setCurrencies] = useState([])
+
+  useEffect(() => {
+    axios.get(`/api/reference-master/${encodeURIComponent('GRN Type')}`)
+      .then(res => {
+        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+        setGrnTypes(types)
+        if (types.length) setForm(f => ({ ...f, grnType: types[0] }))
+      })
+      .catch(() => {})
+
+    axios.get(`/api/reference-master/${encodeURIComponent('Tax Type')}`)
+      .then(res => {
+        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+        setTaxTypes(types)
+        if (types.length) setForm(f => ({ ...f, taxType: f.taxType || types[0] }))
+      })
+      .catch(() => {})
+
+    axios.get(`/api/reference-master/${encodeURIComponent('Purchase Ledger')}`)
+      .then(res => {
+        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+        setPurchaseLedgers(types)
+        if (types.length) setForm(f => ({ ...f, purchaseLedger: f.purchaseLedger || types[0] }))
+      })
+      .catch(() => {})
+
+    axios.get(`/api/reference-master/${encodeURIComponent('PAYMODE')}`)
+      .then(res => {
+        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+        setPurchaseTypes(types)
+        if (types.length) setForm(f => ({ ...f, purchaseType: f.purchaseType || types[0] }))
+      })
+      .catch(() => {})
+
+    axios.get(`/api/reference-master/${encodeURIComponent('QC_Type')}`)
+      .then(res => {
+        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+        setQcTypes(types)
+        if (types.length) setForm(f => ({ ...f, qcType: f.qcType || types[0] }))
+      })
+      .catch(() => {})
+
+    axios.get(`/api/reference-master/${encodeURIComponent('Currency')}`)
+      .then(res => {
+        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+        setCurrencies(types)
+        if (types.length) setForm(f => ({ ...f, currency: f.currency || types[0] }))
+      })
+      .catch(() => {})
+  }, [])
+
   const [form, setForm] = useState({
-    grnType:'GRN Against PO', gateEntryNo:'', supplierName:'', purchaseLedger:'apple tech',
-    purchaseType:'CASH', currency:'INR', currencyType:'EXPORT',
-    contactPerson:'', contactNo:'', poNo:'', poDate:today, taxType:'INTER', exchangeRate:'',
-    grnNo:genGRNNo(), grnDate:today, invoiceNo:'0', invoiceDate:today, qcType:'QUALITY',
+    grnType:'', gateEntryNo:'', supplierName:'', purchaseLedger:'',
+    purchaseType:'', currency:'', currencyType:'EXPORT',
+    contactPerson:'', contactNo:'', poNo:'', poDate:today, taxType:'', exchangeRate:'',
+    grnNo:genGRNNo(), grnDate:today, invoiceNo:'0', invoiceDate:today, qcType:'',
     discountType:'Dis_Per',
   })
   const [items, setItems] = useState([emptyItem()])
@@ -35,7 +93,164 @@ export default function GRNEntry() {
   const [freightLedger, setFreightLedger] = useState('FREIGHT A/C')
   const [tcsLedger, setTcsLedger] = useState('TCS A/C')
 
-  const setField = (k,v) => setForm(f=>({...f,[k]:v}))
+  const [showGateModal, setShowGateModal] = useState(false)
+  const [gateEntries, setGateEntries] = useState([])
+  const [gateSearch, setGateSearch] = useState('')
+  const [gateLoading, setGateLoading] = useState(false)
+
+  const openGateSearch = () => {
+    setShowGateModal(true)
+    setGateSearch('')
+    setGateLoading(true)
+    axios.get('/api/gate-master')
+      .then(res => setGateEntries(res.data.data || []))
+      .catch(() => setGateEntries([]))
+      .finally(() => setGateLoading(false))
+  }
+
+  const calcItemRow = (row) => {
+    const q = parseFloat(row.qty) || 0
+    const up = parseFloat(row.unitPrice) || 0
+    const tot = q * up
+    const dp = parseFloat(row.discPer) || 0
+    const da = tot * dp / 100
+    const tp = parseFloat(row.taxPer) || 0
+    return { ...row, total: tot.toFixed(2), discAmt: da.toFixed(2), finalPrice: (tot - da).toFixed(2), netAmt: ((tot - da) * (1 + tp / 100)).toFixed(2) }
+  }
+
+  const selectGateEntry = (entry) => {
+    setForm(f => ({
+      ...f,
+      gateEntryNo: entry.gateEntryNo,
+      supplierName: entry.supplierName || '',
+      poNo: entry.poNo || '',
+      invoiceNo: entry.invoiceNo || '',
+      invoiceDate: entry.invoiceDate ? entry.invoiceDate.split('T')[0] : f.invoiceDate,
+    }))
+    const gateItems = (entry.details || []).map(d => ({
+      ...emptyItem(),
+      itemCode: d.itemCode || '',
+      itemName: d.itemName || '',
+      supplierPartNo: d.supplierPartNo || '',
+      description: d.description || '',
+      hsnCode: d.hsnCode || '',
+      unit: d.unit || '',
+      orderQty: String(d.qty || ''),
+      qty: String(d.recQty || ''),
+    }))
+    if (entry.poId) {
+      axios.get(`/api/purchase-master/${entry.poId}`)
+        .then(res => {
+          const po = res.data.data
+          if (!po) { if (gateItems.length) setItems(gateItems); return }
+          setForm(f => ({
+            ...f,
+            contactPerson: po.contactPerson || '',
+            contactNo: po.contactNumber || po.supplier?.mobile || po.supplier?.phone || '',
+            poDate: po.poDate ? po.poDate.split('T')[0] : f.poDate,
+          }))
+          // Enrich gate items with unitPrice, discPer, taxPer from PO details
+          if (po.details && po.details.length && gateItems.length) {
+            setItems(gateItems.map(gi => {
+              const pd = po.details.find(d => d.itemCode === gi.itemCode)
+              if (!pd) return gi
+              return calcItemRow({
+                ...gi,
+                unitPrice: String(pd.unitPrice || ''),
+                discPer: String(pd.discPer || ''),
+                taxPer: String(pd.gstPer || ''),
+              })
+            }))
+          } else if (gateItems.length) {
+            setItems(gateItems)
+          }
+        })
+        .catch(() => { if (gateItems.length) setItems(gateItems) })
+    } else if (gateItems.length) {
+      setItems(gateItems)
+    }
+    setShowGateModal(false)
+  }
+
+  const filteredGateEntries = gateEntries.filter(e => {
+    const q = gateSearch.toLowerCase()
+    return !q || (e.gateEntryNo||'').toLowerCase().includes(q)
+      || (e.supplierName||'').toLowerCase().includes(q)
+      || (e.poNo||'').toLowerCase().includes(q)
+      || (e.invoiceNo||'').toLowerCase().includes(q)
+  })
+
+  const [showPoModal, setShowPoModal] = useState(false)
+  const [poList, setPoList] = useState([])
+  const [poSearch, setPoSearch] = useState('')
+  const [poLoading, setPoLoading] = useState(false)
+
+  const openPoSearch = () => {
+    setShowPoModal(true)
+    setPoSearch('')
+    setPoLoading(true)
+    axios.get('/api/purchase-master')
+      .then(res => setPoList(res.data.data || []))
+      .catch(() => setPoList([]))
+      .finally(() => setPoLoading(false))
+  }
+
+  const selectPo = (po) => {
+    setForm(f => ({
+      ...f,
+      poNo: po.poNo || '',
+      poDate: po.poDate ? po.poDate.split('T')[0] : f.poDate,
+      contactPerson: po.contactPerson || '',
+      contactNo: po.contactNumber || po.supplier?.mobile || po.supplier?.phone || '',
+      supplierName: po.supplier?.supplierName || f.supplierName,
+    }))
+    // Populate items from PO details (itemCode, itemName, unitPrice, etc.)
+    if (po.details && po.details.length) {
+      setItems(po.details.map(d => calcItemRow({
+        ...emptyItem(),
+        itemCode: d.itemCode || '',
+        itemName: d.itemName || '',
+        supplierPartNo: d.supplierPartNo || '',
+        description: d.description || '',
+        hsnCode: d.hsnCode || '',
+        unit: d.uom || '',
+        orderQty: String(d.qty || ''),
+        qty: String(d.qty || ''),
+        unitPrice: String(d.unitPrice || ''),
+        discPer: String(d.discPer || ''),
+        taxPer: String(d.gstPer || ''),
+      })))
+    }
+    setShowPoModal(false)
+  }
+
+  const filteredPoList = poList.filter(p => {
+    const q = poSearch.toLowerCase()
+    return !q || (p.poNo||'').toLowerCase().includes(q)
+      || (p.supplier?.supplierName||'').toLowerCase().includes(q)
+      || (p.contactPerson||'').toLowerCase().includes(q)
+  })
+
+  const applyTaxRate = (rate) => {
+    setItems(rows => rows.map(r => {
+      const q = parseFloat(r.qty) || 0
+      const p = parseFloat(r.unitPrice) || 0
+      const tot = q * p
+      const dp = parseFloat(r.discPer) || 0
+      const da = tot * dp / 100
+      const finalPrice = (tot - da).toFixed(2)
+      const netAmt = ((tot - da) * (1 + rate / 100)).toFixed(2)
+      return { ...r, taxPer: String(rate), finalPrice, netAmt }
+    }))
+  }
+
+  const setField = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }))
+    if (k === 'taxType') {
+      const rate = TAX_RATE_MAP[v.toUpperCase()]
+      if (rate !== undefined) applyTaxRate(rate)
+    }
+  }
 
   const setItemField = (idx,k,v) => {
     setItems(rows=>rows.map((r,i)=>{
@@ -80,12 +295,12 @@ export default function GRNEntry() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>GRN Type :</label>
-                <select value={form.grnType} onChange={e=>setField('grnType',e.target.value)} className={inp()}>{GRN_TYPES.map(t=><option key={t}>{t}</option>)}</select>
+                <select value={form.grnType} onChange={e=>setField('grnType',e.target.value)} className={inp()}>{grnTypes.map(t=><option key={t}>{t}</option>)}</select>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Gate Entry No :</label>
-                <input value={form.gateEntryNo} onChange={e=>setField('gateEntryNo',e.target.value)} className={`${inp()} flex-1`}/>
-                <button className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[12px] rounded transition-colors shrink-0">Search</button>
+                <input value={form.gateEntryNo} readOnly className={`${inp()} flex-1 bg-slate-50`}/>
+                <button onClick={openGateSearch} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[12px] rounded transition-colors shrink-0">Search</button>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Supplier Name:</label>
@@ -93,15 +308,24 @@ export default function GRNEntry() {
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Purchase Ledger :</label>
-                <select value={form.purchaseLedger} onChange={e=>setField('purchaseLedger',e.target.value)} className={inp()}>{PURCHASE_LEDGERS.map(l=><option key={l}>{l}</option>)}</select>
+                <select value={form.purchaseLedger} onChange={e=>setField('purchaseLedger',e.target.value)} className={inp()}>
+                  {purchaseLedgers.length === 0 && <option value="">Loading...</option>}
+                  {purchaseLedgers.map(l=><option key={l} value={l}>{l}</option>)}
+                </select>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Purchase Type :</label>
-                <select value={form.purchaseType} onChange={e=>setField('purchaseType',e.target.value)} className={inp()}>{PURCHASE_TYPES.map(t=><option key={t}>{t}</option>)}</select>
+                <select value={form.purchaseType} onChange={e=>setField('purchaseType',e.target.value)} className={inp()}>
+                  {purchaseTypes.length === 0 && <option value="">Loading...</option>}
+                  {purchaseTypes.map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Currency :</label>
-                <select value={form.currency} onChange={e=>setField('currency',e.target.value)} className={`${inp()} w-20`}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select>
+                <select value={form.currency} onChange={e=>setField('currency',e.target.value)} className={`${inp()} w-20`}>
+                  {currencies.length === 0 && <option value="">Loading...</option>}
+                  {currencies.map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
                 <select value={form.currencyType} onChange={e=>setField('currencyType',e.target.value)} className={`${inp()} w-24`}>{CURRENCY_TYPES.map(c=><option key={c}>{c}</option>)}</select>
               </div>
             </div>
@@ -117,7 +341,8 @@ export default function GRNEntry() {
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[130px] shrink-0`}>PO No :</label>
-                <input value={form.poNo} onChange={e=>setField('poNo',e.target.value)} className={inp()}/>
+                <input value={form.poNo} readOnly className={`${inp()} flex-1 bg-slate-50`}/>
+                <button onClick={openPoSearch} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[12px] rounded transition-colors shrink-0">Search</button>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[130px] shrink-0`}>PO Date :</label>
@@ -125,7 +350,10 @@ export default function GRNEntry() {
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[130px] shrink-0`}>Tax Type :</label>
-                <select value={form.taxType} onChange={e=>setField('taxType',e.target.value)} className={inp()}>{TAX_TYPES.map(t=><option key={t}>{t}</option>)}</select>
+                <select value={form.taxType} onChange={e=>setField('taxType',e.target.value)} className={inp()}>
+                  {taxTypes.length === 0 && <option value="">Loading...</option>}
+                  {taxTypes.map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[130px] shrink-0`}>Exchange Rate (Rs.):</label>
@@ -152,7 +380,10 @@ export default function GRNEntry() {
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[110px] shrink-0`}>QC Type :</label>
-                <select value={form.qcType} onChange={e=>setField('qcType',e.target.value)} className={inp()}>{QC_TYPES.map(q=><option key={q}>{q}</option>)}</select>
+                <select value={form.qcType} onChange={e=>setField('qcType',e.target.value)} className={inp()}>
+                  {qcTypes.length === 0 && <option value="">Loading...</option>}
+                  {qcTypes.map(q=><option key={q} value={q}>{q}</option>)}
+                </select>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[110px] shrink-0`}></label>
@@ -255,6 +486,120 @@ export default function GRNEntry() {
           </div>
         </div>
       </div>
+      {/* PO Search Modal */}
+      {showPoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded shadow-xl w-[720px] max-h-[80vh] flex flex-col">
+            <div className="bg-[--color-main] px-4 py-2.5 flex items-center justify-between rounded-t">
+              <h3 className="text-white font-semibold text-[14px]">Select Purchase Order</h3>
+              <button onClick={() => setShowPoModal(false)} className="text-white hover:text-white/70"><X className="w-4 h-4"/></button>
+            </div>
+            <div className="p-3 border-b border-slate-200">
+              <input
+                autoFocus
+                value={poSearch}
+                onChange={e => setPoSearch(e.target.value)}
+                placeholder="Search by PO No, Supplier, Contact Person..."
+                className={`${inp()} w-full`}
+              />
+            </div>
+            <div className="overflow-auto flex-1">
+              {poLoading ? (
+                <div className="p-6 text-center text-slate-400 text-[13px]">Loading...</div>
+              ) : filteredPoList.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-[13px]">No purchase orders found.</div>
+              ) : (
+                <table className="min-w-full text-[12.5px]">
+                  <thead className="sticky top-0">
+                    <tr className="bg-[#4472C4] text-white">
+                      {['PO No','PO Date','Supplier Name','Contact Person','Contact No'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPoList.map((p, i) => (
+                      <tr
+                        key={p.id}
+                        onClick={() => selectPo(p)}
+                        className={`cursor-pointer border-b border-slate-100 hover:bg-[#0097A7]/10 ${i%2===1?'bg-slate-50/50':''}`}
+                      >
+                        <td className="px-3 py-1.5 font-medium text-[#0097A7]">{p.poNo}</td>
+                        <td className="px-3 py-1.5">{p.poDate ? p.poDate.split('T')[0] : '-'}</td>
+                        <td className="px-3 py-1.5">{p.supplier?.supplierName || '-'}</td>
+                        <td className="px-3 py-1.5">{p.contactPerson || '-'}</td>
+                        <td className="px-3 py-1.5">{p.contactNumber || p.supplier?.mobile || p.supplier?.phone || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="px-4 py-2 border-t border-slate-200 text-[11px] text-slate-400 text-right">
+              {filteredPoList.length} record{filteredPoList.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gate Entry Search Modal */}
+      {showGateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded shadow-xl w-[780px] max-h-[80vh] flex flex-col">
+            <div className="bg-[--color-main] px-4 py-2.5 flex items-center justify-between rounded-t">
+              <h3 className="text-white font-semibold text-[14px]">Select Gate Entry</h3>
+              <button onClick={() => setShowGateModal(false)} className="text-white hover:text-white/70"><X className="w-4 h-4"/></button>
+            </div>
+            <div className="p-3 border-b border-slate-200">
+              <input
+                autoFocus
+                value={gateSearch}
+                onChange={e => setGateSearch(e.target.value)}
+                placeholder="Search by Gate Entry No, Supplier, PO No, Invoice No..."
+                className={`${inp()} w-full`}
+              />
+            </div>
+            <div className="overflow-auto flex-1">
+              {gateLoading ? (
+                <div className="p-6 text-center text-slate-400 text-[13px]">Loading...</div>
+              ) : filteredGateEntries.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-[13px]">No gate entries found.</div>
+              ) : (
+                <table className="min-w-full text-[12.5px]">
+                  <thead className="sticky top-0">
+                    <tr className="bg-[#4472C4] text-white">
+                      {['Gate Entry No','Date','Supplier Name','PO No','Invoice No','Status'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredGateEntries.map((e, i) => (
+                      <tr
+                        key={e.id}
+                        onClick={() => selectGateEntry(e)}
+                        className={`cursor-pointer border-b border-slate-100 hover:bg-[#0097A7]/10 ${i%2===1?'bg-slate-50/50':''}`}
+                      >
+                        <td className="px-3 py-1.5 font-medium text-[#0097A7]">{e.gateEntryNo}</td>
+                        <td className="px-3 py-1.5">{e.gateEntryDate ? e.gateEntryDate.split('T')[0] : ''}</td>
+                        <td className="px-3 py-1.5">{e.supplierName || '-'}</td>
+                        <td className="px-3 py-1.5">{e.poNo || '-'}</td>
+                        <td className="px-3 py-1.5">{e.invoiceNo || '-'}</td>
+                        <td className="px-3 py-1.5">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${e.status==='Open'?'bg-green-100 text-green-700':'bg-slate-100 text-slate-600'}`}>{e.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="px-4 py-2 border-t border-slate-200 text-[11px] text-slate-400 text-right">
+              {filteredGateEntries.length} record{filteredGateEntries.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

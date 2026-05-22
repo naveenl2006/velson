@@ -267,11 +267,12 @@ export default function PurchaseOrderEntry() {
         contactPerson: supplier.contactPerson || '',
         contactNumber: supplier.mobile || supplier.phone || '',
         gstNo: supplier.gstNo || '',
+        supplierRefNumber: supplier.sCode || '',
       }))
     } else {
       setForm(f => ({
         ...f, supplierId: null, supplierName: name,
-        supplierAddress: '', contactPerson: '', contactNumber: '', gstNo: '',
+        supplierAddress: '', contactPerson: '', contactNumber: '', gstNo: '', supplierRefNumber: '',
       }))
     }
   }
@@ -358,6 +359,7 @@ export default function PurchaseOrderEntry() {
         poType: form.poType,
         supplierId: form.supplierId,
         contactPerson: form.contactPerson,
+        contactNumber: form.contactNumber,
         supplierAddress: form.supplierAddress,
         gstNo: form.gstNo,
         supplierRefNo: form.supplierRefNumber,
