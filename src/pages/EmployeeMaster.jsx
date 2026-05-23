@@ -5,9 +5,6 @@ import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
 const PAGE_SIZES = [5, 10, 25, 50]
-const DEPARTMENTS  = ['Production','Quality','Stores','Purchase','Sales','HR','Finance','Admin','IT','Maintenance']
-const DESIGNATIONS = ['Manager','Engineer','Technician','Supervisor','Operator','Inspector','Executive','Officer','Assistant','Director']
-const CONTRACTORS  = ['Contractor A','Contractor B','Contractor C']
 
 const emptyForm = {
   empCode: '', empName: '', address: '', contactNo: '', adharNo: '',
@@ -108,6 +105,9 @@ export default function EmployeeMaster() {
 
   const [rows, setRows] = useState([])
   const [companies, setCompanies] = useState([])
+  const [departments, setDepartments] = useState([])
+  const [designations, setDesignations] = useState([])
+  const [contractors, setContractors] = useState([])
   const [tableLoading, setTableLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -152,7 +152,37 @@ export default function EmployeeMaster() {
     }
   }, [])
 
-  useEffect(() => { fetchAll(); fetchNextCode(); fetchCompanies() }, [fetchAll, fetchNextCode, fetchCompanies])
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/reference-master/Department')
+      setDepartments((res.data.data || []).map(d => d.description))
+    } catch {
+      setDepartments([])
+    }
+  }, [])
+
+  const fetchDesignations = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/reference-master/Designation')
+      setDesignations((res.data.data || []).map(d => d.description))
+    } catch {
+      setDesignations([])
+    }
+  }, [])
+
+  const fetchContractors = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/contractor-master')
+      setContractors((res.data.data || []).map(c => c.contractName))
+    } catch {
+      setContractors([])
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchAll(); fetchNextCode(); fetchCompanies()
+    fetchDepartments(); fetchDesignations(); fetchContractors()
+  }, [fetchAll, fetchNextCode, fetchCompanies, fetchDepartments, fetchDesignations, fetchContractors])
 
   const sf = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
@@ -280,16 +310,16 @@ export default function EmployeeMaster() {
           <FI {...fp} label="Adhar No" fk="adharNo" />
           <FI {...fp} label="Join Date" fk="joinDate" type="date" />
           <FI {...fp} label="Releving Date" fk="relevingDate" type="date" />
-          <FS {...fp} label="Department Name" fk="department" opts={DEPARTMENTS} required
+          <FS {...fp} label="Department Name" fk="department" opts={departments} required
             placeholder="---Select Department Name---" />
         </Panel>
 
         {/* Panel 3 */}
         <Panel>
-          <FS {...fp} label="Designation Name" fk="designation" opts={DESIGNATIONS} required
+          <FS {...fp} label="Designation Name" fk="designation" opts={designations} required
             placeholder="---Select Designation Name---" />
-          <FS {...fp} label="Contract Person" fk="contractPerson" opts={CONTRACTORS}
-            placeholder="---Select Contracter Name---" />
+          <FS {...fp} label="Contract Person" fk="contractPerson" opts={contractors}
+            placeholder="---Select Contractor Name---" />
           <FS {...fp} label="Company Name" fk="companyName"
             opts={companies.length ? companies : ['VELSON INDUSTRIES PVT LTD', 'VELSON SERVICES LLP']}
             required placeholder="---Select Company Name---" />

@@ -5,7 +5,6 @@ import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
 const PAGE_SIZES = [5, 10, 25, 50]
-const COMPANY_TYPES = ['Private Limited', 'Public Limited', 'Partnership', 'Sole Proprietorship', 'LLP', 'OPC']
 
 const emptyForm = {
   companyCode: '', companyName: '', companyType: '',
@@ -122,6 +121,7 @@ export default function CompanyMaster() {
   const fileRef = useRef(null)
 
   const [rows, setRows] = useState([])
+  const [companyTypes, setCompanyTypes] = useState([])
   const [tableLoading, setTableLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -134,6 +134,15 @@ export default function CompanyMaster() {
   const [page, setPage] = useState(1)
   const [detailRow, setDetailRow] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+
+  const fetchCompanyTypes = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/reference-master/Company_Type')
+      setCompanyTypes(res.data.data || [])
+    } catch (err) {
+      console.error('[CompanyMaster] fetchCompanyTypes:', err)
+    }
+  }, [])
 
   const fetchAll = useCallback(async () => {
     setTableLoading(true)
@@ -157,7 +166,7 @@ export default function CompanyMaster() {
     }
   }, [])
 
-  useEffect(() => { fetchAll(); fetchNextCode() }, [fetchAll, fetchNextCode])
+  useEffect(() => { fetchAll(); fetchNextCode(); fetchCompanyTypes() }, [fetchAll, fetchNextCode, fetchCompanyTypes])
 
   const sf = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
@@ -273,7 +282,7 @@ export default function CompanyMaster() {
                 <select value={form.companyType} onChange={e => sf('companyType', e.target.value)}
                   className={inp(errors.companyType)}>
                   <option value=""></option>
-                  {COMPANY_TYPES.map(t => <option key={t}>{t}</option>)}
+                  {companyTypes.map(t => <option key={t.id} value={t.description}>{t.description}</option>)}
                 </select>
                 {errors.companyType && <p className="text-[11px] text-red-500 mt-0.5">{errors.companyType}</p>}
               </div>
