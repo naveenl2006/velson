@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import axios from 'axios'
+import api from '../services/api'
 import { ChevronRight, Plus, Trash2, Send, X, RefreshCw, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { SpinnerLoader } from '../components/LocalLoader'
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 const today = new Date().toISOString().split('T')[0]
@@ -82,12 +83,12 @@ export default function QuotationEntry({ pageData }) {
       setMasterLoading(true)
       try {
         const [custRes, currRes, modelRes, taxRes, quotTypeRes, nextNoRes] = await Promise.allSettled([
-          axios.get('/api/customer-master'),
-          axios.get('/api/reference-master/Currency'),
-          axios.get('/api/reference-master/Vehicle_Type'),
-          axios.get('/api/reference-master/Tax%20Type'),
-          axios.get('/api/reference-master/Quotation_Type'),
-          axios.get('/api/quotation-master/next-no'),
+          api.get('/api/customer-master', { skipGlobalLoader: true }),
+          api.get('/api/reference-master/Currency', { skipGlobalLoader: true }),
+          api.get('/api/reference-master/Vehicle_Type', { skipGlobalLoader: true }),
+          api.get('/api/reference-master/Tax%20Type', { skipGlobalLoader: true }),
+          api.get('/api/reference-master/Quotation_Type', { skipGlobalLoader: true }),
+          api.get('/api/quotation-master/next-no', { skipGlobalLoader: true }),
         ])
 
         if (custRes.status === 'fulfilled') {
@@ -243,8 +244,9 @@ export default function QuotationEntry({ pageData }) {
     setPartLoading(prev => ({ ...prev, [idx]: true }))
     searchTimers.current[idx] = setTimeout(async () => {
       try {
-        const res = await axios.get('/api/item-master', {
+        const res = await api.get('/api/item-master', {
           params: { search: value, limit: 20, page: 1 },
+          skipGlobalLoader: true,
         })
         const suggestions = res.data?.data || []
         setPartSuggestions(prev => ({ ...prev, [idx]: suggestions }))
@@ -331,12 +333,12 @@ export default function QuotationEntry({ pageData }) {
         items:            items.filter(r => r.partNo || r.itemName),
       }
 
-      await axios.post('/api/quotation-master', payload)
+      await api.post('/api/quotation-master', payload, { loadingMessage: 'Saving quotation...' })
       toast.success('Quotation saved successfully!')
 
       /* fetch next quotation number for a fresh entry */
       try {
-        const res = await axios.get('/api/quotation-master/next-no')
+        const res = await api.get('/api/quotation-master/next-no', { skipGlobalLoader: true })
         const { quotationNo, financialYear } = res.data
         setForm({ ...emptyForm(), quotationNo, financialYear })
       } catch (err) {
@@ -360,7 +362,7 @@ export default function QuotationEntry({ pageData }) {
   /* ── cancel / reset ────────────────────────────────────────────────────── */
   const handleCancel = async () => {
     try {
-      const res = await axios.get('/api/quotation-master/next-no')
+      const res = await api.get('/api/quotation-master/next-no', { skipGlobalLoader: true })
       const { quotationNo, financialYear } = res.data
       setForm({ ...emptyForm(), quotationNo, financialYear })
     } catch (err) {
@@ -394,10 +396,7 @@ export default function QuotationEntry({ pageData }) {
         {/* Master-data loading overlay */}
         {masterLoading && (
           <div className="absolute inset-0 z-20 bg-white/75 flex items-center justify-center rounded">
-            <div className="flex items-center gap-2 text-[#0097A7] text-[13px] font-medium">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Loading form data…
-            </div>
+            <SpinnerLoader size={20} message="Loading form data…" />
           </div>
         )}
 

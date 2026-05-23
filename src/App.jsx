@@ -1,5 +1,6 @@
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useLoading } from './context/LoadingContext'
 import Layout from './components/Layout'
 import ItemMaster from './pages/ItemMaster'
 import PartNumberBaseMaster from './pages/PartNumberBaseMaster'
@@ -254,12 +255,27 @@ const PAGES = {
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [page, setPage] = useState('Dashboard')
+  const { show, hide } = useLoading()
+  const navTimerRef = useRef(null)
 
   useEffect(() => {
-    const handler = e => setPage(e.detail?.page ?? e.detail)
+    const handler = e => {
+      const nextPage = e.detail?.page ?? e.detail
+      setPage(nextPage)
+      // Brief overlay flash acknowledges the navigation visually
+      if (navTimerRef.current) clearTimeout(navTimerRef.current)
+      show('Navigating...')
+      navTimerRef.current = setTimeout(() => {
+        hide()
+        navTimerRef.current = null
+      }, 300)
+    }
     window.addEventListener('velson:navigate', handler)
-    return () => window.removeEventListener('velson:navigate', handler)
-  }, [])
+    return () => {
+      window.removeEventListener('velson:navigate', handler)
+      if (navTimerRef.current) clearTimeout(navTimerRef.current)
+    }
+  }, [show, hide])
 
   if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />
 

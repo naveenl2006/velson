@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import {
   ChevronRight, X, FileBarChart, FileSpreadsheet, FileText,
   Filter, Settings, Download, Loader2, Pencil, Trash2, Printer, AlertTriangle,
   CheckCircle, XCircle, Eye
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { SpinnerLoader } from '../components/LocalLoader'
 
 const Label = ({ children }) => (
   <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
@@ -79,7 +80,7 @@ const openFormat1Window = async (row) => {
   /* ── fetch customer ── */
   let cust = {}
   try {
-    const res = await axios.get('/api/customer-master')
+    const res = await api.get('/api/customer-master', { skipGlobalLoader: true })
     cust = (res.data?.data ?? []).find(c => c.id === row.customerId) ?? {}
   } catch { cust = { customerName: row.customer?.customerName ?? '' } }
 
@@ -323,7 +324,7 @@ ${pagesHtml}
 const openFormat3Window = async (row) => {
   let cust = {}
   try {
-    const res = await axios.get('/api/customer-master')
+    const res = await api.get('/api/customer-master', { skipGlobalLoader: true })
     cust = (res.data?.data ?? []).find(c => c.id === row.customerId) ?? {}
   } catch { cust = { customerName: row.customer?.customerName ?? '' } }
 
@@ -556,7 +557,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#000;background:#d0d0d0}
 const openFormat4Window = async (row) => {
   let cust = {}
   try {
-    const res = await axios.get('/api/customer-master')
+    const res = await api.get('/api/customer-master', { skipGlobalLoader: true })
     cust = (res.data?.data ?? []).find(c => c.id === row.customerId) ?? {}
   } catch { cust = { customerName: row.customer?.customerName ?? '' } }
 
@@ -804,7 +805,7 @@ ${pagesHtml}
 const openFormat2Window = async (row) => {
   let cust = {}
   try {
-    const res = await axios.get('/api/customer-master')
+    const res = await api.get('/api/customer-master', { skipGlobalLoader: true })
     cust = (res.data?.data ?? []).find(c => c.id === row.customerId) ?? {}
   } catch { cust = { customerName: row.customer?.customerName ?? '' } }
 
@@ -1180,7 +1181,7 @@ export default function QuotationDetails({ onNavigate }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await axios.get('/api/quotation-master')
+      const res = await api.get('/api/quotation-master', { skipGlobalLoader: true })
       let data = res.data?.data ?? []
       if (fromDate) data = data.filter(r => r.quotationDate && r.quotationDate.slice(0, 10) >= fromDate)
       if (toDate)   data = data.filter(r => r.quotationDate && r.quotationDate.slice(0, 10) <= toDate)
@@ -1202,7 +1203,7 @@ export default function QuotationDetails({ onNavigate }) {
     if (!deleteTarget) return
     setDeleteLoading(true)
     try {
-      await axios.delete(`/api/quotation-master/${deleteTarget.id}`)
+      await api.delete(`/api/quotation-master/${deleteTarget.id}`, { loadingMessage: 'Deleting quotation...' })
       setRows(r => r.filter(x => x.id !== deleteTarget.id))
       toast.success(`Quotation ${deleteTarget.quotationNo} deleted.`)
       setDeleteTarget(null)
@@ -1247,7 +1248,7 @@ export default function QuotationDetails({ onNavigate }) {
         status:            actionTarget.action,
         items:             row.details          ?? [],
       }
-      await axios.put(`/api/quotation-master/${actionTarget.id}`, payload)
+      await api.put(`/api/quotation-master/${actionTarget.id}`, payload, { loadingMessage: 'Updating quotation...' })
       setRows(r => r.map(x => x.id === actionTarget.id ? { ...x, status: actionTarget.action } : x))
       toast.success(`Quotation ${actionTarget.quotationNo} ${actionTarget.action.toLowerCase()}.`)
       setActionTarget(null)
@@ -1399,11 +1400,8 @@ export default function QuotationDetails({ onNavigate }) {
                 <tbody className="divide-y divide-slate-100 text-[12px]">
                   {loading ? (
                     <tr>
-                      <td colSpan={COLS.length} className="text-center py-16 text-slate-400">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 size={16} className="animate-spin text-[#0097A7]" />
-                          <span>Loading…</span>
-                        </div>
+                      <td colSpan={COLS.length} className="py-8">
+                        <SpinnerLoader message="Loading quotations…" />
                       </td>
                     </tr>
                   ) : error ? (

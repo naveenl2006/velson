@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { TableSkeleton } from '../components/LocalLoader'
 
 const PAGE_SIZES = [5, 10, 25, 50]
 
@@ -147,7 +148,7 @@ export default function CompanyMaster() {
   const fetchAll = useCallback(async () => {
     setTableLoading(true)
     try {
-      const res = await axios.get('/api/company-master')
+      const res = await api.get('/api/company-master')
       setRows(res.data.data || [])
     } catch (err) {
       console.error('[CompanyMaster] fetchAll:', err)
@@ -159,7 +160,7 @@ export default function CompanyMaster() {
 
   const fetchNextCode = useCallback(async () => {
     try {
-      const res = await axios.get('/api/company-master/next-code')
+      const res = await api.get('/api/company-master/next-code')
       setForm(f => ({ ...f, companyCode: res.data.nextCode || '' }))
     } catch (err) {
       console.error('[CompanyMaster] fetchNextCode:', err)
@@ -186,10 +187,10 @@ export default function CompanyMaster() {
       Object.entries(form).forEach(([k, v]) => { if (k !== 'logo') fd.append(k, v ?? '') })
       if (form.logo) fd.append('logo', form.logo)
       if (editId !== null) {
-        await axios.put(`/api/company-master/${editId}`, fd)
+        await api.put(`/api/company-master/${editId}`, fd)
         toast.success('Company updated successfully.')
       } else {
-        await axios.post('/api/company-master', fd)
+        await api.post('/api/company-master', fd)
         toast.success('Company created successfully.')
       }
       setForm({ ...emptyForm }); setErrors({}); setEditId(null); setPage(1)
@@ -213,7 +214,7 @@ export default function CompanyMaster() {
     if (!confirmDelete) return
     setDeleting(true)
     try {
-      await axios.delete(`/api/company-master/${confirmDelete}`)
+      await api.delete(`/api/company-master/${confirmDelete}`)
       toast.success('Company deleted.')
       setConfirmDelete(null)
       if (editId === confirmDelete) { setForm({ ...emptyForm }); setEditId(null) }
@@ -385,6 +386,9 @@ export default function CompanyMaster() {
           </div>
         </div>
 
+        {tableLoading ? (
+          <TableSkeleton rows={5} cols={['6%', '8%', '20%', '10%', '12%', '12%', '16%', '8%', '8%']} />
+        ) : (
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[13px]">
             <thead>
@@ -395,11 +399,7 @@ export default function CompanyMaster() {
               </tr>
             </thead>
             <tbody>
-              {tableLoading ? (
-                <tr><td colSpan={10} className="text-center py-8 text-slate-400">
-                  <div className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-[#0097A7]" /> Loading...</div>
-                </td></tr>
-              ) : paged.length === 0 ? (
+              {paged.length === 0 ? (
                 <tr><td colSpan={10} className="text-center py-8 text-slate-400">No records found</td></tr>
               ) : paged.map((row, idx) => (
                 <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
@@ -433,6 +433,7 @@ export default function CompanyMaster() {
             </tbody>
           </table>
         </div>
+        )}
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <span className="text-[12px] text-slate-500">

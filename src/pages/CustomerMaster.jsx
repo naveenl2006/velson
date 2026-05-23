@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
+import { TableSkeleton, SpinnerLoader } from '../components/LocalLoader'
 
 // ── Static lookup data ───────────────────────────────────────────────────────
 
@@ -263,7 +264,7 @@ export default function CustomerMaster() {
   const fetchCustomerTypes = useCallback(async () => {
     setLoadingTypes(true)
     try {
-      const res = await axios.get('/api/reference-master/Customer_Type')
+      const res = await api.get('/api/reference-master/Customer_Type')
       const types = (res.data?.data || []).map(r => r.description).filter(Boolean)
       setCustomerTypes(types)
     } catch (err) {
@@ -280,7 +281,7 @@ export default function CustomerMaster() {
     setLoadingList(true)
     setApiError('')
     try {
-      const res = await axios.get('/api/customer-master')
+      const res = await api.get('/api/customer-master')
       setRows(res.data?.data || [])
     } catch (err) {
       console.error('[CustomerMaster] fetchCustomers error:', err)
@@ -346,11 +347,11 @@ export default function CustomerMaster() {
     setApiError('')
     try {
       if (editId !== null) {
-        const res = await axios.put(`/api/customer-master/${editId}`, form)
+        const res = await api.put(`/api/customer-master/${editId}`, form)
         setRows(r => r.map(x => x.id === editId ? res.data.data : x))
         setEditId(null)
       } else {
-        const res = await axios.post('/api/customer-master', form)
+        const res = await api.post('/api/customer-master', form)
         setRows(r => [...r, res.data.data])
         setPage(1)
       }
@@ -372,7 +373,7 @@ export default function CustomerMaster() {
     setLoadingDelete(true)
     setApiError('')
     try {
-      await axios.delete(`/api/customer-master/${deleteTarget.id}`)
+      await api.delete(`/api/customer-master/${deleteTarget.id}`)
       setRows(r => r.filter(x => x.id !== deleteTarget.id))
       setDeleteTarget(null)
     } catch (err) {
@@ -697,12 +698,11 @@ export default function CustomerMaster() {
           </div>
         </div>
 
+        {loadingList ? (
+          <TableSkeleton rows={5} cols={['6%', '10%', '16%', '10%', '10%', '12%', '10%', '13%', '8%', '8%']} />
+        ) : (
         <div className="overflow-x-auto w-full">
-          {loadingList ? (
-            <div className="flex items-center justify-center py-12 gap-2 text-slate-400 text-[13px]">
-              <Loader2 className="w-5 h-5 animate-spin"/> Loading customers...
-            </div>
-          ) : (
+          {(
             <table className="min-w-full text-[13px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -751,6 +751,7 @@ export default function CustomerMaster() {
             </table>
           )}
         </div>
+        )}
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <span className="text-[12px] text-slate-500">

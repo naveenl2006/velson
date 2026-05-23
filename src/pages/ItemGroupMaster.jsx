@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { X, Save, ArrowLeft, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { TableSkeleton, SpinnerLoader } from '../components/LocalLoader'
 
 const PAGE_SIZES = [8, 25, 50, 100]
 const emptyForm = { groupName: '', store: '', prefix: '' }
@@ -61,7 +62,7 @@ export default function ItemGroupMaster() {
   // ── Fetch Store options from ReferenceMaster (type = "Store") ──
   const fetchStores = useCallback(async () => {
     try {
-      const res = await axios.get('/api/reference-master/Store')
+      const res = await api.get('/api/reference-master/Store')
       const stores = (res.data.data || []).map(r => r.description)
       setStoreOptions(stores)
     } catch (err) {
@@ -73,7 +74,7 @@ export default function ItemGroupMaster() {
   // ── Fetch Prefix options from prefix table ─────────────────
   const fetchPrefixes = useCallback(async () => {
     try {
-      const res = await axios.get('/api/prefixes')
+      const res = await api.get('/api/prefixes')
       const prefixes = (res.data.data || []).map(r => r.prefixCode)
       setPrefixOptions(prefixes)
     } catch (err) {
@@ -87,7 +88,7 @@ export default function ItemGroupMaster() {
   const fetchAll = useCallback(async () => {
     setTableLoading(true)
     try {
-      const res = await axios.get('/api/item-group-master')
+      const res = await api.get('/api/item-group-master')
       setRows(res.data.data || [])
     } catch (err) {
       console.error('[ItemGroupMaster] fetchAll error:', err)
@@ -127,14 +128,14 @@ export default function ItemGroupMaster() {
     setSaving(true)
     try {
       if (editId !== null) {
-        await axios.put(`/api/item-group-master/${editId}`, {
+        await api.put(`/api/item-group-master/${editId}`, {
           groupName: form.groupName.trim(),
           store: form.store,
           prefix: form.prefix,
         })
         toast.success('Item group updated successfully.')
       } else {
-        await axios.post('/api/item-group-master', {
+        await api.post('/api/item-group-master', {
           groupName: form.groupName.trim(),
           store: form.store,
           prefix: form.prefix,
@@ -167,7 +168,7 @@ export default function ItemGroupMaster() {
     if (!confirmDelete) return
     setDeleting(true)
     try {
-      await axios.delete(`/api/item-group-master/${confirmDelete}`)
+      await api.delete(`/api/item-group-master/${confirmDelete}`)
       toast.success('Item group deleted.')
       setConfirmDelete(null)
       if (editId === confirmDelete) { setForm(emptyForm); setEditId(null) }
@@ -275,7 +276,7 @@ export default function ItemGroupMaster() {
                   ))}
                 </select>
                 {dropdownLoading && (
-                  <Loader2 className="animate-spin absolute right-7 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0097A7] pointer-events-none" />
+                  <SpinnerLoader size={14} className="absolute right-7 top-1/2 -translate-y-1/2 py-0 pointer-events-none" />
                 )}
               </div>
               {errors.store && (
@@ -305,7 +306,7 @@ export default function ItemGroupMaster() {
                   ))}
                 </select>
                 {dropdownLoading && (
-                  <Loader2 className="animate-spin absolute right-7 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0097A7] pointer-events-none" />
+                  <SpinnerLoader size={14} className="absolute right-7 top-1/2 -translate-y-1/2 py-0 pointer-events-none" />
                 )}
               </div>
               {errors.prefix && (
@@ -364,6 +365,9 @@ export default function ItemGroupMaster() {
         </div>
 
         {/* Table */}
+        {tableLoading ? (
+          <TableSkeleton rows={5} cols={['30%', '25%', '18%', '9%', '9%', '9%']} />
+        ) : (
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[13px]">
             <thead>
@@ -388,15 +392,7 @@ export default function ItemGroupMaster() {
               </tr>
             </thead>
             <tbody>
-              {tableLoading ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-400 text-[13px]">
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#0097A7]" /> Loading...
-                    </div>
-                  </td>
-                </tr>
-              ) : paged.length === 0 ? (
+              {paged.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-8 text-slate-400 text-[13px]">No records found</td>
                 </tr>
@@ -440,6 +436,7 @@ export default function ItemGroupMaster() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">

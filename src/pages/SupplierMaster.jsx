@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { TableSkeleton } from '../components/LocalLoader'
 
 const PAGE_SIZES = [5, 10, 25, 50]
 
@@ -223,7 +224,7 @@ export default function SupplierMaster() {
   // ── Fetch supplier types via reference_type table (Supplier_Type → values) ──
   const fetchSupplierTypes = useCallback(async () => {
     try {
-      const res = await axios.get('/api/reference-types/values/Supplier_Type')
+      const res = await api.get('/api/reference-types/values/Supplier_Type')
       const types = (res.data.data || []).map(r => r.description)
       setSupplierTypes(types)
     } catch (err) {
@@ -236,7 +237,7 @@ export default function SupplierMaster() {
   const fetchAll = useCallback(async () => {
     setTableLoading(true)
     try {
-      const res = await axios.get('/api/supplier-master')
+      const res = await api.get('/api/supplier-master')
       setRows(res.data.data || [])
     } catch (err) {
       console.error('[SupplierMaster] fetchAll error:', err)
@@ -249,7 +250,7 @@ export default function SupplierMaster() {
   // ── Fetch next sCode for display in form ──────────────────────────────────
   const fetchNextCode = useCallback(async () => {
     try {
-      const res = await axios.get('/api/supplier-master/next-code')
+      const res = await api.get('/api/supplier-master/next-code')
       setForm(f => ({ ...f, sCode: res.data.nextSCode || '' }))
     } catch (err) {
       console.error('[SupplierMaster] fetchNextCode error:', err)
@@ -313,10 +314,10 @@ export default function SupplierMaster() {
     setSaving(true)
     try {
       if (editId !== null) {
-        await axios.put(`/api/supplier-master/${editId}`, form)
+        await api.put(`/api/supplier-master/${editId}`, form)
         toast.success('Supplier updated successfully.')
       } else {
-        await axios.post('/api/supplier-master', form)
+        await api.post('/api/supplier-master', form)
         toast.success('Supplier created successfully.')
       }
       setForm(emptyForm)
@@ -373,7 +374,7 @@ export default function SupplierMaster() {
     if (!confirmDelete) return
     setDeleting(true)
     try {
-      await axios.delete(`/api/supplier-master/${confirmDelete}`)
+      await api.delete(`/api/supplier-master/${confirmDelete}`)
       toast.success('Supplier deleted.')
       setConfirmDelete(null)
       if (editId === confirmDelete) { setForm(emptyForm); setEditId(null) }
@@ -671,6 +672,9 @@ export default function SupplierMaster() {
             entries
           </div>
         </div>
+        {tableLoading ? (
+          <TableSkeleton rows={5} cols={['5%', '9%', '16%', '9%', '9%', '12%', '10%', '13%', '7%', '7%']} />
+        ) : (
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[13px]">
             <thead>
@@ -681,15 +685,7 @@ export default function SupplierMaster() {
               </tr>
             </thead>
             <tbody>
-              {tableLoading ? (
-                <tr>
-                  <td colSpan={11} className="text-center py-8 text-slate-400 text-[13px]">
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#0097A7]"/> Loading...
-                    </div>
-                  </td>
-                </tr>
-              ) : paged.length === 0 ? (
+              {paged.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="text-center py-8 text-slate-400 text-[13px]">No records found</td>
                 </tr>
@@ -738,6 +734,7 @@ export default function SupplierMaster() {
             </tbody>
           </table>
         </div>
+        )}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <span className="text-[12px] text-slate-500">
             Showing {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} entries

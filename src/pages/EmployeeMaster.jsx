@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { TableSkeleton } from '../components/LocalLoader'
 
 const PAGE_SIZES = [5, 10, 25, 50]
 
@@ -124,7 +125,7 @@ export default function EmployeeMaster() {
   const fetchAll = useCallback(async () => {
     setTableLoading(true)
     try {
-      const res = await axios.get('/api/employee-master')
+      const res = await api.get('/api/employee-master')
       setRows(res.data.data || [])
     } catch (err) {
       console.error('[EmployeeMaster] fetchAll:', err)
@@ -136,7 +137,7 @@ export default function EmployeeMaster() {
 
   const fetchNextCode = useCallback(async () => {
     try {
-      const res = await axios.get('/api/employee-master/next-code')
+      const res = await api.get('/api/employee-master/next-code')
       setForm(f => ({ ...f, empCode: res.data.nextCode || '' }))
     } catch (err) {
       console.error('[EmployeeMaster] fetchNextCode:', err)
@@ -145,7 +146,7 @@ export default function EmployeeMaster() {
 
   const fetchCompanies = useCallback(async () => {
     try {
-      const res = await axios.get('/api/company-master')
+      const res = await api.get('/api/company-master')
       setCompanies((res.data.data || []).map(c => c.companyName))
     } catch {
       setCompanies([])
@@ -201,10 +202,10 @@ export default function EmployeeMaster() {
     setSaving(true)
     try {
       if (editId !== null) {
-        await axios.put(`/api/employee-master/${editId}`, form)
+        await api.put(`/api/employee-master/${editId}`, form)
         toast.success('Employee updated successfully.')
       } else {
-        await axios.post('/api/employee-master', form)
+        await api.post('/api/employee-master', form)
         toast.success('Employee created successfully.')
       }
       setForm({ ...emptyForm }); setErrors({}); setEditId(null); setPage(1)
@@ -243,7 +244,7 @@ export default function EmployeeMaster() {
     if (!confirmDelete) return
     setDeleting(true)
     try {
-      await axios.delete(`/api/employee-master/${confirmDelete}`)
+      await api.delete(`/api/employee-master/${confirmDelete}`)
       toast.success('Employee deleted.')
       setConfirmDelete(null)
       if (editId === confirmDelete) { setForm({ ...emptyForm }); setEditId(null) }
@@ -366,6 +367,9 @@ export default function EmployeeMaster() {
           </div>
         </div>
 
+        {tableLoading ? (
+          <TableSkeleton rows={5} cols={['5%','7%','12%','10%','8%','8%','8%','8%','7%','7%','7%','8%','7%','7%','7%']} />
+        ) : (
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[12px]">
             <thead>
@@ -378,11 +382,7 @@ export default function EmployeeMaster() {
               </tr>
             </thead>
             <tbody>
-              {tableLoading ? (
-                <tr><td colSpan={19} className="text-center py-8 text-slate-400">
-                  <div className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-[#0097A7]" /> Loading...</div>
-                </td></tr>
-              ) : paged.length === 0 ? (
+              {paged.length === 0 ? (
                 <tr><td colSpan={19} className="text-center py-8 text-slate-400">No records found</td></tr>
               ) : paged.map((row, idx) => (
                 <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
@@ -429,6 +429,7 @@ export default function EmployeeMaster() {
             </tbody>
           </table>
         </div>
+        )}
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <span className="text-[12px] text-slate-500">

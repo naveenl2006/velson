@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
-import { ChevronRight, Plus, Trash2, Send, X } from 'lucide-react'
+import api from '../services/api'
+import { ChevronRight, Plus, Trash2, Send, X, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { SpinnerLoader } from '../components/LocalLoader'
 
 const SUPPLIERS = ['VENKATESWARA ASSOCIATES','APS ENTERPRISES','SM DRILLING COMPANY','ABHISHEK SONI']
 // Purchase Ledger, Purchase Type fetched from reference master
@@ -13,7 +14,6 @@ const TAX_RATE_MAP = { 'LOCAL': 18, 'INTER': 28 }
 // QC Types fetched from reference master
 
 const today = new Date().toISOString().split('T')[0]
-const genGRNNo = () => { const yr = new Date().getFullYear(); return `${(yr-1).toString().slice(-2)}-${yr.toString().slice(-2)}/GRN00001` }
 
 const emptyItem = () => ({ itemCode:'', itemName:'', supplierPartNo:'', description:'', hsnCode:'', unit:'', stockQty:'', orderQty:'', qty:'', unitPrice:'', total:'', discPer:'', discAmt:'', finalPrice:'', taxPer:'', netAmt:'' })
 
@@ -28,62 +28,137 @@ export default function GRNEntry() {
   const [purchaseTypes, setPurchaseTypes] = useState([])
   const [qcTypes, setQcTypes] = useState([])
   const [currencies, setCurrencies] = useState([])
+  const [submitting, setSubmitting] = useState(false)
+  const [refLoading, setRefLoading] = useState(true)
+  const [itemsLoading, setItemsLoading] = useState(false)
+  const [editId, setEditId] = useState(null)
 
   useEffect(() => {
-    axios.get(`/api/reference-master/${encodeURIComponent('GRN Type')}`)
-      .then(res => {
-        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
-        setGrnTypes(types)
-        if (types.length) setForm(f => ({ ...f, grnType: types[0] }))
-      })
-      .catch(() => {})
+    setRefLoading(true)
+    const fetches = [
+      api.get(`/api/reference-master/${encodeURIComponent('GRN Type')}`, { skipGlobalLoader: true })
+        .then(res => {
+          const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+          setGrnTypes(types)
+          if (types.length) setForm(f => ({ ...f, grnType: f.grnType || types[0] }))
+        }).catch(() => {}),
 
-    axios.get(`/api/reference-master/${encodeURIComponent('Tax Type')}`)
-      .then(res => {
-        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
-        setTaxTypes(types)
-        if (types.length) setForm(f => ({ ...f, taxType: f.taxType || types[0] }))
-      })
-      .catch(() => {})
+      api.get(`/api/reference-master/${encodeURIComponent('Tax Type')}`, { skipGlobalLoader: true })
+        .then(res => {
+          const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+          setTaxTypes(types)
+          if (types.length) setForm(f => ({ ...f, taxType: f.taxType || types[0] }))
+        }).catch(() => {}),
 
-    axios.get(`/api/reference-master/${encodeURIComponent('Purchase Ledger')}`)
-      .then(res => {
-        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
-        setPurchaseLedgers(types)
-        if (types.length) setForm(f => ({ ...f, purchaseLedger: f.purchaseLedger || types[0] }))
-      })
-      .catch(() => {})
+      api.get(`/api/reference-master/${encodeURIComponent('Purchase Ledger')}`, { skipGlobalLoader: true })
+        .then(res => {
+          const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+          setPurchaseLedgers(types)
+          if (types.length) setForm(f => ({ ...f, purchaseLedger: f.purchaseLedger || types[0] }))
+        }).catch(() => {}),
 
-    axios.get(`/api/reference-master/${encodeURIComponent('PAYMODE')}`)
-      .then(res => {
-        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
-        setPurchaseTypes(types)
-        if (types.length) setForm(f => ({ ...f, purchaseType: f.purchaseType || types[0] }))
-      })
-      .catch(() => {})
+      api.get(`/api/reference-master/${encodeURIComponent('PAYMODE')}`, { skipGlobalLoader: true })
+        .then(res => {
+          const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+          setPurchaseTypes(types)
+          if (types.length) setForm(f => ({ ...f, purchaseType: f.purchaseType || types[0] }))
+        }).catch(() => {}),
 
-    axios.get(`/api/reference-master/${encodeURIComponent('QC_Type')}`)
-      .then(res => {
-        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
-        setQcTypes(types)
-        if (types.length) setForm(f => ({ ...f, qcType: f.qcType || types[0] }))
-      })
-      .catch(() => {})
+      api.get(`/api/reference-master/${encodeURIComponent('QC_Type')}`, { skipGlobalLoader: true })
+        .then(res => {
+          const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+          setQcTypes(types)
+          if (types.length) setForm(f => ({ ...f, qcType: f.qcType || types[0] }))
+        }).catch(() => {}),
 
-    axios.get(`/api/reference-master/${encodeURIComponent('Currency')}`)
-      .then(res => {
-        const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
-        setCurrencies(types)
-        if (types.length) setForm(f => ({ ...f, currency: f.currency || types[0] }))
-      })
-      .catch(() => {})
+      api.get(`/api/reference-master/${encodeURIComponent('Currency')}`, { skipGlobalLoader: true })
+        .then(res => {
+          const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
+          setCurrencies(types)
+          if (types.length) setForm(f => ({ ...f, currency: f.currency || types[0] }))
+        }).catch(() => {}),
+    ]
+
+    const nav = window.__velsonNav || {}
+    window.__velsonNav = null
+    if (nav.editId) {
+      Promise.allSettled(fetches).finally(() => loadForEdit(nav.editId))
+    } else {
+      // Fetch next GRN number for new entry
+      api.get('/api/grn-master/next-no', { skipGlobalLoader: true })
+        .then(res => {
+          if (res.data.grnNo) {
+            setForm(f => ({ ...f, grnNo: res.data.grnNo, financialYear: res.data.financialYear || '' }))
+          }
+        })
+        .catch(() => {})
+      Promise.allSettled(fetches).finally(() => setRefLoading(false))
+    }
   }, [])
+
+  const loadForEdit = async (id) => {
+    try {
+      const res = await api.get(`/api/grn-master/${id}`, { skipGlobalLoader: true })
+      const grn = res.data.data
+      if (!grn) return
+      setEditId(grn.id)
+      setForm({
+        grnType:       grn.grnType       || '',
+        gateEntryNo:   grn.gateEntryNo   || '',
+        supplierName:  grn.supplierName  || '',
+        purchaseLedger:grn.purchaseLedger|| '',
+        purchaseType:  grn.purchaseType  || '',
+        currency:      grn.currency      || '',
+        currencyType:  grn.currencyType  || 'EXPORT',
+        contactPerson: grn.contactPerson || '',
+        contactNo:     grn.contactNo     || '',
+        poNo:          grn.poNo          || '',
+        poDate:        grn.poDate ? grn.poDate.split('T')[0] : today,
+        taxType:       grn.taxType       || '',
+        exchangeRate:  grn.exchangeRate != null ? String(grn.exchangeRate) : '',
+        grnNo:         grn.grnNo,
+        financialYear: grn.financialYear || '',
+        grnDate:       grn.grnDate ? grn.grnDate.split('T')[0] : today,
+        invoiceNo:     grn.invoiceNo     || '0',
+        invoiceDate:   grn.invoiceDate ? grn.invoiceDate.split('T')[0] : today,
+        qcType:        grn.qcType        || '',
+        discountType:  grn.discountType  || 'Dis_Per',
+      })
+      setRemarks(grn.remarks || '')
+      setCurrencyTotal(grn.currencyTotal != null ? String(grn.currencyTotal) : '')
+      setRoundOff(grn.roundOff != null ? String(grn.roundOff) : '')
+      setFreightLedger(grn.freightLedger || 'FREIGHT A/C')
+      setTcsLedger(grn.tcsLedger || 'TCS A/C')
+      setItems(grn.details?.length > 0 ? grn.details.map(d => ({
+        itemCode:       d.itemCode       || '',
+        itemName:       d.itemName       || '',
+        supplierPartNo: d.supplierPartNo || '',
+        description:    d.description   || '',
+        hsnCode:        d.hsnCode        || '',
+        unit:           d.unit           || '',
+        stockQty:       d.stockQty != null ? String(d.stockQty) : '',
+        orderQty:       d.orderQty != null ? String(d.orderQty) : '',
+        qty:            d.qty      != null ? String(d.qty)      : '',
+        unitPrice:      d.unitPrice!= null ? String(d.unitPrice): '',
+        total:          d.total    != null ? String(d.total)    : '',
+        discPer:        d.discPer  != null ? String(d.discPer)  : '',
+        discAmt:        d.discAmt  != null ? String(d.discAmt)  : '',
+        finalPrice:     d.finalPrice!=null ? String(d.finalPrice): '',
+        taxPer:         d.taxPer   != null ? String(d.taxPer)   : '',
+        netAmt:         d.netAmt   != null ? String(d.netAmt)   : '',
+      })) : [emptyItem()])
+    } catch {
+      toast.error('Failed to load GRN entry for editing')
+    } finally {
+      setRefLoading(false)
+    }
+  }
 
   const [form, setForm] = useState({
     grnType:'', gateEntryNo:'', supplierName:'', purchaseLedger:'',
     purchaseType:'', currency:'', currencyType:'EXPORT',
     contactPerson:'', contactNo:'', poNo:'', poDate:today, taxType:'', exchangeRate:'',
-    grnNo:genGRNNo(), grnDate:today, invoiceNo:'0', invoiceDate:today, qcType:'',
+    grnNo:'', financialYear:'', grnDate:today, invoiceNo:'0', invoiceDate:today, qcType:'',
     discountType:'Dis_Per',
   })
   const [items, setItems] = useState([emptyItem()])
@@ -102,7 +177,7 @@ export default function GRNEntry() {
     setShowGateModal(true)
     setGateSearch('')
     setGateLoading(true)
-    axios.get('/api/gate-master')
+    api.get('/api/gate-master', { skipGlobalLoader: true })
       .then(res => setGateEntries(res.data.data || []))
       .catch(() => setGateEntries([]))
       .finally(() => setGateLoading(false))
@@ -139,7 +214,8 @@ export default function GRNEntry() {
       qty: String(d.recQty || ''),
     }))
     if (entry.poId) {
-      axios.get(`/api/purchase-master/${entry.poId}`)
+      setItemsLoading(true)
+      api.get(`/api/purchase-master/${entry.poId}`, { skipGlobalLoader: true })
         .then(res => {
           const po = res.data.data
           if (!po) { if (gateItems.length) setItems(gateItems); return }
@@ -166,6 +242,7 @@ export default function GRNEntry() {
           }
         })
         .catch(() => { if (gateItems.length) setItems(gateItems) })
+        .finally(() => setItemsLoading(false))
     } else if (gateItems.length) {
       setItems(gateItems)
     }
@@ -189,7 +266,7 @@ export default function GRNEntry() {
     setShowPoModal(true)
     setPoSearch('')
     setPoLoading(true)
-    axios.get('/api/purchase-master')
+    api.get('/api/purchase-master', { skipGlobalLoader: true })
       .then(res => setPoList(res.data.data || []))
       .catch(() => setPoList([]))
       .finally(() => setPoLoading(false))
@@ -273,6 +350,79 @@ export default function GRNEntry() {
 
   const subTotal = items.reduce((s,r)=>s+(parseFloat(r.netAmt)||0),0)
 
+  const handleSubmit = async () => {
+    if (!form.grnNo) {
+      toast.error('GRN number is required')
+      return
+    }
+    if (!form.supplierName) {
+      toast.error('Supplier Name is required')
+      return
+    }
+    const validItems = items.filter(r => r.itemCode || r.itemName)
+    if (validItems.length === 0) {
+      toast.error('Add at least one item')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const payload = {
+        ...form,
+        remarks,
+        currencyTotal,
+        roundOff,
+        freightLedger,
+        tcsLedger,
+        subTotal: subTotal.toFixed(2),
+        totalAmount: (subTotal + parseFloat(roundOff || 0)).toFixed(2),
+        items: validItems,
+      }
+      if (editId) {
+        await api.put(`/api/grn-master/${editId}`, payload, { loadingMessage: 'Updating GRN entry...' })
+        toast.success('GRN Entry updated successfully!')
+        setEditId(null)
+      } else {
+        await api.post('/api/grn-master', payload, { loadingMessage: 'Saving GRN entry...' })
+        toast.success('GRN Entry saved successfully!')
+      }
+
+      // Fetch new GRN number for next entry
+      const nextRes = await api.get('/api/grn-master/next-no', { skipGlobalLoader: true })
+      setForm(f => ({
+        grnType: f.grnType,
+        gateEntryNo: '',
+        supplierName: '',
+        purchaseLedger: f.purchaseLedger,
+        purchaseType: f.purchaseType,
+        currency: f.currency,
+        currencyType: 'EXPORT',
+        contactPerson: '',
+        contactNo: '',
+        poNo: '',
+        poDate: today,
+        taxType: f.taxType,
+        exchangeRate: '',
+        grnNo: nextRes.data.grnNo || f.grnNo,
+        financialYear: nextRes.data.financialYear || f.financialYear,
+        grnDate: today,
+        invoiceNo: '0',
+        invoiceDate: today,
+        qcType: f.qcType,
+        discountType: 'Dis_Per',
+      }))
+      setItems([emptyItem()])
+      setRemarks('')
+      setCurrencyTotal('')
+      setRoundOff('')
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to save GRN entry'
+      toast.error(msg)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="p-4 space-y-4 w-full min-w-0 overflow-x-hidden">
       <div className="flex items-center gap-2 text-[12px] text-slate-400">
@@ -285,9 +435,15 @@ export default function GRNEntry() {
 
       <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
         <div className="bg-[--color-main] px-4 py-2.5 flex items-center justify-between">
-          <h2 className="text-white font-semibold text-[14px]">Create - GRN Entry</h2>
+          <h2 className="text-white font-semibold text-[14px]">{editId ? 'Edit' : 'Create'} - GRN Entry</h2>
           <button className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-[12px] rounded transition-colors">Close</button>
         </div>
+
+        {refLoading && (
+          <div className="bg-slate-50 border-b border-slate-200">
+            <SpinnerLoader size={16} message="Loading reference data..." className="py-3" />
+          </div>
+        )}
 
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-3 gap-4">
@@ -300,7 +456,9 @@ export default function GRNEntry() {
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Gate Entry No :</label>
                 <input value={form.gateEntryNo} readOnly className={`${inp()} flex-1 bg-slate-50`}/>
-                <button onClick={openGateSearch} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[12px] rounded transition-colors shrink-0">Search</button>
+                <button onClick={openGateSearch} disabled={gateLoading} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[12px] rounded transition-colors shrink-0 flex items-center gap-1 disabled:opacity-60">
+                  {gateLoading ? <Loader2 className="w-3 h-3 animate-spin"/> : null}Search
+                </button>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Supplier Name:</label>
@@ -342,7 +500,9 @@ export default function GRNEntry() {
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[130px] shrink-0`}>PO No :</label>
                 <input value={form.poNo} readOnly className={`${inp()} flex-1 bg-slate-50`}/>
-                <button onClick={openPoSearch} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[12px] rounded transition-colors shrink-0">Search</button>
+                <button onClick={openPoSearch} disabled={poLoading} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-[12px] rounded transition-colors shrink-0 flex items-center gap-1 disabled:opacity-60">
+                  {poLoading ? <Loader2 className="w-3 h-3 animate-spin"/> : null}Search
+                </button>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[130px] shrink-0`}>PO Date :</label>
@@ -405,8 +565,24 @@ export default function GRNEntry() {
 
           {/* Items */}
           <div className="mt-2">
-            <div className="bg-slate-700 px-3 py-1.5 rounded-t"><h3 className="text-white text-[13px] font-semibold">Items</h3></div>
-            <div className="overflow-x-auto border border-slate-200 rounded-b">
+            <div className="bg-slate-700 px-3 py-1.5 rounded-t flex items-center justify-between">
+              <h3 className="text-white text-[13px] font-semibold">Items</h3>
+              {itemsLoading && (
+                <span className="flex items-center gap-1.5 text-white/80 text-[11px]">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Loading items from PO...
+                </span>
+              )}
+            </div>
+            <div className="overflow-x-auto border border-slate-200 rounded-b relative">
+              {itemsLoading && (
+                <div className="absolute inset-0 z-10 bg-white/70 flex items-center justify-center">
+                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded shadow px-4 py-2 text-[12.5px] text-slate-600">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#0097A7]"/>
+                    Fetching item details from Purchase Order...
+                  </div>
+                </div>
+              )}
               <table className="min-w-full text-[12.5px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
@@ -441,6 +617,18 @@ export default function GRNEntry() {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-300 bg-slate-100">
+                    <td colSpan={17} className="px-3 py-1.5 text-right text-[12px] font-bold text-slate-700 uppercase tracking-wide">Net Total :</td>
+                    <td className="px-1 py-1">
+                      <input
+                        value={items.reduce((s,r)=>s+(parseFloat(r.netAmt)||0),0).toFixed(2)}
+                        readOnly
+                        className={`${inp()} bg-slate-200 w-18 font-bold text-slate-800`}
+                      />
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
@@ -471,7 +659,14 @@ export default function GRNEntry() {
                 <select value={tcsLedger} onChange={e=>setTcsLedger(e.target.value)} className={inp()}><option>TCS A/C</option></select>
               </div>
               <div className="flex gap-2 pt-1">
-                <button onClick={()=>toast.success('GRN Entry submitted!')} className="flex items-center gap-1 px-5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-semibold rounded transition-colors shadow-sm"><Send className="w-3.5 h-3.5"/> Submit</button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="flex items-center gap-1 px-5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Send className="w-3.5 h-3.5"/>}
+                  {submitting ? 'Submitting...' : 'Submit'}
+                </button>
                 <button className="flex items-center gap-1 px-5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[12px] font-semibold rounded transition-colors shadow-sm"><X className="w-3.5 h-3.5"/> Cancel</button>
               </div>
             </div>
@@ -505,7 +700,7 @@ export default function GRNEntry() {
             </div>
             <div className="overflow-auto flex-1">
               {poLoading ? (
-                <div className="p-6 text-center text-slate-400 text-[13px]">Loading...</div>
+                <SpinnerLoader message="Loading purchase orders..." />
               ) : filteredPoList.length === 0 ? (
                 <div className="p-6 text-center text-slate-400 text-[13px]">No purchase orders found.</div>
               ) : (
@@ -561,7 +756,7 @@ export default function GRNEntry() {
             </div>
             <div className="overflow-auto flex-1">
               {gateLoading ? (
-                <div className="p-6 text-center text-slate-400 text-[13px]">Loading...</div>
+                <SpinnerLoader message="Loading gate entries..." />
               ) : filteredGateEntries.length === 0 ? (
                 <div className="p-6 text-center text-slate-400 text-[13px]">No gate entries found.</div>
               ) : (

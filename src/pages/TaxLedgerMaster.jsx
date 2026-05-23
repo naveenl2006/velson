@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { X, Save, Edit, Trash2, Info, ChevronRight, ArrowLeft, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { TableSkeleton } from '../components/LocalLoader'
 
 const PAGE_SIZES = [8, 25, 50, 100]
 
@@ -52,7 +53,7 @@ export default function TaxLedgerMaster({ onNavigate }) {
   const fetchAll = async () => {
     setTableLoading(true)
     try {
-      const res = await axios.get('/api/tax-ledger')
+      const res = await api.get('/api/tax-ledger')
       if (res.data.success) setRows(res.data.data)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load tax ledgers')
@@ -74,10 +75,10 @@ export default function TaxLedgerMaster({ onNavigate }) {
     setLoading(true)
     try {
       if (editId !== null) {
-        await axios.put(`/api/tax-ledger/${editId}`, payload)
+        await api.put(`/api/tax-ledger/${editId}`, payload)
         toast.success('Updated successfully')
       } else {
-        await axios.post('/api/tax-ledger', payload)
+        await api.post('/api/tax-ledger', payload)
         toast.success('Created successfully')
       }
       setForm(emptyForm)
@@ -101,7 +102,7 @@ export default function TaxLedgerMaster({ onNavigate }) {
     if (!window.confirm('Delete this record?')) return
     setDeleteId(id)
     try {
-      await axios.delete(`/api/tax-ledger/${id}`)
+      await api.delete(`/api/tax-ledger/${id}`)
       toast.success('Deleted successfully')
       await fetchAll()
     } catch (err) {
@@ -213,6 +214,9 @@ export default function TaxLedgerMaster({ onNavigate }) {
           </div>
         </div>
 
+        {tableLoading ? (
+          <TableSkeleton rows={5} cols={['40%', '20%', '13%', '13%', '14%']} />
+        ) : (
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[13px]">
             <thead>
@@ -223,11 +227,7 @@ export default function TaxLedgerMaster({ onNavigate }) {
               </tr>
             </thead>
             <tbody>
-              {tableLoading ? (
-                <tr><td colSpan={5} className="text-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0097A7]" />
-                </td></tr>
-              ) : paged.length === 0 ? (
+              {paged.length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-8 text-slate-400 text-[13px]">No records found</td></tr>
               ) : paged.map((row, idx) => (
                 <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
@@ -257,6 +257,7 @@ export default function TaxLedgerMaster({ onNavigate }) {
             </tbody>
           </table>
         </div>
+        )}
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <span className="text-[12px] text-slate-500">

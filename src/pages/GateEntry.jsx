@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Search, Send, X, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { useLoading } from '../context/LoadingContext'
+import { SpinnerLoader } from '../components/LocalLoader'
 
 const BASE = 'http://localhost:3000'
 const today = new Date().toISOString().split('T')[0]
@@ -19,6 +21,7 @@ const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 export default function GateEntry() {
   const toast = useToast()
+  const { show: showLoader, hide: hideLoader } = useLoading()
 
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
@@ -218,6 +221,7 @@ export default function GateEntry() {
   const handleSubmit = async () => {
     if (!validate()) return
     setSubmitting(true)
+    showLoader(editId ? 'Updating gate entry...' : 'Saving gate entry...')
     try {
       const url = editId ? `${BASE}/api/gate-master/${editId}` : `${BASE}/api/gate-master`
       const method = editId ? 'PUT' : 'POST'
@@ -241,7 +245,7 @@ export default function GateEntry() {
         toast.error(json.message || 'Operation failed')
       }
     } catch { toast.error('Server error. Please try again.') }
-    finally { setSubmitting(false) }
+    finally { setSubmitting(false); hideLoader() }
   }
 
   return (
@@ -347,9 +351,8 @@ export default function GateEntry() {
             <div className="bg-slate-700 px-3 py-1.5 rounded-t"><h3 className="text-white text-[13px] font-semibold">Items</h3></div>
             <div className="overflow-x-auto border border-slate-200 rounded-b relative">
               {loadingPOItems && (
-                <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 gap-2">
-                  <Loader2 className="w-4 h-4 text-[#0097A7] animate-spin"/>
-                  <span className="text-[12px] text-slate-600">Loading PO items...</span>
+                <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+                  <SpinnerLoader message="Loading PO items..." />
                 </div>
               )}
               <table className="min-w-full text-[12.5px]">
@@ -402,8 +405,8 @@ export default function GateEntry() {
               disabled={submitting || Object.keys(recQtyErrors).length > 0}
               className="flex items-center gap-1 px-5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] disabled:opacity-60 text-white text-[12px] font-semibold rounded transition-colors shadow-sm"
             >
-              {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Send className="w-3.5 h-3.5"/>}
-              {submitting ? 'Saving...' : editId ? 'Update' : 'Submit'}
+              <Send className="w-3.5 h-3.5"/>
+              {editId ? 'Update' : 'Submit'}
             </button>
             <button onClick={resetForm} disabled={submitting} className="flex items-center gap-1 px-5 py-1.5 bg-slate-500 hover:bg-slate-600 disabled:opacity-60 text-white text-[12px] font-semibold rounded transition-colors shadow-sm">
               <X className="w-3.5 h-3.5"/> Cancel
