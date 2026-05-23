@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Loader2 } from 'lucide-react'
+import { TableSkeleton, SpinnerLoader } from '../components/LocalLoader'
 
 const BOM_MODELS = ['BOM-V10-001', 'BOM-V10-002', 'BOM-V20-001', 'BOM-CON-001', 'BOM-VT-001']
 const PAGE_SIZES = [5, 10, 25, 50]
@@ -154,9 +155,9 @@ export default function VehicleMaster() {
     setLoadingRefData(true)
     try {
       const [modelRes, subTypeRes, vehicleRes] = await Promise.all([
-        axios.get('/api/reference-master/Vehicle_Type'),
-        axios.get('/api/reference-master/Vehicle_Sub_Type'),
-        axios.get('/api/reference-master/Booking_Vehicle_Name'),
+        api.get('/api/reference-master/Vehicle_Type'),
+        api.get('/api/reference-master/Vehicle_Sub_Type'),
+        api.get('/api/reference-master/Booking_Vehicle_Name'),
       ])
       setModelNameOptions((modelRes.data?.data || []).map(r => r.description).filter(Boolean))
       setModelSubTypeOptions((subTypeRes.data?.data || []).map(r => r.description).filter(Boolean))
@@ -174,7 +175,7 @@ export default function VehicleMaster() {
   const fetchCustomers = useCallback(async () => {
     setLoadingCustomers(true)
     try {
-      const res = await axios.get('/api/customer-master')
+      const res = await api.get('/api/customer-master')
       setCustomers(res.data?.data || [])
     } catch (err) {
       console.error('[VehicleMaster] fetchCustomers error:', err)
@@ -190,7 +191,7 @@ export default function VehicleMaster() {
     setLoadingList(true)
     setApiError('')
     try {
-      const res = await axios.get('/api/vehicle-master')
+      const res = await api.get('/api/vehicle-master')
       setRows(res.data?.data || [])
     } catch (err) {
       console.error('[VehicleMaster] fetchVehicles error:', err)
@@ -252,11 +253,11 @@ export default function VehicleMaster() {
         vehicleCount: form.vehicleCount ? Number(form.vehicleCount) : 1,
       }
       if (editId !== null) {
-        const res = await axios.put(`/api/vehicle-master/${editId}`, payload)
+        const res = await api.put(`/api/vehicle-master/${editId}`, payload)
         setRows(r => r.map(x => x.id === editId ? res.data.data : x))
         setEditId(null)
       } else {
-        const res = await axios.post('/api/vehicle-master', payload)
+        const res = await api.post('/api/vehicle-master', payload)
         setRows(r => [...r, res.data.data])
         setPage(1)
       }
@@ -277,7 +278,7 @@ export default function VehicleMaster() {
     setLoadingDelete(true)
     setApiError('')
     try {
-      await axios.delete(`/api/vehicle-master/${deleteTarget.id}`)
+      await api.delete(`/api/vehicle-master/${deleteTarget.id}`)
       setRows(r => r.filter(x => x.id !== deleteTarget.id))
       setDeleteTarget(null)
     } catch (err) {
@@ -372,9 +373,7 @@ export default function VehicleMaster() {
                 <label className={`${lbl} w-32 shrink-0`}><span className="text-red-500">*</span> Customer Name :</label>
                 <div className="flex-1">
                   {loadingCustomers ? (
-                    <div className="flex items-center gap-1.5 h-7 text-[12px] text-slate-400">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin"/> Loading customers...
-                    </div>
+                    <SpinnerLoader size={14} message="Loading customers..." className="h-7 py-0 justify-start" />
                   ) : (
                     <select value={form.customerId} onChange={e => handleCustomerChange(e.target.value)} className={inp(errors.customerId)}>
                       <option value="">---Select Customer Name---</option>
@@ -408,9 +407,7 @@ export default function VehicleMaster() {
                 <label className={`${lbl} w-36 shrink-0`}><span className="text-red-500">*</span> Vehicle Model Name :</label>
                 <div className="flex-1">
                   {loadingRefData ? (
-                    <div className="flex items-center gap-1.5 h-7 text-[12px] text-slate-400">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin"/> Loading...
-                    </div>
+                    <SpinnerLoader size={14} message="Loading..." className="h-7 py-0 justify-start" />
                   ) : (
                     <select value={form.modelName} onChange={e => handleModelNameChange(e.target.value)} className={inp(errors.modelName)}>
                       <option value="">---Select Model Name---</option>
@@ -423,9 +420,7 @@ export default function VehicleMaster() {
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-36 shrink-0`}>Model Sub Type :</label>
                 {loadingRefData ? (
-                  <div className="flex items-center gap-1.5 h-7 text-[12px] text-slate-400">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin"/> Loading...
-                  </div>
+                  <SpinnerLoader size={14} message="Loading..." className="h-7 py-0 justify-start" />
                 ) : (
                   <select value={form.modelSubType} onChange={e => setField('modelSubType', e.target.value)} className={inp(false)}>
                     <option value="">---Select Model Sub Type---</option>
@@ -437,9 +432,7 @@ export default function VehicleMaster() {
                 <label className={`${lbl} w-36 shrink-0`}><span className="text-red-500">*</span> Vehicle Name :</label>
                 <div className="flex-1">
                   {loadingRefData ? (
-                    <div className="flex items-center gap-1.5 h-7 text-[12px] text-slate-400">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin"/> Loading...
-                    </div>
+                    <SpinnerLoader size={14} message="Loading..." className="h-7 py-0 justify-start" />
                   ) : (
                     <select value={form.vehicleName} onChange={e => setField('vehicleName', e.target.value)} className={inp(errors.vehicleName)}>
                       <option value="">---Select Vehicle Name---</option>
@@ -527,12 +520,11 @@ export default function VehicleMaster() {
           </div>
         </div>
 
+        {loadingList ? (
+          <TableSkeleton rows={5} cols={['6%','10%','16%','9%','12%','12%','12%','13%','7%','7%']} />
+        ) : (
         <div className="overflow-x-auto w-full">
-          {loadingList ? (
-            <div className="flex items-center justify-center py-12 gap-2 text-slate-400 text-[13px]">
-              <Loader2 className="w-5 h-5 animate-spin"/> Loading vehicle records...
-            </div>
-          ) : (
+          {(
             <table className="min-w-full text-[13px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
@@ -583,6 +575,7 @@ export default function VehicleMaster() {
             </table>
           )}
         </div>
+        )}
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <span className="text-[12px] text-slate-500">

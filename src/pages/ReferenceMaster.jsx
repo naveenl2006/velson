@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { ChevronRight, ChevronDown, Search, Save, Edit2, Trash2, X, FileSpreadsheet, ChevronUp, Plus, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { SpinnerLoader } from '../components/LocalLoader'
 
 export default function ReferenceMaster() {
   const toast = useToast()
@@ -32,7 +33,7 @@ export default function ReferenceMaster() {
   const fetchRefTypes = useCallback(async () => {
     setTypesLoading(true)
     try {
-      const res = await axios.get('/api/reference-types')
+      const res = await api.get('/api/reference-types')
       setRefTypes(res.data.data || [])
     } catch (err) {
       console.error('[ReferenceMaster] fetchRefTypes error:', err)
@@ -51,7 +52,7 @@ export default function ReferenceMaster() {
     if (!type) { setTableData([]); setCode(''); return }
     setLoading(true)
     try {
-      const res = await axios.get(`/api/reference-master/${encodeURIComponent(type)}`)
+      const res = await api.get(`/api/reference-master/${encodeURIComponent(type)}`)
       setTableData(res.data.data || [])
       setCode(res.data.nextCode || '')
       setDescription('')
@@ -71,7 +72,7 @@ export default function ReferenceMaster() {
       if (!refType) { setTableData([]); setCode(''); return }
       setLoading(true)
       try {
-        const res = await axios.get(`/api/reference-master/${encodeURIComponent(refType)}`)
+        const res = await api.get(`/api/reference-master/${encodeURIComponent(refType)}`)
         if (!active) return
         setTableData(res.data.data || [])
         setCode(res.data.nextCode || '')
@@ -113,7 +114,7 @@ export default function ReferenceMaster() {
 
     setAddTypeLoading(true)
     try {
-      await axios.post('/api/reference-types', { name: trimmed })
+      await api.post('/api/reference-types', { name: trimmed })
       await fetchRefTypes()
       handleRefTypeChange(trimmed)
       setNewTypeName('')
@@ -136,7 +137,7 @@ export default function ReferenceMaster() {
     setLoading(true)
     try {
       if (editId) {
-        await axios.put(`/api/reference-master/${editId}`, {
+        await api.put(`/api/reference-master/${editId}`, {
           referenceType: refType,
           code: code.trim(),
           description: description.trim(),
@@ -149,7 +150,7 @@ export default function ReferenceMaster() {
           setLoading(false)
           return
         }
-        await axios.post('/api/reference-master', {
+        await api.post('/api/reference-master', {
           referenceType: refType,
           code: code.trim(),
           description: description.trim(),
@@ -178,7 +179,7 @@ export default function ReferenceMaster() {
     setConfirmDelete(false)
     setLoading(true)
     try {
-      await axios.delete(`/api/reference-master/${editId}`)
+      await api.delete(`/api/reference-master/${editId}`)
       toast.success('Record deleted.')
       await fetchReferenceData(refType)
     } catch (err) {
@@ -410,14 +411,8 @@ export default function ReferenceMaster() {
                     <tbody className="divide-y divide-slate-100 bg-white">
                       {loading ? (
                         <tr>
-                          <td colSpan={4} className="px-4 py-8 text-center">
-                            <div className="flex items-center justify-center gap-2 text-[12px] text-slate-400">
-                              <svg className="animate-spin h-4 w-4 text-[#0097A7]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                              Loading...
-                            </div>
+                          <td colSpan={4} className="px-0 py-0 border-none">
+                            <SpinnerLoader message="Loading..." />
                           </td>
                         </tr>
                       ) : displayed.length === 0 ? (

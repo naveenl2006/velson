@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { SpinnerLoader } from '../components/LocalLoader'
 
 // ── API helper ─────────────────────────────────────────────────────
 const api = {
@@ -603,7 +604,7 @@ function IndexView({ onCreate, onEdit, onView, dropdowns }) {
           <div className="overflow-x-auto relative">
             {(loading || filterLoading) && (
               <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
-                <Loader2 className="w-6 h-6 text-[#0097A7] animate-spin" />
+                <SpinnerLoader size={24} />
               </div>
             )}
             <table className="w-full border-collapse min-w-[1000px]">

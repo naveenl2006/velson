@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, Plus, Trash2, X, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { useLoading } from '../context/LoadingContext'
 
 const today = new Date().toISOString().split('T')[0]
 const BASE = 'http://localhost:3000'
@@ -24,6 +25,7 @@ const FieldLoader = ({ loading, children, className = '' }) => (
 
 export default function PurchaseRequestEntry() {
   const toast = useToast()
+  const { show: showLoader, hide: hideLoader } = useLoading()
   const [form, setForm] = useState({
     department: '', departmentId: null, requestingUser: 'admin',
     team: '', teamId: null, requestingFor: '', requestingForId: null,
@@ -167,6 +169,7 @@ export default function PurchaseRequestEntry() {
       return
     }
     setSubmitting(true)
+    showLoader(editId ? 'Updating purchase request...' : 'Submitting purchase request...')
     try {
       const mappedItems = items
         .filter(r => r.code)
@@ -251,6 +254,7 @@ export default function PurchaseRequestEntry() {
       toast?.error ? toast.error('Network error — please try again') : alert('Network error')
     } finally {
       setSubmitting(false)
+      hideLoader()
     }
   }
 
@@ -416,9 +420,8 @@ export default function PurchaseRequestEntry() {
             <label className={`${lbl} pt-1`}>Remarks:</label>
             <textarea rows="2" value={form.remarks} onChange={e => setField('remarks', e.target.value)} className={`${inp()} resize-none`} />
           </div>
-          <button onClick={handleSubmit} disabled={loading || submitting} className="px-6 py-2 bg-[#0097A7] hover:bg-[#007a87] disabled:opacity-60 disabled:cursor-not-allowed text-white text-[13px] font-bold rounded shadow-sm transition-colors mt-2 flex items-center gap-2">
-            {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {submitting ? (editId ? 'Updating…' : 'Submitting…') : (editId ? 'Update Request' : 'Submit For Approval')}
+          <button onClick={handleSubmit} disabled={loading || submitting} className="px-6 py-2 bg-[#0097A7] hover:bg-[#007a87] disabled:opacity-60 disabled:cursor-not-allowed text-white text-[13px] font-bold rounded shadow-sm transition-colors mt-2">
+            {editId ? 'Update Request' : 'Submit For Approval'}
           </button>
         </div>
       </div>

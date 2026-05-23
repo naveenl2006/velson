@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { Plus, X, Save, Edit, Trash2, Info, ChevronRight, Loader2, ArrowLeft } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { TableSkeleton } from '../components/LocalLoader'
 
 const PAGE_SIZES = [10, 25, 50, 100]
 
@@ -62,7 +63,7 @@ function CategoryCreateModal({ onClose, onCreated }) {
     if (!validate()) return
     setSaving(true)
     try {
-      const res = await axios.post('/api/categories', {
+      const res = await api.post('/api/categories', {
         categoryName: form.categoryName.trim(),
       })
       toast.success(`Category "${res.data.data.categoryName}" created.`)
@@ -134,7 +135,7 @@ function SubCategoryCreateModal({ categories, defaultCategoryId, onClose, onCrea
     if (!validate()) return
     setSaving(true)
     try {
-      const res = await axios.post('/api/subcategories', {
+      const res = await api.post('/api/subcategories', {
         categoryId:      Number(form.categoryId),
         subCategoryName: form.subCategoryName.trim(),
         prefixCode:      form.prefixCode.trim(),
@@ -268,7 +269,7 @@ export default function PartNumberBaseMaster() {
   const fetchCategories = useCallback(async () => {
     setCatLoading(true)
     try {
-      const res = await axios.get('/api/categories')
+      const res = await api.get('/api/categories')
       setCategories(res.data.data || [])
     } catch (err) {
       console.error('[PartNumberBase] fetchCategories error:', err)
@@ -282,7 +283,7 @@ export default function PartNumberBaseMaster() {
     if (!categoryId) { setSubCategories([]); return }
     setSubCatLoading(true)
     try {
-      const res = await axios.get(`/api/subcategories/category/${categoryId}`)
+      const res = await api.get(`/api/subcategories/category/${categoryId}`)
       setSubCategories(res.data.data || [])
     } catch (err) {
       console.error('[PartNumberBase] fetchSubCategories error:', err)
@@ -296,7 +297,7 @@ export default function PartNumberBaseMaster() {
   const fetchAll = useCallback(async () => {
     setTableLoading(true)
     try {
-      const res = await axios.get('/api/part-number-base')
+      const res = await api.get('/api/part-number-base')
       setRows(res.data.data || [])
     } catch (err) {
       console.error('[PartNumberBase] fetchAll error:', err)
@@ -374,10 +375,10 @@ export default function PartNumberBaseMaster() {
         endingNumber:   Number(form.endingNumber),
       }
       if (editId !== null) {
-        await axios.put(`/api/part-number-base/${editId}`, payload)
+        await api.put(`/api/part-number-base/${editId}`, payload)
         toast.success('Record updated successfully.')
       } else {
-        await axios.post('/api/part-number-base', payload)
+        await api.post('/api/part-number-base', payload)
         toast.success('Record created successfully.')
       }
       resetForm()
@@ -420,7 +421,7 @@ export default function PartNumberBaseMaster() {
     if (!confirmDelete) return
     setDeleting(true)
     try {
-      await axios.delete(`/api/part-number-base/${confirmDelete}`)
+      await api.delete(`/api/part-number-base/${confirmDelete}`)
       toast.success('Record deleted.')
       setConfirmDelete(null)
       if (editId === confirmDelete) resetForm()
@@ -672,6 +673,9 @@ export default function PartNumberBaseMaster() {
         </div>
 
         {/* Table */}
+        {tableLoading ? (
+          <TableSkeleton rows={5} cols={['14%','14%','12%','9%','12%','12%','9%','9%','9%']} />
+        ) : (
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[13px]">
             <thead>
@@ -688,15 +692,7 @@ export default function PartNumberBaseMaster() {
               </tr>
             </thead>
             <tbody>
-              {tableLoading ? (
-                <tr>
-                  <td colSpan={10} className="text-center py-8 text-slate-400 text-[13px]">
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#0097A7]" /> Loading…
-                    </div>
-                  </td>
-                </tr>
-              ) : paged.length === 0 ? (
+              {paged.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="text-center py-8 text-slate-400 text-[13px]">
                     No records found
@@ -749,6 +745,7 @@ export default function PartNumberBaseMaster() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">

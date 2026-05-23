@@ -272,7 +272,7 @@ export default function Layout({ currentPage, onNavigate, children }) {
       {/* ── Sidebar ─────────────────────────────── */}
       <aside className="w-[210px] flex-shrink-0 bg-[#2c3e50] flex flex-col overflow-y-auto scrollbar-thin">
         {/* Brand */}
-        <div className="px-4 py-3 bg-[#1a252f] border-b border-white/10 flex-shrink-0">
+        <div className="px-4 py-[8.9px] bg-[#1a252f] border-b border-white/10 flex-shrink-0">
           <p className="text-white font-extrabold text-[13px] tracking-wide leading-tight">VELSON</p>
           <p className="text-white/40 text-[9px] font-medium tracking-widest uppercase">ERP WEB APPLICATION</p>
         </div>

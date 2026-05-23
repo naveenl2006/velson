@@ -3,6 +3,8 @@ PurchaseOrderEntry.jsx
 import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, Plus, Trash2, Send, X } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { useLoading } from '../context/LoadingContext'
+import { SpinnerLoader } from '../components/LocalLoader'
 
 const PO_TYPES = ['Purchase Order','Purchase Return','Job Work']
 
@@ -44,6 +46,7 @@ const ComboInput = ({ id, value, onChange, className, placeholder, suggestions =
 
 export default function PurchaseOrderEntry() {
   const toast = useToast()
+  const { show: showLoader, hide: hideLoader } = useLoading()
   const [form, setForm] = useState({
     supplierId: null,
     supplierName: '', supplierAddress: '', contactPerson: '', contactNumber: '',
@@ -350,6 +353,7 @@ export default function PurchaseOrderEntry() {
   const handleSubmit = async () => {
     if (!form.supplierName) { toast.warning('Please select a supplier'); return }
     setSubmitting(true)
+    showLoader(editPoId ? 'Updating purchase order...' : 'Saving purchase order...')
     try {
       const payload = {
         poNo: form.poNumber,
@@ -394,6 +398,7 @@ export default function PurchaseOrderEntry() {
       toast.error('Submit failed: ' + err.message)
     } finally {
       setSubmitting(false)
+      hideLoader()
     }
   }
 
@@ -425,9 +430,8 @@ export default function PurchaseOrderEntry() {
       <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden relative">
         {/* Loading overlay while dropdowns fetch */}
         {loadingDropdowns && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center gap-3">
-            <span className="w-9 h-9 border-[3px] border-slate-200 border-t-[#0097A7] rounded-full animate-spin" />
-            <span className="text-[12.5px] text-slate-500 font-medium">Loading…</span>
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-20 flex items-center justify-center">
+            <SpinnerLoader size={36} message="Loading…" />
           </div>
         )}
         <div className="bg-[--color-main] px-4 py-2.5 flex items-center justify-between">
@@ -646,9 +650,7 @@ export default function PurchaseOrderEntry() {
                   disabled={submitting}
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-semibold rounded transition-colors shadow-sm disabled:opacity-70"
                 >
-                  {submitting
-                    ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> {editPoId ? 'Updating…' : 'Submitting…'}</>
-                    : <><Send className="w-3.5 h-3.5"/> {editPoId ? 'Update' : 'Submit'}</>}
+                  <Send className="w-3.5 h-3.5"/> {editPoId ? 'Update' : 'Submit'}
                 </button>
                 <button
                   onClick={handleCancel}
