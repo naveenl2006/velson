@@ -1,11 +1,12 @@
-
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useLoading } from './context/LoadingContext'
 import Layout from './components/Layout'
+import { PAGE_TO_PATH } from './config/nav'
+
+import { TaxLedgerMaster, DashboardPage } from './pages/OtherPages'
 import ItemMaster from './pages/ItemMaster'
 import PartNumberBaseMaster from './pages/PartNumberBaseMaster'
-// import DropDownNameMaster from './pages/DropDownNameMaster'
-// import DropDownListMaster from './pages/DropDownListMaster'
 import TaxMaster from './pages/TaxMaster'
 import ItemGroupMaster from './pages/ItemGroupMaster'
 import SupplierMaster from './pages/SupplierMaster'
@@ -24,8 +25,6 @@ import GateEntry from './pages/GateEntry'
 import GateEntryReport from './pages/GateEntryReport'
 import GRNEntry from './pages/GRNEntry'
 import GRNEntryReport from './pages/GRNEntryReport'
-import { TaxLedgerMaster, DashboardPage } from './pages/OtherPages'
-// ── New Master Pages ──
 import CompanyMaster from './pages/CompanyMaster'
 import EmployeeMaster from './pages/EmployeeMaster'
 import LedgerGroupMaster from './pages/LedgerGroupMaster'
@@ -52,8 +51,8 @@ import OutstandingReceiptReport from './pages/OutstandingReceiptReport'
 import PaymentEntry from './pages/PaymentEntry'
 import PaymentDetails from './pages/PaymentDetails'
 import JournalEntry from './pages/JournalEntry'
-import BOMUpload from './pages/BOMUpload'
-import CustomerwiseBOMReport from './pages/CustomerwiseBOMReport'
+import BOMCreation from './pages/BOMCreation'
+import BOMCreationReport from './pages/BOMCreationReport'
 import IndexCreation from './pages/IndexCreation'
 import IndexCreationReport from './pages/IndexCreationReport'
 import UploadBOM from './pages/UploadBOM'
@@ -97,7 +96,12 @@ import CreditSales from './pages/CreditSales'
 import SalesDetails from './pages/SalesDetails'
 import QuotationSales from './pages/QuotationSales'
 import DCSales from './pages/DCSales'
-
+import DCDetails from './pages/DCDetails'
+import DCDetailsReport from './pages/DCDetailsReport'
+import ServiceBillEntry from './pages/ServiceBillEntry'
+import ServiceBillDetails from './pages/ServiceBillDetails'
+import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
+import TempServiceBillDetails from './pages/TempServiceBillDetails'
 import DrawingUpload from './pages/DrawingUpload'
 import JobCardEntry from './pages/JobCardEntry'
 import ProcessMenu from './pages/ProcessMenu'
@@ -117,171 +121,185 @@ import LoginPage from './pages/LoginPage'
 import JobQtyMismatch from './pages/JobQtyMismatch'
 import ProcessCardClose from './pages/ProcessCardClose'
 import JobQCEntry from './pages/JobQCEntry'
-import DCDetails from './pages/DCDetails'
-import DCDetailsReport from './pages/DCDetailsReport'
 
-import ServiceBillEntry from './pages/ServiceBillEntry'
-import ServiceBillDetails from './pages/ServiceBillDetails'
-import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
-import TempServiceBillDetails from './pages/TempServiceBillDetails'
-
-const PAGES = {
-  Dashboard:      <DashboardPage />,
-  PartNumberBase: <PartNumberBaseMaster />,
-  // DropDownName:   <DropDownNameMaster />,
-  // DropDownList:   <DropDownListMaster />,
-  TaxLedger:      <TaxLedgerMaster />,
-  TaxMaster:      <TaxMaster />,
-  ItemGroup:      <ItemGroupMaster />,
-  ItemMaster:     <ItemMaster />,
-  SupplierMaster: <SupplierMaster />,
-  CustomerMaster:    <CustomerMaster />,
-  VehicleMaster:     <VehicleMaster />,
-  QuotationEntry:    <QuotationEntry />,
-  QuotationDetails:     <QuotationDetails />,
-  PurchaseOrderEntry:   <PurchaseOrderEntry />,
-  PurchaseOrderDetails: <PurchaseOrderDetails />,
-  PrintPurchaseOrder:   <PrintPurchaseOrder />,
-  PurchaseRequestEntry: <PurchaseRequestEntry />,
-  PrintPurchaseRequest: <PrintPurchaseRequest />,
-  MaterialRequestEntry: <MaterialRequestEntry />,
-  PrintMaterialRequest:  <PrintMaterialRequest />,
-  GateEntry:             <GateEntry />,
-  GateEntryReport:       <GateEntryReport />,
-  GRNEntry:              <GRNEntry />,
-  GRNEntryReport:        <GRNEntryReport />,
-  // ── New Master Pages ──
-  CompanyMaster:       <CompanyMaster />,
-  EmployeeMaster:      <EmployeeMaster />,
-  LedgerGroupMaster:   <LedgerGroupMaster />,
-  MachineMaster:       <MachineMaster />,
-  VehicleServiceMaster:<VehicleServiceMaster />,
-  ContractorMaster:    <ContractorMaster />,
-  ProcessMaster:       <ProcessMaster />,
-  ReferenceMaster:     <ReferenceMaster />,
-  PartUsageList:       <PartUsageList />,
-  QCCheckMethod:       <QCCheckMethod />,
-  QCInspectionChar:    <QCInspectionChar />,
-  QCStandardMaster:    <QCStandardMaster />,
-  AutoPO:              <AutoPO />,
-  SystemInfoMaster:    <SystemInfoMaster />,
-  DBCopy:              <DBCopy />,
-  RestoreDB:           <RestoreDB />,
-  ReceiptEntry:        <ReceiptEntry />,
-  ReceiptDetails:      <ReceiptDetails />,
-  VoucherEntry:        <VoucherEntry />,
-  DayReport:           <DayReport />,
-  DayBook:             <DayBook />,
-  LedgerBalance:       <LedgerBalance />,
-  MonthlyLedgerBalance: <MonthlyLedgerBalance />,
-  OutstandingReceiptReport: <OutstandingReceiptReport />,
-  PaymentEntry:         <PaymentEntry />,
-  PaymentDetails:       <PaymentDetails />,
-  JournalEntry:         <JournalEntry />,
-  BOMUpload:            <BOMUpload />,
-  CustomerwiseBOMReport: <CustomerwiseBOMReport />,
-  IndexCreation:         <IndexCreation />,
-  IndexCreationReport:   <IndexCreationReport />,
-  UploadBOM:             <UploadBOM />,
-  MainIndex:             <MainIndex />,
-  MainIndexReport:       <MainIndexReport />,
-  ViewModel:             <ViewModel />,
-  CustomerComplaintEntry: <CustomerComplaintEntry />,
-  DCEntry:               <DCEntry />,
-  MachineBreakDown:      <MachineBreakDown />,
-  BreakDownClearence:    <BreakDownClearence />,
-  BreakDownAcceptance:   <BreakDownAcceptance />,
-  BreakDownApprovalList: <BreakDownApprovalList />,
-  QCRejectionDetails:    <QCRejectionDetails />,
-  NCApproval:            <NCApproval />,
-  NCJobCreated:          <NCJobCreated />,
-  NCDCEntry:             <NCDCEntry />,
-  NCDCDetails:           <NCDCDetails />,
-  JobList:               <JobList />,
-  BarcodeDetails:        <BarcodeDetails />,
-  AutoJobEntry:          <AutoJobEntry />,
-  ServiceJobEntryDetails: <ServiceJobEntryDetails />,
-  ConformationList:      <ConformationList />,
-  ConformationEntryDetails: <ConformationEntryDetails />,
-  ProcessCard:           <ProcessCard />,
-  RawMaterialIssue:      <RawMaterialIssue />,
-  RawMaterialIssuedDetails: <RawMaterialIssuedDetails />,
-  MaterialRequestRejectionList: <MaterialRequestRejectionList />,
-  InwardReports: <InwardReports />,
-  OutwardDetails: <OutwardDetails />,
-  MinStock: <MinStock />,
-  MaterialIssuedDetails: <MaterialIssuedDetails />,
-  CompletedJobList: <CompletedJobList />,
-  PurchaseOrderReport: <PurchaseOrderReport />,
-  PurchaseOrderOverallReport: <PurchaseOrderOverallReport />,
-  CurrentStock: <CurrentStock />,
-  QCCompletedList: <QCCompletedList />,
-  MaterialIssueCorrection: <MaterialIssueCorrection />,
-  StockDetails: <StockDetails />,
-  QCEntryReport: <QCEntryReport />,
-  CreditSales: <CreditSales />,
-  SalesDetails: <SalesDetails />,
-  QuotationSales: <QuotationSales />,
-  DCSales: <DCSales />,
-
-  DCDetails: <DCDetails />,
-  DCDetailsReport: <DCDetailsReport />,
-
-  ServiceBillEntry: <ServiceBillEntry />,
-  ServiceBillDetails: <ServiceBillDetails />,
-  ServiceLabourBillDetails: <ServiceLabourBillDetails />,
-  TempServiceBillDetails: <TempServiceBillDetails />,
-  DrawingUpload: <DrawingUpload />,
-  JobCardEntry: <JobCardEntry />,
-  ProcessMenu: <ProcessMenu />,
-  TechAutoJobEntry: <TechAutoJobEntry />,
-  ViewJobStatus: <ViewJobStatus />,
-  WaitingForApproval: <WaitingForApproval />,
-  UpdateRouteDetails: <UpdateRouteDetails />,
-  RejectedJobList: <RejectedJobList />,
-  ProcessCompleted: <ProcessCompleted />,
-  FileUploads: <FileUploads />,
-  MRApproval: <MRApproval />,
-  NCJobCreated: <NCJobCreated />,
-  NCApproval: <NCApproval />,
-  JobEntryClosed: <JobEntryClosed />,
-  JobCardCancel: <JobCardCancel />,
-  IPRApproval: <IPRApproval />,
-  JobQtyMismatch: <JobQtyMismatch />,
-  ProcessCardClose: <ProcessCardClose />,
-  JobQCEntry: <JobQCEntry />,
+// page key → component (used to build <Route> elements)
+const PAGE_COMPONENTS = {
+  Dashboard:                   DashboardPage,
+  PartNumberBase:              PartNumberBaseMaster,
+  TaxLedger:                   TaxLedgerMaster,
+  TaxMaster:                   TaxMaster,
+  ItemGroup:                   ItemGroupMaster,
+  ItemMaster:                  ItemMaster,
+  SupplierMaster:              SupplierMaster,
+  CustomerMaster:              CustomerMaster,
+  VehicleMaster:               VehicleMaster,
+  QuotationEntry:              QuotationEntry,
+  QuotationDetails:            QuotationDetails,
+  PurchaseOrderEntry:          PurchaseOrderEntry,
+  PurchaseOrderDetails:        PurchaseOrderDetails,
+  PrintPurchaseOrder:          PrintPurchaseOrder,
+  PurchaseRequestEntry:        PurchaseRequestEntry,
+  PrintPurchaseRequest:        PrintPurchaseRequest,
+  MaterialRequestEntry:        MaterialRequestEntry,
+  PrintMaterialRequest:        PrintMaterialRequest,
+  GateEntry:                   GateEntry,
+  GateEntryReport:             GateEntryReport,
+  GRNEntry:                    GRNEntry,
+  GRNEntryReport:              GRNEntryReport,
+  CompanyMaster:               CompanyMaster,
+  EmployeeMaster:              EmployeeMaster,
+  LedgerGroupMaster:           LedgerGroupMaster,
+  MachineMaster:               MachineMaster,
+  VehicleServiceMaster:        VehicleServiceMaster,
+  ContractorMaster:            ContractorMaster,
+  ProcessMaster:               ProcessMaster,
+  ReferenceMaster:             ReferenceMaster,
+  PartUsageList:               PartUsageList,
+  QCCheckMethod:               QCCheckMethod,
+  QCInspectionChar:            QCInspectionChar,
+  QCStandardMaster:            QCStandardMaster,
+  AutoPO:                      AutoPO,
+  SystemInfoMaster:            SystemInfoMaster,
+  DBCopy:                      DBCopy,
+  RestoreDB:                   RestoreDB,
+  ReceiptEntry:                ReceiptEntry,
+  ReceiptDetails:              ReceiptDetails,
+  VoucherEntry:                VoucherEntry,
+  DayReport:                   DayReport,
+  DayBook:                     DayBook,
+  LedgerBalance:               LedgerBalance,
+  MonthlyLedgerBalance:        MonthlyLedgerBalance,
+  OutstandingReceiptReport:    OutstandingReceiptReport,
+  PaymentEntry:                PaymentEntry,
+  PaymentDetails:              PaymentDetails,
+  JournalEntry:                JournalEntry,
+  BOMCreation:                 BOMCreation,
+  CustomerwiseBOMReport:       BOMCreationReport,
+  IndexCreation:               IndexCreation,
+  IndexCreationReport:         IndexCreationReport,
+  UploadBOM:                   UploadBOM,
+  MainIndex:                   MainIndex,
+  MainIndexReport:             MainIndexReport,
+  ViewModel:                   ViewModel,
+  CustomerComplaintEntry:      CustomerComplaintEntry,
+  DCEntry:                     DCEntry,
+  MachineBreakDown:            MachineBreakDown,
+  BreakDownClearence:          BreakDownClearence,
+  BreakDownAcceptance:         BreakDownAcceptance,
+  BreakDownApprovalList:       BreakDownApprovalList,
+  QCRejectionDetails:          QCRejectionDetails,
+  NCApproval:                  NCApproval,
+  NCJobCreated:                NCJobCreated,
+  NCDCEntry:                   NCDCEntry,
+  NCDCDetails:                 NCDCDetails,
+  JobList:                     JobList,
+  BarcodeDetails:              BarcodeDetails,
+  AutoJobEntry:                AutoJobEntry,
+  ServiceJobEntryDetails:      ServiceJobEntryDetails,
+  ConformationList:            ConformationList,
+  ConformationEntryDetails:    ConformationEntryDetails,
+  ProcessCard:                 ProcessCard,
+  RawMaterialIssue:            RawMaterialIssue,
+  RawMaterialIssuedDetails:    RawMaterialIssuedDetails,
+  MaterialRequestRejectionList:MaterialRequestRejectionList,
+  InwardReports:               InwardReports,
+  OutwardDetails:              OutwardDetails,
+  MinStock:                    MinStock,
+  MaterialIssuedDetails:       MaterialIssuedDetails,
+  CompletedJobList:            CompletedJobList,
+  PurchaseOrderReport:         PurchaseOrderReport,
+  PurchaseOrderOverallReport:  PurchaseOrderOverallReport,
+  CurrentStock:                CurrentStock,
+  QCCompletedList:             QCCompletedList,
+  MaterialIssueCorrection:     MaterialIssueCorrection,
+  StockDetails:                StockDetails,
+  QCEntryReport:               QCEntryReport,
+  CreditSales:                 CreditSales,
+  SalesDetails:                SalesDetails,
+  QuotationSales:              QuotationSales,
+  DCSales:                     DCSales,
+  DCDetails:                   DCDetails,
+  DCDetailsReport:             DCDetailsReport,
+  ServiceBillEntry:            ServiceBillEntry,
+  ServiceBillDetails:          ServiceBillDetails,
+  ServiceLabourBillDetails:    ServiceLabourBillDetails,
+  TempServiceBillDetails:      TempServiceBillDetails,
+  DrawingUpload:               DrawingUpload,
+  JobCardEntry:                JobCardEntry,
+  ProcessMenu:                 ProcessMenu,
+  TechAutoJobEntry:            TechAutoJobEntry,
+  ViewJobStatus:               ViewJobStatus,
+  WaitingForApproval:          WaitingForApproval,
+  UpdateRouteDetails:          UpdateRouteDetails,
+  RejectedJobList:             RejectedJobList,
+  ProcessCompleted:            ProcessCompleted,
+  FileUploads:                 FileUploads,
+  MRApproval:                  MRApproval,
+  JobEntryClosed:              JobEntryClosed,
+  JobCardCancel:               JobCardCancel,
+  IPRApproval:                 IPRApproval,
+  JobQtyMismatch:              JobQtyMismatch,
+  ProcessCardClose:            ProcessCardClose,
+  JobQCEntry:                  JobQCEntry,
 }
 
-export default function App() {
-  const [loggedIn, setLoggedIn] = useState(false)
-  const [page, setPage] = useState('Dashboard')
+// Bridges legacy velson:navigate custom events to React Router navigation.
+// Pages that still dispatch window events work without modification.
+function NavigationEventBridge() {
+  const navigate = useNavigate()
   const { show, hide } = useLoading()
-  const navTimerRef = useRef(null)
 
   useEffect(() => {
+    let timer = null
     const handler = e => {
-      const nextPage = e.detail?.page ?? e.detail
-      setPage(nextPage)
-      // Brief overlay flash acknowledges the navigation visually
-      if (navTimerRef.current) clearTimeout(navTimerRef.current)
+      const pageKey = e.detail?.page ?? e.detail
+      const path = PAGE_TO_PATH[pageKey]
+      if (!path) return
       show('Navigating...')
-      navTimerRef.current = setTimeout(() => {
-        hide()
-        navTimerRef.current = null
-      }, 300)
+      navigate(path)
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => { hide(); timer = null }, 300)
     }
     window.addEventListener('velson:navigate', handler)
     return () => {
       window.removeEventListener('velson:navigate', handler)
-      if (navTimerRef.current) clearTimeout(navTimerRef.current)
+      if (timer) clearTimeout(timer)
     }
-  }, [show, hide])
+  }, [navigate, show, hide])
 
-  if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />
+  return null
+}
 
+function AppRoutes() {
   return (
-    <Layout currentPage={page} onNavigate={setPage}>
-      {PAGES[page] ?? <DashboardPage />}
-    </Layout>
+    <>
+      <NavigationEventBridge />
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {Object.entries(PAGE_COMPONENTS).map(([pageKey, Component]) => {
+            const path = PAGE_TO_PATH[pageKey]
+            if (!path) return null
+            return <Route key={pageKey} path={path} element={<Component />} />
+          })}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Layout>
+    </>
   )
+}
+
+export default function App() {
+  const [loggedIn, setLoggedIn] = useState(
+    () => localStorage.getItem('velson_auth') === '1'
+  )
+
+  const handleLogin = () => {
+    localStorage.setItem('velson_auth', '1')
+    setLoggedIn(true)
+  }
+
+  if (!loggedIn) return <LoginPage onLogin={handleLogin} />
+
+  return <AppRoutes />
 }

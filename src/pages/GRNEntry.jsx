@@ -16,6 +16,19 @@ const TAX_RATE_MAP = { 'LOCAL': 18, 'INTER': 28 }
 const today = new Date().toISOString().split('T')[0]
 
 const emptyItem = () => ({ itemCode:'', itemName:'', supplierPartNo:'', description:'', hsnCode:'', unit:'', stockQty:'', orderQty:'', qty:'', unitPrice:'', total:'', discPer:'', discAmt:'', finalPrice:'', taxPer:'', netAmt:'' })
+const emptyFreightRow = () => ({ freightName:'', amount:'', taxPer:'', gstAmt:'0', igstAmt:'0', netTotal:'0' })
+
+const DEFAULT_FREIGHT_NAMES = [
+  'Freight Inward',
+  'Freight Outward',
+  'Gas cutting Charge',
+  'HANDLING CHARGES',
+  'OTHERS',
+  'Packing and forwading',
+  'TESTING CHARGES',
+  'Accommodation Charges',
+]
+const defaultFreightRows = () => DEFAULT_FREIGHT_NAMES.map(name => ({ ...emptyFreightRow(), freightName: name }))
 
 const inp = (err='') => `w-full border rounded px-2 py-1 text-[12.5px] focus:outline-none focus:ring-1 transition-colors bg-white ${err?'border-red-400 focus:ring-red-300':'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'}`
 const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
@@ -129,6 +142,9 @@ export default function GRNEntry() {
       setRoundOff(grn.roundOff != null ? String(grn.roundOff) : '')
       setFreightLedger(grn.freightLedger || 'FREIGHT A/C')
       setTcsLedger(grn.tcsLedger || 'TCS A/C')
+      setOthersAmt(grn.othersAmt != null ? String(grn.othersAmt) : '')
+      setOgstAmtVal(grn.ogstAmt != null ? String(grn.ogstAmt) : '')
+      setTcsAmtVal(grn.tcsAmt != null ? String(grn.tcsAmt) : '')
       setItems(grn.details?.length > 0 ? grn.details.map(d => ({
         itemCode:       d.itemCode       || '',
         itemName:       d.itemName       || '',
@@ -167,6 +183,12 @@ export default function GRNEntry() {
   const [roundOff, setRoundOff] = useState('')
   const [freightLedger, setFreightLedger] = useState('FREIGHT A/C')
   const [tcsLedger, setTcsLedger] = useState('TCS A/C')
+
+  const [showFreightPopup, setShowFreightPopup] = useState(false)
+  const [freightRows, setFreightRows] = useState(defaultFreightRows())
+  const [othersAmt, setOthersAmt] = useState('')
+  const [ogstAmtVal, setOgstAmtVal] = useState('')
+  const [tcsAmtVal, setTcsAmtVal] = useState('')
 
   const [showGateModal, setShowGateModal] = useState(false)
   const [gateEntries, setGateEntries] = useState([])
@@ -350,6 +372,41 @@ export default function GRNEntry() {
 
   const subTotal = items.reduce((s,r)=>s+(parseFloat(r.netAmt)||0),0)
 
+  const isInterTax = (form.taxType || '').toUpperCase().includes('INTER')
+  const totalItemTaxAmt = items.reduce((s,r) => s + ((parseFloat(r.netAmt)||0) - (parseFloat(r.finalPrice)||0)), 0)
+  const computedGstAmt = isInterTax ? 0 : totalItemTaxAmt
+  const computedIgstAmt = isInterTax ? totalItemTaxAmt : 0
+  const grandTotal = subTotal + computedGstAmt + computedIgstAmt
+    + parseFloat(ogstAmtVal || 0) + parseFloat(othersAmt || 0)
+    + parseFloat(tcsAmtVal || 0) - parseFloat(roundOff || 0)
+
+  const calcFreightRow = (row) => {
+    const amt = parseFloat(row.amount) || 0
+    const tp = parseFloat(row.taxPer) || 0
+    const taxAmt = amt * tp / 100
+    const gstAmt = isInterTax ? 0 : taxAmt
+    const igstAmt = isInterTax ? taxAmt : 0
+    return { ...row, gstAmt: gstAmt.toFixed(2), igstAmt: igstAmt.toFixed(2), netTotal: (amt + gstAmt + igstAmt).toFixed(2) }
+  }
+
+  const setFreightRowField = (idx, k, v) => {
+    setFreightRows(rows => rows.map((r, i) => {
+      if (i !== idx) return r
+      const updated = { ...r, [k]: v }
+      return (k === 'amount' || k === 'taxPer') ? calcFreightRow(updated) : updated
+    }))
+  }
+
+  const freightPopupTotal = freightRows.reduce((s, r) => s + (parseFloat(r.netTotal) || 0), 0)
+
+  const freightBaseTotal = freightRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
+
+  const applyFreightCharges = () => {
+    setOthersAmt(freightBaseTotal.toFixed(2))      // base amount (no tax) → Others
+    setOgstAmtVal(freightPopupTotal.toFixed(2))    // net total (with tax) → OGST
+    setShowFreightPopup(false)
+  }
+
   const handleSubmit = async () => {
     if (!form.grnNo) {
       toast.error('GRN number is required')
@@ -375,7 +432,13 @@ export default function GRNEntry() {
         freightLedger,
         tcsLedger,
         subTotal: subTotal.toFixed(2),
-        totalAmount: (subTotal + parseFloat(roundOff || 0)).toFixed(2),
+        gstAmt: computedGstAmt.toFixed(2),
+        igstAmt: computedIgstAmt.toFixed(2),
+        othersAmt,
+        ogstAmt: ogstAmtVal,
+        tcsAmt: tcsAmtVal,
+        grandTotal: grandTotal.toFixed(2),
+        totalAmount: grandTotal.toFixed(2),
         items: validItems,
       }
       if (editId) {
@@ -415,6 +478,10 @@ export default function GRNEntry() {
       setRemarks('')
       setCurrencyTotal('')
       setRoundOff('')
+      setOthersAmt('')
+      setFreightRows(defaultFreightRows())
+      setOgstAmtVal('')
+      setTcsAmtVal('')
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to save GRN entry'
       toast.error(msg)
@@ -672,11 +739,21 @@ export default function GRNEntry() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>Sub Total :</label><input value={subTotal.toFixed(2)} readOnly className={`${inp()} bg-slate-50`}/></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>GST Amt :</label><input readOnly className={`${inp()} bg-slate-50`}/></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>IGST Amt :</label><input readOnly className={`${inp()} bg-slate-50`}/></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>Others :</label><input readOnly className={`${inp()} bg-slate-50`}/></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>OGSTAmt :</label><input readOnly className={`${inp()} bg-slate-50`}/></div>
-              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>TCS % :</label><input readOnly className={`${inp()} bg-slate-50`}/></div>
+              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>GST Amt :</label><input value={computedGstAmt.toFixed(2)} readOnly className={`${inp()} bg-slate-50`}/></div>
+              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>IGST Amt :</label><input value={computedIgstAmt.toFixed(2)} readOnly className={`${inp()} bg-slate-50`}/></div>
+              <div className="flex items-center gap-2">
+                <label className={`${lbl} w-[90px] shrink-0`}>Others :</label>
+                <input
+                  value={othersAmt}
+                  readOnly
+                  onClick={() => setShowFreightPopup(true)}
+                  placeholder="Click to add freight"
+                  className={`${inp()} bg-slate-50 cursor-pointer`}
+                />
+              </div>
+              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>OGSTAmt :</label><input value={ogstAmtVal} onChange={e=>setOgstAmtVal(e.target.value)} className={inp()}/></div>
+              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0`}>TCS % :</label><input value={tcsAmtVal} onChange={e=>setTcsAmtVal(e.target.value)} className={inp()}/></div>
+              <div className="flex items-center gap-2"><label className={`${lbl} w-[90px] shrink-0 font-bold text-slate-800`}>Grand Total :</label><input value={grandTotal.toFixed(2)} readOnly className={`${inp()} bg-slate-200 font-bold text-slate-800`}/></div>
             </div>
           </div>
         </div>
@@ -732,6 +809,62 @@ export default function GRNEntry() {
             </div>
             <div className="px-4 py-2 border-t border-slate-200 text-[11px] text-slate-400 text-right">
               {filteredPoList.length} record{filteredPoList.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Freight Charges Popup */}
+      {showFreightPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded shadow-xl w-[820px] max-h-[80vh] flex flex-col">
+            <div className="bg-[--color-main] px-4 py-2.5 flex items-center justify-between rounded-t">
+              <h3 className="text-white font-semibold text-[14px]">Freight Charges</h3>
+              <button onClick={() => setShowFreightPopup(false)} className="text-white hover:text-white/70"><X className="w-4 h-4"/></button>
+            </div>
+            <div className="overflow-auto flex-1">
+              <table className="min-w-full text-[12.5px]">
+                <thead className="sticky top-0">
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-2 py-1.5 text-center font-bold text-slate-600 text-[11px] uppercase w-8">#</th>
+                    {['Freight Name','Amount','Tax %','GST Amount','IGST Amount','Net Total','Action'].map(h=>(
+                      <th key={h} className="px-2 py-1.5 text-center font-bold text-slate-600 text-[11px] uppercase whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {freightRows.map((row, idx) => (
+                    <tr key={idx} className={`border-b border-slate-100 ${idx%2===1?'bg-slate-50/50':''}`}>
+                      <td className="px-2 py-1 text-center text-slate-500">{idx+1}</td>
+                      <td className="px-1 py-1"><input value={row.freightName} onChange={e=>setFreightRowField(idx,'freightName',e.target.value)} className={`${inp()} min-w-[130px]`}/></td>
+                      <td className="px-1 py-1"><input value={row.amount} onChange={e=>setFreightRowField(idx,'amount',e.target.value)} className={`${inp()} w-22`}/></td>
+                      <td className="px-1 py-1"><input value={row.taxPer} onChange={e=>setFreightRowField(idx,'taxPer',e.target.value)} className={`${inp()} w-16`}/></td>
+                      <td className="px-1 py-1"><input value={row.gstAmt} readOnly className={`${inp()} bg-slate-50 w-22`}/></td>
+                      <td className="px-1 py-1"><input value={row.igstAmt} readOnly className={`${inp()} bg-slate-50 w-22`}/></td>
+                      <td className="px-1 py-1"><input value={row.netTotal} readOnly className={`${inp()} bg-slate-50 w-22 font-semibold`}/></td>
+                      <td className="px-2 py-1 text-center">
+                        <button onClick={()=>setFreightRows(r=>r.filter((_,i)=>i!==idx))} className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[11px] rounded transition-colors">Remove</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-300 bg-slate-100">
+                    <td colSpan={6} className="px-3 py-1.5 text-right text-[12px] font-bold text-slate-700 uppercase tracking-wide">Total :</td>
+                    <td className="px-1 py-1"><input value={freightPopupTotal.toFixed(2)} readOnly className={`${inp()} bg-slate-200 w-22 font-bold text-slate-800`}/></td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div className="px-4 py-2.5 border-t border-slate-200 flex items-center justify-between">
+              <button onClick={()=>setFreightRows(r=>[...r,emptyFreightRow()])} className="flex items-center gap-1 px-3 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[12px] font-semibold rounded transition-colors shadow-sm">
+                <Plus className="w-3.5 h-3.5"/> Add Row
+              </button>
+              <div className="flex gap-2">
+                <button onClick={applyFreightCharges} className="px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-semibold rounded transition-colors shadow-sm">Apply</button>
+                <button onClick={()=>setShowFreightPopup(false)} className="px-4 py-1.5 bg-slate-500 hover:bg-slate-600 text-white text-[12px] font-semibold rounded transition-colors shadow-sm">Cancel</button>
+              </div>
             </div>
           </div>
         </div>

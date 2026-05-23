@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ChevronRight, Upload, Download, X, Plus, Image as ImageIcon, FileText, Search, RotateCcw } from 'lucide-react'
+import { ChevronRight, Upload, Download, X, Plus, Image as ImageIcon, FileText, Search, RotateCcw, FileSpreadsheet } from 'lucide-react'
 import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
@@ -39,7 +39,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   </div>
 )
 
-export default function BOMUpload() {
+export default function BOMCreation() {
   const toast = useToast()
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -56,31 +56,30 @@ export default function BOMUpload() {
     assemblyPartNo: ''
   })
 
-  const [uploadedRecords, setUploadedRecords] = useState([])
-  const [isUploading, setIsUploading] = useState(false)
+  const [createdRecords, setCreatedRecords] = useState([])
+  const [isCreating, setIsCreating] = useState(false)
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const handleUpload = () => {
+  const handleCreate = () => {
     if (!form.customerName || !form.fileName) {
       toast.warning('Please fill required fields (Customer, File Name).')
       return
     }
-    setIsUploading(true)
+    setIsCreating(true)
     setTimeout(() => {
-      const newRecord = { ...form, id: Date.now() }
-      const existing = JSON.parse(localStorage.getItem('velson_bom_uploads') || '[]')
+      const existing = JSON.parse(localStorage.getItem('velson_bom_creations') || localStorage.getItem('velson_bom_uploads') || '[]')
       const updated = [newRecord, ...existing]
-      localStorage.setItem('velson_bom_uploads', JSON.stringify(updated))
-      setUploadedRecords(updated)
-      setIsUploading(false)
-      toast.warning('BOM Uploaded Successfully!')
+      localStorage.setItem('velson_bom_creations', JSON.stringify(updated))
+      setCreatedRecords(updated)
+      setIsCreating(false)
+      toast.success('BOM Created Successfully!')
     }, 1000)
   }
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('velson_bom_uploads') || '[]')
-    setUploadedRecords(saved)
+    const saved = JSON.parse(localStorage.getItem('velson_bom_creations') || localStorage.getItem('velson_bom_uploads') || '[]')
+    setCreatedRecords(saved)
   }, [])
 
   const handleClear = () => {
@@ -105,7 +104,7 @@ export default function BOMUpload() {
       <div className="px-6 py-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-bold tracking-tight">
-          <span>Dashboard</span> <ChevronRight size={12} /> <span>BOM</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">BOM Upload</span>
+          <span>Dashboard</span> <ChevronRight size={12} /> <span>BOM</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">BOM Creation</span>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -113,11 +112,11 @@ export default function BOMUpload() {
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-700 rounded-sm" />
-              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">BOM Upload Interface</h2>
+              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">BOM Creation Interface</h2>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={handleClear} className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold rounded-lg border border-slate-200 transition-all shadow-sm">
-                <RotateCcw size={14} /> Reset
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold rounded-lg border border-slate-200 transition-all shadow-sm">
+                <FileSpreadsheet size={14} className="text-green-600" /> Sample Upload File
               </button>
               <button onClick={() => window.history.back()} className="text-slate-400 hover:text-red-600 transition-colors ml-2">
                 <X size={20} strokeWidth={2.5} />
@@ -135,13 +134,13 @@ export default function BOMUpload() {
                     <Input type="date" value={form.date} onChange={u('date')} />
                   </div>
                   <div>
-                    <Label>BOM Reference No</Label>
+                    <Label>BOM No</Label>
                     <Input value={form.bomNo} readOnly placeholder="Auto-generated" className="!font-bold text-[#0097A7]" />
                   </div>
                 </div>
 
                 <div>
-                  <Label required>Customer</Label>
+                  <Label required>Customer Name</Label>
                   <Select options={['Customer A', 'Customer B', 'Customer C']} value={form.customerName} onChange={u('customerName')} placeholder="Search Customer..." />
                 </div>
 
@@ -177,18 +176,19 @@ export default function BOMUpload() {
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 border-dashed">
                   <div className="space-y-4">
                     <div>
-                      <Label>File System Path</Label>
+                      <Label>File Location</Label>
                       <Input value={form.fileLocation} onChange={u('fileLocation')} placeholder="C:\Documents\BOM..." />
                     </div>
                     <div>
-                      <Label required>BOM Excel File</Label>
-                      <Select options={['BOM_V1.xlsx', 'BOM_V2.xlsx', 'BOM_Final.xlsx']} value={form.fileName} onChange={u('fileName')} placeholder="Pick Excel File" />
+                      <Label required>File Name</Label>
+                      <Select options={['Model X', 'Model Y', 'Model Z']} value={form.model} onChange={u('model')} placeholder="Select File Name" />
+
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <Label>Material Group</Label>
+                  <Label>Group Name</Label>
                   <Select options={['Group 1', 'Group 2']} value={form.groupName} onChange={u('groupName')} placeholder="Pick Group" />
                 </div>
                 <div>
@@ -200,13 +200,13 @@ export default function BOMUpload() {
                   <button className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-[13px] font-bold rounded-lg transition-all shadow-sm active:scale-95">
                     <Search size={18} className="text-[#0097A7]" /> Browse
                   </button>
-                  <button 
-                    onClick={handleUpload}
-                    disabled={isUploading}
+                  <button
+                    onClick={handleCreate}
+                    disabled={isCreating}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-bold rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50"
                   >
-                    {isUploading ? <RotateCcw size={18} className="animate-spin" /> : <Upload size={18} />}
-                    {isUploading ? 'Uploading...' : 'Process BOM'}
+                    {isCreating ? <RotateCcw size={18} className="animate-spin" /> : <Plus size={18} />}
+                    {isCreating ? 'Uploading' : 'Upload'}
                   </button>
                 </div>
               </div>
@@ -223,54 +223,50 @@ export default function BOMUpload() {
 
             {/* Table Section */}
             <div className="mt-12">
-               <div className="flex items-center justify-between mb-4 px-2">
-                 <div className="flex items-center gap-3">
-                   <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest border-l-4 border-[#0097A7] pl-3">Recent Uploads</h3>
-                   <span className="bg-[#0097A7]/10 text-[#0097A7] px-2 py-0.5 rounded text-[10px] font-bold">{uploadedRecords.length} Items</span>
-                 </div>
-                 <div className="flex gap-4">
-                    <button className="flex items-center gap-1.5 text-slate-400 hover:text-[#0097A7] text-[11px] font-bold uppercase transition-colors">
-                      <Download size={15} /> Sample Template
-                    </button>
-                 </div>
-               </div>
-               <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                 <table className="w-full text-left border-collapse">
-                   <thead className="bg-[#fcfdfe] text-[11px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                     <tr>
-                       <th className="px-5 py-4 border-r border-slate-200 w-16 text-center">S.No</th>
-                       <th className="px-5 py-4 border-r border-slate-200">Customer</th>
-                       <th className="px-5 py-4 border-r border-slate-200">BOM No</th>
-                       <th className="px-5 py-4 border-r border-slate-200">Model</th>
-                       <th className="px-5 py-4 border-r border-slate-200">File Name</th>
-                       <th className="px-5 py-4 text-center">Status</th>
-                     </tr>
-                   </thead>
-                   <tbody className="divide-y divide-slate-100">
-                     {uploadedRecords.length === 0 ? (
-                       <tr>
-                         <td colSpan={6} className="py-20 text-center text-slate-300 italic text-sm">
-                            <FileText size={40} className="mx-auto mb-2 opacity-20" />
-                            No BOM records processed yet.
-                         </td>
-                       </tr>
-                     ) : (
-                       uploadedRecords.map((row, idx) => (
-                         <tr key={row.id} className="hover:bg-slate-50 transition-colors h-14">
-                           <td className="px-5 py-2 border-r border-slate-200 text-center text-slate-400 font-bold">{idx + 1}</td>
-                           <td className="px-5 py-2 border-r border-slate-200 font-black text-slate-700">{row.customerName}</td>
-                           <td className="px-5 py-2 border-r border-slate-200 font-bold text-[#0097A7]">{row.bomNo}</td>
-                           <td className="px-5 py-2 border-r border-slate-200">{row.model}</td>
-                           <td className="px-5 py-2 border-r border-slate-200 text-[12px] text-slate-500">{row.fileName}</td>
-                           <td className="px-5 py-2 text-center">
-                             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Uploaded</span>
-                           </td>
-                         </tr>
-                       ))
-                     )}
-                   </tbody>
-                 </table>
-               </div>
+              <div className="flex items-center justify-between mb-4 px-2">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest border-l-4 border-[#0097A7] pl-3">Recent BOM Creations</h3>
+                  <span className="bg-[#0097A7]/10 text-[#0097A7] px-2 py-0.5 rounded text-[10px] font-bold">{createdRecords.length} Items</span>
+                </div>
+
+              </div>
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-[#fcfdfe] text-[11px] uppercase text-slate-500 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="px-5 py-4 border-r border-slate-200 w-16 text-center">S.No</th>
+                      <th className="px-5 py-4 border-r border-slate-200">Customer</th>
+                      <th className="px-5 py-4 border-r border-slate-200">BOM No</th>
+                      <th className="px-5 py-4 border-r border-slate-200">Model</th>
+                      <th className="px-5 py-4 border-r border-slate-200">File Name</th>
+                      <th className="px-5 py-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {createdRecords.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-20 text-center text-slate-300 italic text-sm">
+                          <FileText size={40} className="mx-auto mb-2 opacity-20" />
+                          No BOM records created yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      createdRecords.map((row, idx) => (
+                        <tr key={row.id} className="hover:bg-slate-50 transition-colors h-14">
+                          <td className="px-5 py-2 border-r border-slate-200 text-center text-slate-400 font-bold">{idx + 1}</td>
+                          <td className="px-5 py-2 border-r border-slate-200 font-black text-slate-700">{row.customerName}</td>
+                          <td className="px-5 py-2 border-r border-slate-200 font-bold text-[#0097A7]">{row.bomNo}</td>
+                          <td className="px-5 py-2 border-r border-slate-200">{row.model}</td>
+                          <td className="px-5 py-2 border-r border-slate-200 text-[12px] text-slate-500">{row.fileName}</td>
+                          <td className="px-5 py-2 text-center">
+                            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Created</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
