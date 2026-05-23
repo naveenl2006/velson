@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight } from 'lucide-react'
+import api from '../services/api'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
-const VEHICLE_TYPES = ['Truck', 'Mini Truck', 'Pickup Van', 'Motorcycle', 'Car', 'Forklift', 'Tractor']
 const PAGE_SIZES = [5, 10, 25, 50]
 
 const empty = {
@@ -11,12 +13,6 @@ const empty = {
   materialCharge: '0',
 }
 
-const SEED = [
-  { id: 1, vehicleTypeId: 'Truck',      serviceName: 'Oil Change',         labourCharge: '500',  materialCharge: '1200' },
-  { id: 2, vehicleTypeId: 'Mini Truck', serviceName: 'Brake Pad Replacement', labourCharge: '800', materialCharge: '2500' },
-  { id: 3, vehicleTypeId: 'Car',        serviceName: 'Full Service',        labourCharge: '1500', materialCharge: '3500' },
-]
-
 const inp = (err) =>
   `w-full border rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 transition-colors bg-white ${
     err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'
@@ -25,7 +21,9 @@ const inp = (err) =>
 const lbl = 'text-[12.5px] font-semibold text-slate-600 whitespace-nowrap w-40 shrink-0'
 
 export default function VehicleServiceMaster() {
-  const [rows, setRows] = useState(SEED)
+  const toast = useToast()
+
+  const [rows, setRows] = useState([])
   const [form, setForm] = useState({ ...empty })
   const [errors, setErrors] = useState({})
   const [editId, setEditId] = useState(null)
@@ -33,6 +31,25 @@ export default function VehicleServiceMaster() {
   const [pageSize, setPageSize] = useState(5)
   const [page, setPage] = useState(1)
   const [detailRow, setDetailRow] = useState(null)
+  const [vehicleTypes, setVehicleTypes] = useState([])
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    fetchAll()
+    api.get(`/api/reference-master/${encodeURIComponent('Vehicle_Type')}`, { skipGlobalLoader: true })
+      .then(res => setVehicleTypes((res.data.data || []).map(r => r.description || r.code).filter(Boolean)))
+      .catch(() => toast.error('Failed to load vehicle types'))
+  }, [])
+
+  const fetchAll = async () => {
+    try {
+      const res = await api.get('/api/vehicle-service-master')
+      setRows(res.data.data || [])
+    } catch {
+      toast.error('Failed to load vehicle service records')
+    }
+  }
 
   const sf = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
@@ -44,20 +61,50 @@ export default function VehicleServiceMaster() {
     return !Object.keys(e).length
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return
-    if (editId !== null) {
-      setRows(r => r.map(x => x.id === editId ? { ...form, id: editId } : x))
-      setEditId(null)
-    } else {
-      const id = Math.max(0, ...rows.map(r => r.id)) + 1
-      setRows(r => [...r, { ...form, id }])
+    try {
+      if (editId !== null) {
+        const res = await api.put(`/api/vehicle-service-master/${editId}`, form, { loadingMessage: 'Updating record...' })
+        setRows(r => r.map(x => x.id === editId ? res.data.data : x))
+        toast.success('Vehicle service updated successfully', 'Success')
+        setEditId(null)
+      } else {
+        const res = await api.post('/api/vehicle-service-master', form, { loadingMessage: 'Saving record...' })
+        setRows(r => [res.data.data, ...r])
+        toast.success('Vehicle service created successfully', 'Success')
+      }
+      setForm({ ...empty }); setErrors({}); setPage(1)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Save failed')
     }
-    setForm({ ...empty }); setErrors({}); setPage(1)
   }
 
-  const handleEdit = r => { setForm({ ...r }); setErrors({}); setEditId(r.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }
-  const handleDelete = id => { if (window.confirm('Delete this record?')) setRows(r => r.filter(x => x.id !== id)) }
+  const handleEdit = r => {
+    setForm({
+      vehicleTypeId: r.vehicleTypeId,
+      serviceName: r.serviceName,
+      labourCharge: String(r.labourCharge ?? 0),
+      materialCharge: String(r.materialCharge ?? 0),
+    })
+    setErrors({}); setEditId(r.id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleDeleteConfirm = async () => {
+    setDeleting(true)
+    try {
+      await api.delete(`/api/vehicle-service-master/${deleteTarget.id}`, { loadingMessage: 'Deleting record...' })
+      setRows(r => r.filter(x => x.id !== deleteTarget.id))
+      toast.success('Vehicle service deleted successfully', 'Deleted')
+      setDeleteTarget(null)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Delete failed')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const handleClear = () => { setForm({ ...empty }); setErrors({}); setEditId(null) }
 
   const totalAmt = (r) => (parseFloat(r.labourCharge) || 0) + (parseFloat(r.materialCharge) || 0)
@@ -106,7 +153,7 @@ export default function VehicleServiceMaster() {
             <div className="flex-1">
               <select value={form.vehicleTypeId} onChange={e => sf('vehicleTypeId', e.target.value)} className={inp(errors.vehicleTypeId)}>
                 <option value="">---Select Vehicle Type---</option>
-                {VEHICLE_TYPES.map(v => <option key={v}>{v}</option>)}
+                {vehicleTypes.map(v => <option key={v}>{v}</option>)}
               </select>
               {errors.vehicleTypeId && <p className="text-[11px] text-red-500 mt-0.5">{errors.vehicleTypeId}</p>}
             </div>
@@ -163,7 +210,7 @@ export default function VehicleServiceMaster() {
               className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
               <RotateCcw className="w-4 h-4" /> Clear
             </button>
-            <button onClick={() => setPage(1)}
+            <button onClick={() => { fetchAll(); setPage(1) }}
               className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
               <List className="w-4 h-4" /> Display All
             </button>
@@ -221,7 +268,7 @@ export default function VehicleServiceMaster() {
                       </button>
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <button onClick={() => handleDelete(r.id)}
+                      <button onClick={() => setDeleteTarget(r)}
                         className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -288,6 +335,16 @@ export default function VehicleServiceMaster() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirm Dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Confirm Delete"
+        message={`Delete service "${deleteTarget?.serviceName}" for ${deleteTarget?.vehicleTypeId}? This action cannot be undone.`}
+        confirming={deleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }
