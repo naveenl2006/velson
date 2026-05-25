@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { useLoading } from './context/LoadingContext'
 import Layout from './components/Layout'
 import { PAGE_TO_PATH } from './config/nav'
 
-import { TaxLedgerMaster, DashboardPage } from './pages/OtherPages'
+import BookingEntryNew from './pages/BookingEntryNew'
+import ServiceQuotation from './pages/ServiceQuotation'
+import ServiceQuotationDetails from './pages/ServiceQuotationDetails'
+import ServiceDetailsEntry from './pages/ServiceDetailsEntry'
+import ServiceDetailsReport from './pages/ServiceDetailsReport'
+import ServiceBookingDetails from './pages/ServiceBookingDetails'
+import ServiceSpareEntry from './pages/ServiceSpareEntry'
+
+
+import TaxLedgerMaster from './pages/TaxLedgerMaster'
 import ItemMaster from './pages/ItemMaster'
 import PartNumberBaseMaster from './pages/PartNumberBaseMaster'
 import TaxMaster from './pages/TaxMaster'
@@ -118,6 +126,7 @@ import JobCardCancel from './pages/JobCardCancel'
 import IPRApproval from './pages/IPRApproval'
 import ReferenceMaster from './pages/ReferenceMaster'
 import LoginPage from './pages/LoginPage'
+import { DashboardPage } from './pages/OtherPages'
 import JobQtyMismatch from './pages/JobQtyMismatch'
 import ProcessCardClose from './pages/ProcessCardClose'
 import JobQCEntry from './pages/JobQCEntry'
@@ -130,6 +139,13 @@ const PAGE_COMPONENTS = {
   TaxMaster:                   TaxMaster,
   ItemGroup:                   ItemGroupMaster,
   ItemMaster:                  ItemMaster,
+  ServiceQuotation:            ServiceQuotation,
+  BookingEntryNew:             BookingEntryNew,
+  ServiceQuotationDetails:     ServiceQuotationDetails,
+  ServiceDetailsEntry:         ServiceDetailsEntry,
+  ServiceDetailsReport:        ServiceDetailsReport,
+  ServiceBookingDetails:       ServiceBookingDetails,
+  ServiceSpareEntry:           ServiceSpareEntry,
   SupplierMaster:              SupplierMaster,
   CustomerMaster:              CustomerMaster,
   VehicleMaster:               VehicleMaster,
@@ -247,25 +263,17 @@ const PAGE_COMPONENTS = {
 // Pages that still dispatch window events work without modification.
 function NavigationEventBridge() {
   const navigate = useNavigate()
-  const { show, hide } = useLoading()
 
   useEffect(() => {
-    let timer = null
     const handler = e => {
       const pageKey = e.detail?.page ?? e.detail
       const path = PAGE_TO_PATH[pageKey]
       if (!path) return
-      show('Navigating...')
       navigate(path)
-      if (timer) clearTimeout(timer)
-      timer = setTimeout(() => { hide(); timer = null }, 300)
     }
     window.addEventListener('velson:navigate', handler)
-    return () => {
-      window.removeEventListener('velson:navigate', handler)
-      if (timer) clearTimeout(timer)
-    }
-  }, [navigate, show, hide])
+    return () => window.removeEventListener('velson:navigate', handler)
+  }, [navigate])
 
   return null
 }

@@ -114,7 +114,8 @@ export default function VoucherEntry() {
 
       <div className="px-6 py-6">
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black">
-          <span>Dashboard</span> <ChevronRight size={12} /> <span>Account</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">Voucher Entry</span>
+          {/* <span>Dashboard</span> <ChevronRight size={12} /> */}
+           <span>Account</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">Voucher Entry</span>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

@@ -121,8 +121,8 @@ export default function ReceiptEntry() {
       
       <div className="px-8 py-8 max-w-[1600px] mx-auto">
         <div className="flex items-center gap-3 text-[11px] text-slate-400 mb-6 uppercase font-bold tracking-[0.2em]">
-          <span className="hover:text-teal-600 cursor-pointer transition-colors">Dashboard</span> 
-          <ChevronRight size={10} className="text-slate-300" /> 
+          {/* <span className="hover:text-teal-600 cursor-pointer transition-colors">Dashboard</span>  */}
+          {/* <ChevronRight size={10} className="text-slate-300" />  */}
           <span className="hover:text-teal-600 cursor-pointer transition-colors">Account</span> 
           <ChevronRight size={10} className="text-slate-300" /> 
           <span className="text-teal-600">Receipt Entry</span>

@@ -35,7 +35,7 @@ export function LoadingProvider({ children }) {
         >
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl px-10 py-8 flex flex-col items-center gap-4 min-w-[180px]">
             <Loader2
-              size={40}
+              size={35}
               className="animate-spin"
               style={{ color: '#0097A7' }}
             />

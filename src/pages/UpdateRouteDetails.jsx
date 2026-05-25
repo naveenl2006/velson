@@ -139,7 +139,8 @@ export default function UpdateRouteDetails() {
       <div className="px-6 py-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-bold tracking-tight">
-          <span>Dashboard</span><ChevronRight size={12} /><span>Technical</span><ChevronRight size={12} />
+          {/* <span>Dashboard</span><ChevronRight size={12} /> */}
+          <span>Technical</span><ChevronRight size={12} />
           <span className="text-[#0097A7]">Update Route Details</span>
         </div>
 

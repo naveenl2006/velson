@@ -74,7 +74,8 @@ export default function ViewModel() {
     <div className="bg-[#f4f6f8] min-h-full pb-10">
       <div className="px-6 py-6">
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black tracking-tight">
-          <span>Dashboard</span> <ChevronRight size={12} /> <span>BOM</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">View Model</span>
+          {/* <span>Dashboard</span> <ChevronRight size={12} />  */}
+          <span>BOM</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">View Model</span>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[750px]">

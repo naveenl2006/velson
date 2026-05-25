@@ -383,8 +383,8 @@ export default function QuotationEntry({ pageData }) {
     <div className="p-4 space-y-4 w-full min-w-0 overflow-x-hidden">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-slate-400">
-        <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span>
-        <ChevronRight className="w-3 h-3" />
+        {/* <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span> */}
+        {/* <ChevronRight className="w-3 h-3" /> */}
         <span className="hover:text-[#0097A7] cursor-pointer">Quotation</span>
         <ChevronRight className="w-3 h-3" />
         <span className="text-[#0097A7] font-semibold">Quotation Entry</span>

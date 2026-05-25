@@ -448,8 +448,8 @@ export default function CustomerMaster() {
     <div className="p-4 space-y-4 w-full min-w-0">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-slate-400">
-        <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span>
-        <ChevronRight className="w-3 h-3"/>
+        {/* <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span> */}
+        {/* <ChevronRight className="w-3 h-3"/> */}
         <span className="hover:text-[#0097A7] cursor-pointer">Person Masters</span>
         <ChevronRight className="w-3 h-3"/>
         <span className="text-[#0097A7] font-semibold">Customer Master</span>

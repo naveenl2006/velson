@@ -2,9 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, Plus, Trash2, X, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import { useLoading } from '../context/LoadingContext'
+import api from '../services/api'
 
 const today = new Date().toISOString().split('T')[0]
 const BASE = 'http://localhost:3000'
+
+// Module-level cache — survives re-mounts (e.g. return from pick) but not page refresh
+let _ddCache = null
 
 const emptyItem = () => ({ itemId: null, code: '', itemName: '', specification: '', jobNo: '', machineNo: '', unit: '', qty: '', eta: '', qcDept: '', purpose: '', selected: false })
 
@@ -49,26 +53,90 @@ export default function PurchaseRequestEntry() {
     const load = async () => {
       setLoading(true)
 
-      // Check if we're in edit mode before any fetch
-      const editRaw = localStorage.getItem('velson:pr-edit')
+      // Capture both flags synchronously before any async work
+      const editRaw  = localStorage.getItem('velson:pr-edit')
       const editIdVal = editRaw ? parseInt(editRaw, 10) : null
       if (editRaw) localStorage.removeItem('velson:pr-edit')
 
-      try {
-        const [dRes, tRes, rRes, iRes, nRes] = await Promise.all([
-          fetch(`${BASE}/api/reference-master/Department`),
-          fetch(`${BASE}/api/reference-master/Team`),
-          fetch(`${BASE}/api/reference-master/Requesting_for_purchase`),
-          fetch(`${BASE}/api/item-master?limit=10000`),
-          fetch(`${BASE}/api/purchase-request/next-no`),
-        ])
-        const [dj, tj, rj, ij, nj] = await Promise.all([dRes.json(), tRes.json(), rRes.json(), iRes.json(), nRes.json()])
-        if (dj.success) setDepartments(dj.data)
-        if (tj.success) setTeams(tj.data)
-        if (rj.success) setRequestingForOpts(rj.data)
-        if (ij.success) setItemsData(ij.data)
+      const mrPickId = window.__velsonMrPickId ?? null
+      if (mrPickId) window.__velsonMrPickId = null
 
-        if (editIdVal) {
+      try {
+        // MR pick fetch always starts in parallel — regardless of cache state
+        const mrPickPromise = mrPickId
+          ? api.get(`/api/material-request/${mrPickId}`, { skipGlobalLoader: true })
+              .then(r => r.data?.data ?? null)
+              .catch(() => null)
+          : Promise.resolve(null)
+
+        let dj, tj, rj, ij
+
+        if (_ddCache) {
+          // Return from pick — reuse cached dropdowns, only fetch next-no
+          ;({ dj, tj, rj, ij } = _ddCache)
+          setDepartments(dj.data)
+          setTeams(tj.data)
+          setRequestingForOpts(rj.data)
+          setItemsData(ij.data)
+        } else {
+          // First load — fetch everything in parallel
+          const [dRes, tRes, rRes, iRes] = await Promise.all([
+            fetch(`${BASE}/api/reference-master/Department`),
+            fetch(`${BASE}/api/reference-master/Team`),
+            fetch(`${BASE}/api/reference-master/Requesting_for_purchase`),
+            fetch(`${BASE}/api/item-master?limit=10000`),
+          ])
+          ;[dj, tj, rj, ij] = await Promise.all([dRes.json(), tRes.json(), rRes.json(), iRes.json()])
+          if (dj.success) setDepartments(dj.data)
+          if (tj.success) setTeams(tj.data)
+          if (rj.success) setRequestingForOpts(rj.data)
+          if (ij.success) setItemsData(ij.data)
+          _ddCache = { dj, tj, rj, ij }
+        }
+
+        const [nRes, mr] = await Promise.all([
+          fetch(`${BASE}/api/purchase-request/next-no`).then(r => r.json()),
+          mrPickPromise,
+        ])
+        const nj = nRes
+
+        if (mrPickId) {
+          if (nj.success) setForm(f => ({ ...f, requestNo: nj.prNo, financialYear: nj.financialYear }))
+          if (mr) {
+            const deptRec = dj.success ? dj.data.find(d => d.description === mr.departmentTo) : null
+            const rfRec   = rj.success ? rj.data.find(r => r.description === mr.requestingFor) : null
+            setForm(f => ({
+              ...f,
+              department:      mr.departmentTo   || '',
+              departmentId:    deptRec?.id        ?? null,
+              requestingUser:  mr.requestingUser  || f.requestingUser,
+              requestingFor:   mr.requestingFor   || '',
+              requestingForId: rfRec?.id           ?? null,
+              requiredDate:    mr.requiredDate ? mr.requiredDate.split('T')[0] : f.requiredDate,
+              remarks:         mr.remarks || '',
+            }))
+            if (mr.details?.length > 0) {
+              const itemsList = ij.success ? ij.data : []
+              setItems(mr.details.map(d => {
+                const matched = itemsList.find(i => i.partNo === d.itemCode)
+                return {
+                  itemId:        matched?.id     ?? null,
+                  code:          d.itemCode      || '',
+                  itemName:      d.itemName      || matched?.partName || '',
+                  specification: d.materialGrade || matched?.description || '',
+                  jobNo:         d.modelName     || '',
+                  machineNo:     '',
+                  unit:          d.unit          || '',
+                  qty:           String(d.requestedQty ?? ''),
+                  eta:           '',
+                  qcDept:        '',
+                  purpose:       d.remarks       || '',
+                  selected:      false,
+                }
+              }))
+            }
+          }
+        } else if (editIdVal) {
           setEditId(editIdVal)
           const prRes = await fetch(`${BASE}/api/purchase-request/${editIdVal}`)
           const prJson = await prRes.json()
@@ -263,7 +331,7 @@ export default function PurchaseRequestEntry() {
       window.dispatchEvent(new CustomEvent('velson:navigate', { detail: { page: 'PrintPurchaseRequest' } }))
     } else {
       setForm(f => ({ ...f, department: '', departmentId: null, team: '', teamId: null, requestingFor: '', requestingForId: null, remarks: '', requestDate: today, requiredDate: today }))
-      setItems([emptyItem()])
+      setItems([emptyItem()]) 
     }
   }
 
@@ -271,8 +339,8 @@ export default function PurchaseRequestEntry() {
     <div className="p-4 space-y-4 w-full min-w-0 overflow-x-hidden">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-slate-400">
-        <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span>
-        <ChevronRight className="w-3 h-3" />
+        {/* <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span> */}
+        {/* <ChevronRight className="w-3 h-3" /> */}
         <span className="hover:text-[#0097A7] cursor-pointer">Purchase</span>
         <ChevronRight className="w-3 h-3" />
         <span className="text-[#0097A7] font-semibold">Purchase Request Entry</span>
@@ -349,7 +417,16 @@ export default function PurchaseRequestEntry() {
                 </FieldLoader>
               </div>
               <div className="flex justify-end pt-1">
-                <a href="#" className="text-blue-600 text-[12.5px] hover:underline font-medium">Pick From Material Request</a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.__velsonMrPickMode = true
+                    window.dispatchEvent(new CustomEvent('velson:navigate', { detail: { page: 'PrintMaterialRequest' } }))
+                  }}
+                  className="text-blue-600 text-[12.5px] hover:underline font-medium"
+                >
+                  Pick From Material Request
+                </button>
               </div>
             </div>
           </div>

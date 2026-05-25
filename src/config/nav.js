@@ -15,7 +15,7 @@ export const NAV = [
       { id: 'employee-master',       label: 'Employee Master',               page: 'EmployeeMaster' },
       { id: 'ledger-group-master',   label: 'Ledger Group Master',           page: 'LedgerGroupMaster' },
       { id: 'machine-master',        label: 'Machine Master',                page: 'MachineMaster' },
-      { id: 'vehicle-service-master',label: 'Vehicle Service Master',        page: 'VehicleServiceMaster' },
+      // { id: 'vehicle-service-master',label: 'Vehicle Service Master',        page: 'VehicleServiceMaster' },
       { id: 'contractor-master',     label: 'Contractor Master',             page: 'ContractorMaster' },
       { id: 'process-master',        label: 'Process Master',                page: 'ProcessMaster' },
       { id: 'reference-master',      label: 'Reference Master',              page: 'ReferenceMaster' },
@@ -50,6 +50,13 @@ export const NAV = [
     id: 'service', label: 'Service', icon: Wrench,
     children: [
       { id: 'vehicle-master', label: 'Vehicle Master', page: 'VehicleMaster' },
+      { id: 'booking-entry-new', label: 'Booking Entry', page: 'BookingEntryNew' },
+      { id: 'service-quotation', label: 'Service Quotation', page: 'ServiceQuotation' },
+      {id: 'service-quotation-details', label: 'Service Quotation Details', page: 'ServiceQuotationDetails' },
+      {id: 'service-details-entry', label: 'Service Details Entry', page: 'ServiceDetailsEntry' },
+      {id: 'service-details-report', label: 'Service Details Report', page: 'ServiceDetailsReport' },
+      {id: 'service-booking-details', label: 'Service Booking Details', page: 'ServiceBookingDetails' },
+      {id: 'service-spare-entry', label: 'Service Spare Entry', page: 'ServiceSpareEntry' },
     ],
   },
   {
@@ -66,7 +73,7 @@ export const NAV = [
       { id: 'purchase-order-details', label: 'Purchase Order Details',  page: 'PurchaseOrderDetails' },
       { id: 'purchase-request',       label: 'Purchase Request',        page: 'PurchaseRequestEntry' },
       { id: 'print-purchase-request', label: 'Print Purchase Request',  page: 'PrintPurchaseRequest' },
-      { id: 'print-purchase-order',   label: 'Print Purchase Order',    page: 'PrintPurchaseOrder' },
+      // { id: 'print-purchase-order',   label: 'Print Purchase Order',    page: 'PrintPurchaseOrder' },
     ],
   },
   {

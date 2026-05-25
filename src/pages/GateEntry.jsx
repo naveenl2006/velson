@@ -150,9 +150,9 @@ export default function GateEntry() {
         }))
         setItems(det.length > 0 ? det.map(d => ({
           poNo: data.poNo, itemCode: d.itemCode || '', itemName: d.itemName || '',
-          supplierPartNo: d.supplierPartNo || '', description: d.description || '',
-          hsnCode: d.hsnCode || '', unit: d.uom || '',
-          qty: d.qty != null ? String(d.qty) : '', recQty: '',
+          supplierPartNo: d.supplierPartNo || data.supplierRefNo || '',
+          description: d.description || '', hsnCode: d.hsnCode || '',
+          unit: d.uom || '', qty: d.qty != null ? String(d.qty) : '', recQty: '',
         })) : [emptyItem()])
       }
     } catch { toast.error('Failed to fetch PO details') }
@@ -251,8 +251,8 @@ export default function GateEntry() {
   return (
     <div className="p-4 space-y-4 w-full min-w-0 overflow-x-hidden">
       <div className="flex items-center gap-2 text-[12px] text-slate-400">
-        <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span>
-        <ChevronRight className="w-3 h-3"/>
+        {/* <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span> */}
+        {/* <ChevronRight className="w-3 h-3"/> */}
         <span className="hover:text-[#0097A7] cursor-pointer">Stores</span>
         <ChevronRight className="w-3 h-3"/>
         <span className="text-[#0097A7] font-semibold">Gate Entry</span>
@@ -373,7 +373,7 @@ export default function GateEntry() {
                       <td className="px-1 py-1"><input value={row.poNo} onChange={e=>setItemField(idx,'poNo',e.target.value)} className={inp()}/></td>
                       <td className="px-1 py-1"><input value={row.itemCode} onChange={e=>setItemField(idx,'itemCode',e.target.value)} className={inp()}/></td>
                       <td className="px-1 py-1"><input value={row.itemName} onChange={e=>setItemField(idx,'itemName',e.target.value)} className={`${inp()} min-w-[140px]`}/></td>
-                      <td className="px-1 py-1"><input value={row.supplierPartNo} onChange={e=>setItemField(idx,'supplierPartNo',e.target.value)} className={inp()}/></td>
+                      <td className="px-1 py-1"><input value={row.supplierPartNo} readOnly className={`${inp()} bg-slate-50`}/></td>
                       <td className="px-1 py-1"><input value={row.description} onChange={e=>setItemField(idx,'description',e.target.value)} className={`${inp()} min-w-[120px]`}/></td>
                       <td className="px-1 py-1"><input value={row.hsnCode} onChange={e=>setItemField(idx,'hsnCode',e.target.value)} className={inp()}/></td>
                       <td className="px-1 py-1"><input value={row.unit} onChange={e=>setItemField(idx,'unit',e.target.value)} className={`${inp()} w-14`}/></td>

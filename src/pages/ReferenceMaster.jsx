@@ -228,8 +228,8 @@ export default function ReferenceMaster() {
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-bold tracking-tight">
-          <span>Dashboard</span>
-          <ChevronRight size={12} />
+          {/* <span>Dashboard</span>
+          <ChevronRight size={12} /> */}
           <span>Master</span>
           <ChevronRight size={12} />
           <span className="text-[#0097A7]">Reference Master</span>
