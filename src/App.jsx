@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import { PAGE_TO_PATH } from './config/nav'
+import { useAuth } from './context/AuthContext'
 
 import BookingEntryNew from './pages/BookingEntryNew'
 import ServiceQuotation from './pages/ServiceQuotation'
@@ -297,17 +298,30 @@ function AppRoutes() {
   )
 }
 
+// ─── LOGIN GATE ──────────────────────────────────────────────────────────────
+// Set to true  → login page required; users must authenticate
+// Set to false → login skipped; app opens directly as admin (dev / demo mode)
+const LOGIN_REQUIRED = false
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Default identity used when LOGIN_REQUIRED = false
+const BYPASS_ADMIN = {
+  token: 'bypass',
+  user: { id: 0, name: 'Administrator', email: 'admin@admin.com', role: 'admin' },
+}
+
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(
-    () => localStorage.getItem('velson_auth') === '1'
-  )
+  const { auth, login } = useAuth()
 
-  const handleLogin = () => {
-    localStorage.setItem('velson_auth', '1')
-    setLoggedIn(true)
-  }
+  // When login is disabled: auto-inject admin on first render AND after logout
+  useEffect(() => {
+    if (!LOGIN_REQUIRED && !auth) login(BYPASS_ADMIN)
+  }, [auth, login])
 
-  if (!loggedIn) return <LoginPage onLogin={handleLogin} />
+  // LOGIN_REQUIRED = true  → gate on; show login if not authenticated
+  // LOGIN_REQUIRED = false → gate off; brief null while effect fires, then admin
+  if (LOGIN_REQUIRED && !auth) return <LoginPage onLogin={login} />
+  if (!auth) return null
 
   return <AppRoutes />
 }

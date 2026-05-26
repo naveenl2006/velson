@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { NAV } from '../config/nav'
+import { useAuth } from '../context/AuthContext'
 import {
-  ChevronRight, ChevronDown, User,
+  ChevronRight, ChevronDown, User, LogOut,
 } from 'lucide-react'
 
-// Map each child path (/parentId/childId) → parent group id, for auto-expanding the active group
 const PATH_TO_GROUP = {}
 for (const item of NAV) {
   if (item.children) {
@@ -20,16 +20,36 @@ for (const item of NAV) {
 export default function Layout({ children }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { auth, logout } = useAuth()
+
+  const userRole = auth?.user?.role || 'user'
+  const userName = auth?.user?.name || 'User'
 
   const [openGroup, setOpenGroup] = useState(() => PATH_TO_GROUP[pathname] ?? null)
 
-  // Sync open group when navigating via browser back/forward or velson:navigate events
   useEffect(() => {
     const group = PATH_TO_GROUP[pathname]
     if (group) setOpenGroup(group)
   }, [pathname])
 
   const toggle = id => setOpenGroup(p => (p === id ? null : id))
+
+  const handleLogout = () => {
+    logout()
+  }
+
+  // Filter nav items based on hiddenRoles
+  const visibleNav = NAV.map(item => {
+    if (item.hiddenRoles?.includes(userRole)) return null
+    if (item.children) {
+      const visibleChildren = item.children.filter(
+        child => !child.hiddenRoles?.includes(userRole)
+      )
+      if (item.children.length > 0 && visibleChildren.length === 0) return null
+      return { ...item, children: visibleChildren }
+    }
+    return item
+  }).filter(Boolean)
 
   return (
     <div className="flex h-screen bg-[#f4f6f8] overflow-hidden">
@@ -43,7 +63,7 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="flex-1 py-1">
-          {NAV.map(item => {
+          {visibleNav.map(item => {
             const hasChildren = item.children && item.children.length > 0
             const isOpen = openGroup === item.id
             const Icon = item.icon
@@ -115,12 +135,21 @@ export default function Layout({ children }) {
           </span>
           <div className="flex items-center gap-3">
             <span className="text-white/75 text-[13px]">
-              Hi <span className="font-semibold text-white">superadmin</span> !
+              Hi <span className="font-semibold text-white">{userName}</span> !
             </span>
-            <div className="w-8 h-8 bg-[#0097A7] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#007a87] transition-colors">
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#0097A7]/40 text-[#7dd3fc] tracking-wide">
+              {userRole}
+            </span>
+            <div className="w-8 h-8 bg-[#0097A7] rounded-full flex items-center justify-center">
               <User size={15} className="text-white" />
             </div>
-            <ChevronDown size={13} className="text-white/50" />
+            <button
+              onClick={handleLogout}
+              title="Logout"
+              className="w-8 h-8 bg-red-600/70 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+            >
+              <LogOut size={14} className="text-white" />
+            </button>
           </div>
         </header>
 

@@ -13,6 +13,8 @@ export default function LoginPage({ onLogin }) {
   const [showPwd,   setShowPwd]   = useState(false)
   const [captcha,   setCaptcha]   = useState(genCaptcha)
   const [captchaIn, setCaptchaIn] = useState('')
+  const [error,     setError]     = useState('')
+  const [loading,   setLoading]   = useState(false)
 
   const refresh = useCallback(() => {
     setCaptcha(genCaptcha())
@@ -21,19 +23,48 @@ export default function LoginPage({ onLogin }) {
 
   useEffect(() => { refresh() }, [])
 
-  const handleLogin = e => {
+  const handleLogin = async e => {
     e.preventDefault()
-    onLogin()
+    setError('')
+
+    if (!username.trim() || !password) {
+      setError('Email and password are required')
+      return
+    }
+    if (captchaIn.trim() !== captcha.answer) {
+      setError('Incorrect CAPTCHA answer')
+      refresh()
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: username.trim(), password }),
+      })
+      const data = await response.json()
+      if (response.ok) {
+        onLogin(data)
+      } else {
+        setError(data.error || 'Login failed')
+        refresh()
+      }
+    } catch {
+      setError('Error connecting to server')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#1a3a5c] via-[#1e4d78] to-[#0097A7] relative overflow-hidden">
-      {/* Background decorative circles */}
       <div className="absolute top-[-80px] left-[-80px] w-72 h-72 rounded-full bg-white/5" />
       <div className="absolute bottom-[-60px] right-[-60px] w-96 h-96 rounded-full bg-white/5" />
       <div className="absolute top-1/3 right-[-40px] w-48 h-48 rounded-full bg-[#0097A7]/20" />
 
-      {/* Logo + App name */}
+      {/* Logo */}
       <div className="flex items-center gap-3 mb-8 z-10">
         <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-lg overflow-hidden">
           <img src="/velson-logo.png" alt="Velson" className="w-12 h-12 object-contain"
@@ -48,26 +79,29 @@ export default function LoginPage({ onLogin }) {
 
       {/* Card */}
       <div className="z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
-        {/* Card header */}
         <div className="bg-gradient-to-r from-[#1a3a5c] to-[#0097A7] px-6 py-4">
           <h2 className="text-white font-bold text-[15px] uppercase tracking-widest text-center">User Login</h2>
         </div>
 
         <form onSubmit={handleLogin} className="px-7 py-6 space-y-4">
-          {/* Username */}
+          {error && (
+            <div className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center font-medium">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Username</label>
+            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Email</label>
             <input
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              placeholder="Enter username"
+              placeholder="Enter email"
               autoComplete="username"
               className="w-full px-3 py-2.5 text-[13px] border border-slate-300 rounded-lg bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7] focus:border-transparent transition-all"
             />
           </div>
 
-          {/* Password */}
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Password</label>
             <div className="relative">
@@ -90,7 +124,6 @@ export default function LoginPage({ onLogin }) {
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">CAPTCHA Verification</label>
             <div className="flex items-center gap-3">
-              {/* Captcha display */}
               <div className="flex items-center justify-center gap-2 bg-slate-100 border border-slate-300 rounded-lg px-4 py-2.5 min-w-[110px] select-none">
                 <span className="text-[17px] font-black text-slate-700 tracking-widest font-mono"
                   style={{ letterSpacing: '0.15em', textShadow: '1px 1px 0 #94a3b8' }}>
@@ -112,31 +145,18 @@ export default function LoginPage({ onLogin }) {
             </div>
           </div>
 
-          {/* Login button */}
-          <button type="submit"
-            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#1a3a5c] to-[#0097A7] hover:from-[#1e4d78] hover:to-[#007a87] text-white text-[13px] font-bold rounded-lg shadow-md transition-all active:scale-[0.98] mt-2">
-            <LogIn size={16} /> Login
+          <button type="submit" disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#1a3a5c] to-[#0097A7] hover:from-[#1e4d78] hover:to-[#007a87] disabled:opacity-60 text-white text-[13px] font-bold rounded-lg shadow-md transition-all active:scale-[0.98] mt-2">
+            <LogIn size={16} /> {loading ? 'Logging in...' : 'Login'}
           </button>
 
-          {/* Hint */}
           <p className="text-center text-[10px] text-slate-400 pt-1">
-            Default credentials: <span className="font-bold text-slate-500">admin / admin</span>
+            Default: <span className="font-bold text-slate-500">admin@admin.com / password123</span>
           </p>
         </form>
       </div>
 
-      {/* Footer */}
       <p className="z-10 mt-6 text-[11px] text-white/40">© 2026 Velson Stock Management System</p>
-
-      <style>{`
-        @keyframes shake {
-          0%,100%{transform:translateX(0)}
-          20%{transform:translateX(-8px)}
-          40%{transform:translateX(8px)}
-          60%{transform:translateX(-6px)}
-          80%{transform:translateX(6px)}
-        }
-      `}</style>
     </div>
   )
 }
