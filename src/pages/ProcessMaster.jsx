@@ -1,20 +1,13 @@
 import { useState, useEffect } from 'react'
-import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Search, Settings2 } from 'lucide-react'
+import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, Search, Settings2, Image as ImageIcon, FileText, Plus } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import api from '../services/api'
 
 const PAGE_SIZES = [4, 10, 25, 50]
 
-const PROCESS_TYPES = ['Machining', 'Welding', 'Assembly', 'Inspection', 'Heat Treatment', 'Surface Finishing', 'Fabrication']
-const TEAMS = ['Team Alpha', 'Team Beta', 'Night Shift', 'Day Shift', 'QC Unit']
-const MACHINE_LIST = [
-  { code: 'MCH-001', name: 'Precision CNC' },
-  { code: 'MCH-002', name: 'VMC Master' },
-  { code: 'MCH-003', name: 'Radial Precision' },
-]
-
 const empty = {
   PM_Part_Name: '', PM_Process_Name: '', PM_Process_Name1: '',
-  PM_Process_Order: '', TeamId: '', Machine_Code: '', Machine_Name: '',
+  PM_Process_Order: '1', TeamId: '', Machine_Code: '', Machine_Name: '',
   PM_Days: '', PM_Hours: '', Minutes: '',
   Setting_Time: '', Cycle_Time: '', Handling_Time: '', Idle_Time: '',
 }
@@ -31,16 +24,52 @@ export default function ProcessMaster() {
   const [pageSize, setPageSize] = useState(4)
   const [page, setPage] = useState(1)
   const [detailRow, setDetailRow] = useState(null)
+  const [partItems, setPartItems] = useState([])
+  const [partUploads, setPartUploads] = useState([])
+  const [uploadsLoading, setUploadsLoading] = useState(false)
+  const [zoomImage, setZoomImage] = useState(null)
+  const [processTypes, setProcessTypes] = useState([])
+  const [teams, setTeams] = useState([])
+  const [machines, setMachines] = useState([])
+  const [isAddMode, setIsAddMode] = useState(false)
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('velson_process_master') || '[]')
     setRows(saved)
+
+    fetch('/api/item-master?limit=99999')
+      .then(r => r.json())
+      .then(json => setPartItems(json.data || []))
+      .catch(() => {})
+
+    Promise.allSettled([
+      api.get(`/api/reference-master/${encodeURIComponent('Process_Type')}`, { skipGlobalLoader: true })
+        .then(res => setProcessTypes((res.data.data || []).map(r => r.description || r.code).filter(Boolean)))
+        .catch(() => {}),
+      api.get(`/api/reference-master/${encodeURIComponent('Team')}`, { skipGlobalLoader: true })
+        .then(res => setTeams((res.data.data || []).map(r => r.description || r.code).filter(Boolean)))
+        .catch(() => {}),
+      api.get('/api/machine-master', { skipGlobalLoader: true })
+        .then(res => setMachines((res.data.data || []).filter(m => m.machineCode)))
+        .catch(() => {}),
+    ])
   }, [])
+
+  useEffect(() => {
+    const item = partItems.find(i => i.partName === form.PM_Part_Name)
+    if (!item) { setPartUploads([]); return }
+    setUploadsLoading(true)
+    fetch(`/api/item-master/${item.id}/uploads`)
+      .then(r => r.json())
+      .then(json => setPartUploads(json.data || []))
+      .catch(() => setPartUploads([]))
+      .finally(() => setUploadsLoading(false))
+  }, [form.PM_Part_Name, partItems])
 
   const sf = (k, v) => {
     if (k === 'Machine_Code') {
-      const m = MACHINE_LIST.find(x => x.code === v)
-      setForm(f => ({ ...f, Machine_Code: v, Machine_Name: m ? m.name : '' }))
+      const m = machines.find(x => x.machineCode === v)
+      setForm(f => ({ ...f, Machine_Code: v, Machine_Name: m ? m.machineName : '' }))
     } else {
       setForm(f => ({ ...f, [k]: v }))
     }
@@ -66,14 +95,25 @@ export default function ProcessMaster() {
     }, 400)
   }
 
-  const handleEdit = r => { setForm({ ...r }); setEditId(r.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const handleEdit = r => { setForm({ ...r }); setEditId(r.id); setIsAddMode(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const handleAdd = r => {
+    setForm({ ...r, PM_Process_Order: String(Number(r.PM_Process_Order || 0) + 1) })
+    setEditId(r.id)
+    setIsAddMode(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const handleDelete = id => {
     if (!window.confirm('Delete this process?')) return
     const next = rows.filter(r => r.id !== id)
     setRows(next)
     localStorage.setItem('velson_process_master', JSON.stringify(next))
   }
-  const handleClear = () => { setForm({ ...empty }); setEditId(null) }
+  const handleClear = () => {
+    setForm({ ...empty })
+    setEditId(null)
+    setIsAddMode(false)
+    setPartUploads([])
+  }
 
   const filtered = rows.filter(r =>
     [r.PM_Part_Name, r.PM_Process_Name, r.PM_Process_Name1, r.TeamId, r.Machine_Name, r.Machine_Code].some(v =>
@@ -98,10 +138,14 @@ export default function ProcessMaster() {
       : 'border-slate-300 focus:ring-[#0097A7]/30 focus:border-[#0097A7]'
     }`
   const lbl = 'block text-[12px] font-semibold text-slate-600 mb-0.5'
+  // In ADD mode only Process Name is editable; all others are locked.
+  // Process Name is locked outside of ADD mode.
+  const roOthers = isAddMode   // lock every field except Process Name
+  const roClass  = `${inp(false)} bg-slate-50 cursor-not-allowed text-slate-400`
 
   const COLS = ['#', 'Process Name', 'Process Name1', 'Process Order', 'Team', 'Machine Name',
     'Days', 'Hours', 'Minutes', 'Setting Time', 'Cycle Time', 'Handling Time', 'Idle Time',
-    'Created By', 'Edit', 'Delete', 'Details']
+    'Created By', 'Add', 'Edit', 'Delete', 'Details']
 
   return (
     <div className="p-5 space-y-5 w-full min-w-0 bg-slate-50 min-h-screen">
@@ -122,11 +166,11 @@ export default function ProcessMaster() {
             <Settings2 className="w-4 h-4 text-white" />
           </div>
           <h2 className="text-white font-semibold text-[14px] tracking-wide">
-            {editId !== null ? 'Edit' : 'Create'} — Process Master Details
+            {isAddMode ? 'Add' : editId !== null ? 'Edit' : 'Create'} — Process Master Details
           </h2>
-          {editId !== null && (
+          {(editId !== null || isAddMode) && (
             <span className="ml-auto text-[11px] bg-white/20 text-white px-2.5 py-0.5 rounded-full font-medium">
-              Editing ID #{editId}
+              {isAddMode ? `Adding Process — ID #${editId}` : `Editing ID #${editId}`}
             </span>
           )}
         </div>
@@ -138,32 +182,44 @@ export default function ProcessMaster() {
             <div className="border border-slate-200 rounded-lg p-3 space-y-2">
               <div>
                 <label className={lbl}><span className="text-red-500">*</span> Part Name</label>
-                <input value={form.PM_Part_Name} onChange={e => sf('PM_Part_Name', e.target.value)} placeholder="Enter part name" className={inp(false)} />
+                <select value={form.PM_Part_Name} onChange={e => sf('PM_Part_Name', e.target.value)} disabled={roOthers} className={roOthers ? roClass : inp(false)}>
+                  <option value="">---Select Part Name---</option>
+                  {partItems.map(i => <option key={i.id} value={i.partName}>{i.partName}</option>)}
+                </select>
               </div>
               <div>
                 <label className={lbl}><span className="text-red-500">*</span> Process Name</label>
-                <select value={form.PM_Process_Name} onChange={e => sf('PM_Process_Name', e.target.value)} className={inp(false)}>
+                <select
+                  value={form.PM_Process_Name}
+                  onChange={e => sf('PM_Process_Name', e.target.value)}
+                  disabled={editId !== null && !isAddMode}
+                  className={editId !== null && !isAddMode ? roClass : inp(false)}
+                >
                   <option value="">---Select Process Type---</option>
-                  {PROCESS_TYPES.map(o => <option key={o} value={o}>{o}</option>)}
+                  {processTypes.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
                 <label className={lbl}>Process Name 1</label>
-                <input value={form.PM_Process_Name1} onChange={e => sf('PM_Process_Name1', e.target.value)} placeholder="Alias / shortname" className={inp(false)} />
+                <input value={form.PM_Process_Name1} onChange={e => sf('PM_Process_Name1', e.target.value)} placeholder="Alias / shortname" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
               <div>
                 <label className={lbl}>Team</label>
-                <select value={form.TeamId} onChange={e => sf('TeamId', e.target.value)} className={inp(false)}>
+                <select value={form.TeamId} onChange={e => sf('TeamId', e.target.value)} disabled={roOthers} className={roOthers ? roClass : inp(false)}>
                   <option value="">---Select Team---</option>
-                  {TEAMS.map(o => <option key={o} value={o}>{o}</option>)}
+                  {teams.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
                 <label className={lbl}>Machine Code</label>
-                <select value={form.Machine_Code} onChange={e => sf('Machine_Code', e.target.value)} className={inp(false)}>
+                <select value={form.Machine_Code} onChange={e => sf('Machine_Code', e.target.value)} disabled={roOthers} className={roOthers ? roClass : inp(false)}>
                   <option value="">---Select Machine---</option>
-                  {MACHINE_LIST.map(m => <option key={m.code} value={m.code}>{m.code}</option>)}
+                  {machines.map(m => <option key={m.machineCode} value={m.machineCode}>{m.machineCode}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className={lbl}>Machine Name</label>
+                <input value={form.Machine_Name} readOnly className={`${inp(false)} bg-slate-50 cursor-not-allowed text-slate-500`} />
               </div>
             </div>
 
@@ -171,23 +227,19 @@ export default function ProcessMaster() {
             <div className="border border-slate-200 rounded-lg p-3 space-y-2">
               <div>
                 <label className={lbl}>Process Order</label>
-                <input type="number" value={form.PM_Process_Order} onChange={e => sf('PM_Process_Order', e.target.value)} placeholder="e.g. 1" className={inp(false)} />
-              </div>
-              <div>
-                <label className={lbl}>Machine Name</label>
-                <input value={form.Machine_Name} readOnly placeholder="Auto-filled" className={`${inp(false)} bg-slate-50 cursor-not-allowed text-slate-500`} />
+                <input type="number" value={form.PM_Process_Order} onChange={e => sf('PM_Process_Order', e.target.value)} placeholder="e.g. 1" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
               <div>
                 <label className={lbl}>Days</label>
-                <input type="number" value={form.PM_Days} onChange={e => sf('PM_Days', e.target.value)} placeholder="0" className={inp(false)} />
+                <input type="number" value={form.PM_Days} onChange={e => sf('PM_Days', e.target.value)} placeholder="0" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
               <div>
                 <label className={lbl}>Hours</label>
-                <input type="number" value={form.PM_Hours} onChange={e => sf('PM_Hours', e.target.value)} placeholder="0" className={inp(false)} />
+                <input type="number" value={form.PM_Hours} onChange={e => sf('PM_Hours', e.target.value)} placeholder="0" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
               <div>
                 <label className={lbl}>Minutes</label>
-                <input type="number" value={form.Minutes} onChange={e => sf('Minutes', e.target.value)} placeholder="0" className={inp(false)} />
+                <input type="number" value={form.Minutes} onChange={e => sf('Minutes', e.target.value)} placeholder="0" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
             </div>
 
@@ -195,22 +247,98 @@ export default function ProcessMaster() {
             <div className="border border-slate-200 rounded-lg p-3 space-y-2">
               <div>
                 <label className={lbl}>Setting Time</label>
-                <input type="number" value={form.Setting_Time} onChange={e => sf('Setting_Time', e.target.value)} placeholder="0" className={inp(false)} />
+                <input type="number" value={form.Setting_Time} onChange={e => sf('Setting_Time', e.target.value)} placeholder="0" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
               <div>
                 <label className={lbl}>Cycle Time</label>
-                <input type="number" value={form.Cycle_Time} onChange={e => sf('Cycle_Time', e.target.value)} placeholder="0" className={inp(false)} />
+                <input type="number" value={form.Cycle_Time} onChange={e => sf('Cycle_Time', e.target.value)} placeholder="0" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
               <div>
                 <label className={lbl}>Handling Time</label>
-                <input type="number" value={form.Handling_Time} onChange={e => sf('Handling_Time', e.target.value)} placeholder="0" className={inp(false)} />
+                <input type="number" value={form.Handling_Time} onChange={e => sf('Handling_Time', e.target.value)} placeholder="0" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
               <div>
                 <label className={lbl}>Idle Time</label>
-                <input type="number" value={form.Idle_Time} onChange={e => sf('Idle_Time', e.target.value)} placeholder="0" className={inp(false)} />
+                <input type="number" value={form.Idle_Time} onChange={e => sf('Idle_Time', e.target.value)} placeholder="0" disabled={roOthers} readOnly={roOthers} className={roOthers ? roClass : inp(false)} />
               </div>
             </div>
           </div>
+
+          {/* Upload Section */}
+          {form.PM_Part_Name && (
+            <div className="mt-3 border border-slate-200 rounded-lg p-3 space-y-3">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Uploads for: <span className="text-[#0097A7]">{form.PM_Part_Name}</span>
+              </p>
+
+              {/* Existing uploads from ItemMaster */}
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Existing Uploads</p>
+                {uploadsLoading ? (
+                  <p className="text-[12px] text-slate-400 italic">Loading…</p>
+                ) : partUploads.length === 0 ? (
+                  <p className="text-[12px] text-slate-400 italic">No existing uploads for this part.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Show latest image */}
+                    {(() => {
+                      const latest = [...partUploads].reverse().find(u => u.imagePath)
+                      return (
+                        <div>
+                          <p className="text-[11px] font-semibold text-slate-500 mb-1.5 flex items-center gap-1">
+                            <ImageIcon className="w-3.5 h-3.5 text-[#0097A7]" /> Current Image
+                          </p>
+                          {latest ? (
+                            <img
+                              src={latest.imagePath}
+                              alt="Part"
+                              onClick={() => setZoomImage(latest.imagePath)}
+                              className="h-28 w-full object-contain rounded-lg border border-slate-200 bg-slate-50 cursor-zoom-in hover:scale-105 hover:shadow-md transition-transform duration-200"
+                            />
+                          ) : (
+                            <div className="h-28 flex items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50">
+                              <span className="text-[12px] text-slate-400">No image uploaded</span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+
+                    {/* Show latest PDF */}
+                    {(() => {
+                      const latest = [...partUploads].reverse().find(u => u.pdfPath)
+                      return (
+                        <div>
+                          <p className="text-[11px] font-semibold text-slate-500 mb-1.5 flex items-center gap-1">
+                            <FileText className="w-3.5 h-3.5 text-[#0097A7]" /> Current Drawing PDF
+                          </p>
+                          {latest ? (
+                            <a
+                              href={latest.pdfPath}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 hover:bg-[#0097A7]/5 hover:border-[#0097A7] transition-colors group"
+                            >
+                              <svg className="w-6 h-6 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="text-[12px] font-medium text-[#0097A7] group-hover:underline truncate">
+                                {latest.pdfPath.split('/').pop()}
+                              </span>
+                            </a>
+                          ) : (
+                            <div className="h-28 flex items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50">
+                              <span className="text-[12px] text-slate-400">No PDF uploaded</span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-2.5 pt-3 mt-3 border-t border-slate-100 justify-start">
@@ -307,6 +435,11 @@ export default function ProcessMaster() {
                     <td className="px-3 py-2.5 text-center text-slate-600">{r.Idle_Time ?? '—'}</td>
                     <td className="px-3 py-2.5 text-center text-slate-500">{r.CreatedBy || '—'}</td>
                     <td className="px-3 py-2.5 text-center">
+                      <button onClick={() => handleAdd(r)} title="Add next process" className="inline-flex items-center justify-center gap-1 px-2.5 h-8 bg-[#27ae60] hover:bg-[#229954] text-white text-[12px] font-semibold rounded-lg transition-colors shadow-sm">
+                        <Plus className="w-3.5 h-3.5" /> Add
+                      </button>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
                       <button onClick={() => handleEdit(r)} title="Edit" className="inline-flex items-center justify-center w-8 h-8 bg-[#0097A7] hover:bg-[#007a87] text-white rounded-lg transition-colors shadow-sm">
                         <Edit className="w-3.5 h-3.5" />
                       </button>
@@ -401,6 +534,28 @@ export default function ProcessMaster() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Zoom Lightbox */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setZoomImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full flex items-center justify-center" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setZoomImage(null)}
+              className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-600 hover:text-red-500 hover:bg-red-50 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img
+              src={zoomImage}
+              alt="Zoomed"
+              className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl"
+            />
           </div>
         </div>
       )}

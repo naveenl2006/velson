@@ -1,25 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ChevronRight, Search, Plus, Save, RotateCcw, List, Edit, Trash2, Info, X, Package } from 'lucide-react'
+import api from '../services/api'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const PAGE_SIZES = [4, 10, 25, 50]
-
 const GROUPS = ['Mechanical', 'Electrical', 'Hydraulic', 'Pneumatic', 'Structural', 'Consumable']
-
-const SEED = [
-  { id: 1, IM_Part_No: 'PRT-001', IM_PartName: 'Shaft Bearing 6205',   Group: 'Mechanical',  PartSpareQty: 10 },
-  { id: 2, IM_Part_No: 'PRT-002', IM_PartName: 'Oil Seal 50x70',        Group: 'Mechanical',  PartSpareQty: 20 },
-  { id: 3, IM_Part_No: 'PRT-003', IM_PartName: 'V-Belt 1250mm',         Group: 'Mechanical',  PartSpareQty: 8  },
-  { id: 4, IM_Part_No: 'PRT-004', IM_PartName: 'Coupling Flange',       Group: 'Structural',  PartSpareQty: 5  },
-  { id: 5, IM_Part_No: 'PRT-005', IM_PartName: 'Roller Bearing NJ205',  Group: 'Mechanical',  PartSpareQty: 6  },
-  { id: 6, IM_Part_No: 'PRT-006', IM_PartName: 'Hex Bolt M12x60',       Group: 'Structural',  PartSpareQty: 50 },
-]
-
-const empty = { IM_Part_No: '', IM_PartName: '', Group: '', PartSpareQty: '' }
-
-const today = () => new Date().toISOString().slice(0, 10)
+const empty = { partNo: '', partName: '', group: '', partSpareQty: '' }
 
 export default function PartUsageList() {
-  const [rows, setRows]           = useState(SEED)
+  const toast = useToast()
+
+  const [rows, setRows]           = useState([])
+  const [itemParts, setItemParts] = useState([])   // [{partNo, partName}] from Item Master
   const [form, setForm]           = useState({ ...empty })
   const [errors, setErrors]       = useState({})
   const [editId, setEditId]       = useState(null)
@@ -27,44 +20,120 @@ export default function PartUsageList() {
   const [search, setSearch]       = useState('')
   const [pageSize, setPageSize]   = useState(4)
   const [page, setPage]           = useState(1)
-  const [detailRow, setDetailRow] = useState(null)
+  const [detailRow, setDetailRow]   = useState(null)
+  const [confirmId, setConfirmId]   = useState(null)
+  const [confirming, setConfirming] = useState(false)
+
+  // Load part usage list records from backend
+  const fetchList = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/part-usage-list')
+      setRows(data.data || [])
+    } catch {
+      toast.error('Failed to load part usage list')
+    }
+  }, [toast])
+
+  // Load item master part numbers for dropdown (skip global loader — background fetch)
+  const fetchItemParts = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/item-master', {
+        params: { limit: 5000 },
+        skipGlobalLoader: true,
+      })
+      setItemParts(
+        (data.data || []).map(i => ({ partNo: i.partNo, partName: i.partName }))
+      )
+    } catch {
+      // non-critical — dropdown simply stays empty
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchList()
+    fetchItemParts()
+  }, [fetchList, fetchItemParts])
+
+  // When part number changes, auto-populate part name from item master data
+  const handlePartNoChange = (partNo) => {
+    const match = itemParts.find(i => i.partNo === partNo)
+    setForm(f => ({ ...f, partNo, partName: match ? match.partName : '' }))
+    setErrors(e => ({ ...e, partNo: '', partName: '' }))
+  }
 
   const sf = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
   const validate = () => {
     const e = {}
-    if (!form.IM_Part_No.trim())  e.IM_Part_No  = 'Required'
-    if (!form.IM_PartName.trim()) e.IM_PartName = 'Required'
+    if (!form.partNo.trim())   e.partNo   = 'Required'
+    if (!form.partName.trim()) e.partName = 'Required'
     setErrors(e)
     return !Object.keys(e).length
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return
-    if (editId !== null) {
-      setRows(r => r.map(x => x.id === editId ? { ...x, ...form, id: editId } : x))
-      setEditId(null)
-    } else {
-      const id = Math.max(0, ...rows.map(r => r.id)) + 1
-      setRows(r => [...r, { ...form, id, CreatedDate: today(), CreatedBy: 'Admin' }])
+    const payload = {
+      partNo:       form.partNo.trim(),
+      partName:     form.partName.trim(),
+      group:        form.group || null,
+      partSpareQty: form.partSpareQty !== '' ? form.partSpareQty : null,
     }
-    setForm({ ...empty }); setErrors({}); setPage(1); setShowForm(false)
+    try {
+      if (editId !== null) {
+        const { data } = await api.put(`/api/part-usage-list/${editId}`, payload, {
+          loadingMessage: 'Updating...',
+        })
+        setRows(r => r.map(x => x.id === editId ? data.data : x))
+        toast.success('Part usage record updated successfully', 'Updated')
+        setEditId(null)
+      } else {
+        const { data } = await api.post('/api/part-usage-list', payload, {
+          loadingMessage: 'Creating...',
+        })
+        setRows(r => [data.data, ...r])
+        toast.success('Part usage record created successfully', 'Created')
+      }
+      setForm({ ...empty }); setErrors({}); setPage(1); setShowForm(false)
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to save record'
+      toast.error(msg)
+    }
   }
 
-  const handleEdit = r => {
-    setForm({ ...r }); setErrors({}); setEditId(r.id)
+  const handleEdit = (r) => {
+    setForm({
+      partNo:       r.partNo,
+      partName:     r.partName,
+      group:        r.group || '',
+      partSpareQty: r.partSpareQty ?? '',
+    })
+    setErrors({}); setEditId(r.id)
     setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = id => {
-    if (window.confirm('Delete this part?')) setRows(r => r.filter(x => x.id !== id))
+  const handleDelete = (id) => setConfirmId(id)
+
+  const handleConfirmDelete = async () => {
+    setConfirming(true)
+    try {
+      await api.delete(`/api/part-usage-list/${confirmId}`, { loadingMessage: 'Deleting...' })
+      setRows(r => r.filter(x => x.id !== confirmId))
+      toast.success('Part usage record deleted', 'Deleted')
+      if (page > 1 && paged.length === 1) setPage(p => p - 1)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete record')
+    } finally {
+      setConfirming(false)
+      setConfirmId(null)
+    }
   }
 
   const handleClear  = () => { setForm({ ...empty }); setErrors({}); setEditId(null) }
   const handleCancel = () => { setForm({ ...empty }); setErrors({}); setEditId(null); setShowForm(false) }
 
   const filtered = rows.filter(r =>
-    [r.IM_Part_No, r.IM_PartName, r.Group].some(v =>
+    [r.partNo, r.partName, r.group].some(v =>
       String(v || '').toLowerCase().includes(search.toLowerCase())
     )
   )
@@ -129,32 +198,54 @@ export default function PartUsageList() {
 
           <div className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-3 max-w-4xl">
+
+              {/* Part Number dropdown */}
               <div>
                 <label className={lbl}><span className="text-red-500">*</span> Part Number</label>
-                <input value={form.IM_Part_No} onChange={e => sf('IM_Part_No', e.target.value)}
-                  placeholder="e.g. PRT-001" className={inp(errors.IM_Part_No)} />
-                {errors.IM_Part_No && <p className="text-[11px] text-red-500 mt-0.5">{errors.IM_Part_No}</p>}
+                <select
+                  value={form.partNo}
+                  onChange={e => handlePartNoChange(e.target.value)}
+                  className={inp(errors.partNo)}
+                >
+                  <option value="">--- Select Part No ---</option>
+                  {itemParts.map(i => (
+                    <option key={i.partNo} value={i.partNo}>{i.partNo}</option>
+                  ))}
+                </select>
+                {errors.partNo && <p className="text-[11px] text-red-500 mt-0.5">{errors.partNo}</p>}
               </div>
 
+              {/* Part Name — auto-filled, read-only */}
               <div>
                 <label className={lbl}><span className="text-red-500">*</span> Part Name</label>
-                <input value={form.IM_PartName} onChange={e => sf('IM_PartName', e.target.value)}
-                  placeholder="Enter part name" className={inp(errors.IM_PartName)} />
-                {errors.IM_PartName && <p className="text-[11px] text-red-500 mt-0.5">{errors.IM_PartName}</p>}
+                <input
+                  value={form.partName}
+                  readOnly
+                  placeholder="Auto-populated from Part Number"
+                  className={`${inp(errors.partName)} bg-slate-50 cursor-default`}
+                />
+                {errors.partName && <p className="text-[11px] text-red-500 mt-0.5">{errors.partName}</p>}
               </div>
 
+              {/* Group */}
               <div>
                 <label className={lbl}>Group</label>
-                <select value={form.Group} onChange={e => sf('Group', e.target.value)} className={inp(false)}>
+                <select value={form.group} onChange={e => sf('group', e.target.value)} className={inp(false)}>
                   <option value="">--- Select Group ---</option>
                   {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
 
+              {/* Part Spare Qty */}
               <div>
                 <label className={lbl}>Part Spare Qty</label>
-                <input type="number" value={form.PartSpareQty} onChange={e => sf('PartSpareQty', e.target.value)}
-                  placeholder="0" className={inp(false)} />
+                <input
+                  type="number"
+                  value={form.partSpareQty}
+                  onChange={e => sf('partSpareQty', e.target.value)}
+                  placeholder="0"
+                  className={inp(false)}
+                />
               </div>
             </div>
 
@@ -168,7 +259,7 @@ export default function PartUsageList() {
                 className="flex items-center gap-2 px-5 py-2 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded-lg transition-colors shadow-sm">
                 <RotateCcw className="w-4 h-4" />Clear
               </button>
-              <button onClick={() => setPage(1)}
+              <button onClick={() => { setPage(1); fetchList() }}
                 className="flex items-center gap-2 px-5 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded-lg transition-colors shadow-sm">
                 <List className="w-4 h-4" />Display All
               </button>
@@ -231,14 +322,14 @@ export default function PartUsageList() {
                 : paged.map((r, idx) => (
                   <tr key={r.id} className={`border-b border-slate-100 hover:bg-[#0097A7]/5 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                     <td className="px-3 py-2.5 text-center text-slate-500 font-medium">{(page - 1) * pageSize + idx + 1}</td>
-                    <td className="px-3 py-2.5 text-center font-semibold text-[#0097A7]">{r.IM_Part_No}</td>
-                    <td className="px-3 py-2.5 text-center font-medium text-slate-700">{r.IM_PartName}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-[#0097A7]">{r.partNo}</td>
+                    <td className="px-3 py-2.5 text-center font-medium text-slate-700">{r.partName}</td>
                     <td className="px-3 py-2.5 text-center">
-                      {r.Group
-                        ? <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200">{r.Group}</span>
+                      {r.group
+                        ? <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200">{r.group}</span>
                         : <span className="text-slate-400">—</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-center font-semibold text-slate-700">{r.PartSpareQty ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-slate-700">{r.partSpareQty ?? '—'}</td>
                     <td className="px-3 py-2.5 text-center">
                       <button onClick={() => handleEdit(r)} title="Edit"
                         className="inline-flex items-center justify-center w-8 h-8 bg-[#0097A7] hover:bg-[#007a87] text-white rounded-lg transition-colors shadow-sm">
@@ -291,6 +382,15 @@ export default function PartUsageList() {
         </div>
       </div>
 
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={confirmId !== null}
+        message="Delete this part usage record? This action cannot be undone."
+        confirming={confirming}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmId(null)}
+      />
+
       {/* Detail Modal */}
       {detailRow && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -308,12 +408,12 @@ export default function PartUsageList() {
             </div>
             <div className="p-5">
               {[
-                ['Part Number',    detailRow.IM_Part_No],
-                ['Part Name',      detailRow.IM_PartName],
-                ['Group',          detailRow.Group],
-                ['Part Spare Qty', detailRow.PartSpareQty],
-                ['Created By',     detailRow.CreatedBy],
-                ['Created Date',   detailRow.CreatedDate],
+                ['Part Number',    detailRow.partNo],
+                ['Part Name',      detailRow.partName],
+                ['Group',          detailRow.group],
+                ['Part Spare Qty', detailRow.partSpareQty],
+                ['Created By',     detailRow.createdBy],
+                ['Created Date',   detailRow.createdAt ? new Date(detailRow.createdAt).toLocaleDateString() : null],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-start justify-between py-2.5 border-b border-slate-100 last:border-0">
                   <span className="text-[12px] font-semibold text-slate-400 uppercase tracking-wider w-32 shrink-0">{label}</span>
