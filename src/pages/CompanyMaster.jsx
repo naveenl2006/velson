@@ -138,7 +138,7 @@ export default function CompanyMaster() {
 
   const fetchCompanyTypes = useCallback(async () => {
     try {
-      const res = await axios.get('/api/reference-master/Company_Type')
+      const res = await api.get('/api/reference-master/Company_Type')
       setCompanyTypes(res.data.data || [])
     } catch (err) {
       console.error('[CompanyMaster] fetchCompanyTypes:', err)
