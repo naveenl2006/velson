@@ -208,12 +208,13 @@ export default function PurchaseOrderEntry() {
                   return {
                     ...emptyItem(),
                     purchaseReqNo: prefill.prNo,
-                    itemId:        master?.id        || null,
-                    itemCode:      d.itemCode        || '',
-                    itemName:      d.itemName        || master?.partName    || '',
-                    description:   d.specification   || master?.description || '',
-                    hsnCode:       master?.hsnCode   || '',
-                    uom:           d.uom             || master?.uom        || '',
+                    itemId:        master?.id             || null,
+                    itemCode:      d.itemCode             || '',
+                    itemName:      d.itemName             || master?.partName    || '',
+                    description:   d.specification        || master?.description || '',
+                    hsnCode:       master?.hsnCode        || '',
+                    uom:           d.uom                  || master?.uom        || '',
+                    supplierPartNo: master?.outsourcePartNo || '',
                     qty:           String(d.qty ?? ''),
                   }
                 })
@@ -292,8 +293,10 @@ export default function PurchaseOrderEntry() {
           updated.description = item.description || ''
           updated.hsnCode = item.hsnCode || ''
           updated.uom = item.uom || ''
+          updated.supplierPartNo = item.outsourcePartNo || ''
         } else {
           updated.itemId = null
+          updated.supplierPartNo = ''
         }
       }
       const q = parseFloat(k === 'qty' ? v : updated.qty) || 0

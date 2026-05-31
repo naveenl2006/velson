@@ -490,9 +490,9 @@ function IndexView({ onCreate, onEdit, onView, dropdowns }) {
       if (!json.success) throw new Error(json.message)
       const all = json.data || []
       const predicates = {
-        hasUploads: r => r.imagePath || r.pdfPath,
-        noImage:    r => !r.imagePath,
-        noPdf:      r => !r.pdfPath,
+        hasUploads: r => r.hasImage || r.hasPdf,
+        noImage:    r => !r.hasImage,
+        noPdf:      r => !r.hasPdf,
       }
       setFilterItems(all.filter(predicates[type] ?? (() => true)))
     } catch (err) {
@@ -660,12 +660,12 @@ function IndexView({ onCreate, onEdit, onView, dropdowns }) {
                       {/* Image */}
                       <td className={tdCls}>
                         <div className="flex items-center justify-center">
-                          {item.imagePath
+                          {item.hasImage
                             ? <div
                                 className="w-8 h-8 rounded bg-[#0097A7]/80 flex items-center justify-center shadow-sm cursor-pointer"
                                 onMouseEnter={e => {
                                   const r = e.currentTarget.getBoundingClientRect()
-                                  setHoverImage({ src: item.imagePath, x: r.left + r.width / 2, y: r.top })
+                                  setHoverImage({ src: `/api/item-master/${item.id}/download-image`, x: r.left + r.width / 2, y: r.top })
                                 }}
                                 onMouseLeave={() => setHoverImage(null)}
                               >
@@ -681,12 +681,12 @@ function IndexView({ onCreate, onEdit, onView, dropdowns }) {
                       {/* Drawing */}
                       <td className={tdCls}>
                         <div className="flex items-center justify-center">
-                          {item.pdfPath
-                            ? <div className="w-8 h-8 rounded bg-red-100 flex items-center justify-center shadow-sm" title={item.pdfPath}>
+                          {item.hasPdf
+                            ? <a href={`/api/item-master/${item.id}/download-pdf`} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-red-100 flex items-center justify-center shadow-sm" title="View PDF">
                                 <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                              </div>
+                              </a>
                             : <span className="text-slate-300 text-[10px]">—</span>
                           }
                         </div>
@@ -857,6 +857,7 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, onSaved }) 
       setPartNoGenerating(true)
       fetch(`/api/part-number-base/preview?prefix=${encodeURIComponent(group.prefix)}`, {
         signal: controller.signal,
+        cache: 'no-store'
       })
         .then(r => r.json())
         .then(json => {
@@ -1346,8 +1347,8 @@ function PreviewView({ item, dropdowns, onBack, onCreate, onViewUploads }) {
                   <div className="w-[30%] text-right pr-4 font-bold text-slate-800 text-[13px] mt-2">Image :</div>
                   <div className="w-[70%]">
                     <div className="w-full max-w-[340px] aspect-[16/10] rounded-lg shadow-inner flex items-center justify-center border-[6px] border-white drop-shadow-md relative overflow-hidden bg-[#0097A7]/20">
-                      {item.imagePath
-                        ? <img src={item.imagePath} alt="item" className="w-full h-full object-contain" />
+                      {item.hasImage
+                        ? <img src={`/api/item-master/${item.id}/download-image`} alt="item" className="w-full h-full object-contain" />
                         : <ImageIcon className="w-16 h-16 text-[#0097A7]/40" />
                       }
                     </div>
@@ -1356,8 +1357,8 @@ function PreviewView({ item, dropdowns, onBack, onCreate, onViewUploads }) {
                 <div className="flex items-center">
                   <div className="w-[30%] text-right pr-4 font-bold text-slate-800 text-[13px]">Drawing PDF :</div>
                   <div className="w-[70%] text-[13px] text-slate-500">
-                    {item.pdfPath
-                      ? <a href={item.pdfPath} target="_blank" rel="noreferrer" className="text-[#0097A7] underline">{item.pdfPath.split('/').pop()}</a>
+                    {item.hasPdf
+                      ? <a href={`/api/item-master/${item.id}/download-pdf`} target="_blank" rel="noreferrer" className="text-[#0097A7] underline">View PDF Document</a>
                       : 'No PDF Uploaded For Drawing.'
                     }
                   </div>
@@ -1454,19 +1455,19 @@ function ImagePdfDetailsView({ item, onBack }) {
                   <tr key={u.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                     <td className={tdCls}>{idx + 1}</td>
                     <td className={tdCls}>
-                      {u.imagePath ? (
-                        <img src={u.imagePath} alt="upload" className="w-[80px] h-[54px] object-contain rounded shadow-sm" />
+                      {u.hasImage ? (
+                        <img src={`/api/item-master/upload/${u.id}/download-image`} alt="upload" className="w-[80px] h-[54px] object-contain rounded shadow-sm" />
                       ) : (
                         <span className="text-slate-400 text-[12px]">No Image</span>
                       )}
                     </td>
                     <td className={tdCls}>
-                      {u.pdfPath ? (
-                        <a href={u.pdfPath} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[#0097A7] font-medium hover:underline">
+                      {u.hasPdf ? (
+                        <a href={`/api/item-master/upload/${u.id}/download-pdf`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[#0097A7] font-medium hover:underline">
                           <svg className="w-4 h-4 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
-                          {u.pdfPath.split('/').pop()}
+                          View PDF Document
                         </a>
                       ) : (
                         <span className="text-slate-400 text-[12px]">No PDF</span>

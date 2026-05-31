@@ -291,10 +291,22 @@ export default function CustomerMaster() {
     }
   }, [])
 
+  const fetchNextCode = useCallback(async () => {
+    try {
+      const res = await api.get('/api/customer-master/next-code')
+      setForm(f => ({ ...f, cCode: res.data.nextCCode || '' }))
+    } catch (err) {
+      console.error('[CustomerMaster] fetchNextCode error:', err)
+    }
+  }, [])
+
   useEffect(() => {
-    fetchCustomerTypes()
-    fetchCustomers()
-  }, [fetchCustomerTypes, fetchCustomers])
+    const init = async () => {
+      await fetchCustomerTypes()
+      await Promise.all([fetchCustomers(), fetchNextCode()])
+    }
+    init()
+  }, [fetchCustomerTypes, fetchCustomers, fetchNextCode])
 
   // ── Form helpers ──
 
@@ -357,6 +369,7 @@ export default function CustomerMaster() {
       }
       setForm(emptyForm)
       setErrors({})
+      await fetchNextCode()
     } catch (err) {
       console.error('[CustomerMaster] save error:', err)
       const msg = err.response?.data?.message || 'Failed to save customer record.'
@@ -420,7 +433,7 @@ export default function CustomerMaster() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleClear = () => { setForm(emptyForm); setErrors({}); setEditId(null); setApiError('') }
+  const handleClear = async () => { setForm(emptyForm); setErrors({}); setEditId(null); setApiError(''); await fetchNextCode(); }
 
   // ── Filtering & pagination ──
 

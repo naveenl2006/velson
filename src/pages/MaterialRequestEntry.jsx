@@ -97,13 +97,13 @@ export default function MaterialRequestEntry() {
       if (i !== idx) return r
       if (k !== 'itemCode') return { ...r, [k]: v }
       const master = itemsData.find(it => it.partNo === v)
-      setPartImage(master?.imagePath || null)
+      setPartImage(master?.hasImage ? `/api/item-master/${master.id}/download-image` : (master?.imagePath || null))
       return {
         ...r,
         itemCode:      v,
         itemName:      master?.partName          || '',
         materialGrade: master?.materialGradeName || '',
-        unit:          master?.uomName           || '',
+        unit:          master?.uom || master?.uomName || '',
       }
     }))
   }

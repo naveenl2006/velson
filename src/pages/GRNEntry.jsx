@@ -4,8 +4,6 @@ import { ChevronRight, Plus, Trash2, Send, X, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import { SpinnerLoader } from '../components/LocalLoader'
 
-const SUPPLIERS = ['VENKATESWARA ASSOCIATES','APS ENTERPRISES','SM DRILLING COMPANY','ABHISHEK SONI']
-// Purchase Ledger, Purchase Type fetched from reference master
 // Currencies fetched from reference master
 const CURRENCY_TYPES = ['EXPORT','DOMESTIC']
 // Tax Types are fetched dynamically from reference master (see useEffect below)
@@ -45,11 +43,12 @@ export default function GRNEntry() {
   const [refLoading, setRefLoading] = useState(true)
   const [itemsLoading, setItemsLoading] = useState(false)
   const [editId, setEditId] = useState(null)
+  const [suppliersData, setSuppliersData] = useState([])
 
   useEffect(() => {
     setRefLoading(true)
     const fetches = [
-      api.get(`/api/reference-master/${encodeURIComponent('GRN Type')}`, { skipGlobalLoader: true })
+      api.get(`/api/reference-master/${encodeURIComponent('GRN_Type')}`, { skipGlobalLoader: true })
         .then(res => {
           const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
           setGrnTypes(types)
@@ -63,11 +62,16 @@ export default function GRNEntry() {
           if (types.length) setForm(f => ({ ...f, taxType: f.taxType || types[0] }))
         }).catch(() => {}),
 
-      api.get(`/api/reference-master/${encodeURIComponent('Purchase Ledger')}`, { skipGlobalLoader: true })
+      api.get(`/api/reference-master/${encodeURIComponent('Purchase_Ledger')}`, { skipGlobalLoader: true })
         .then(res => {
           const types = (res.data.data || []).map(r => r.description || r.code).filter(Boolean)
           setPurchaseLedgers(types)
           if (types.length) setForm(f => ({ ...f, purchaseLedger: f.purchaseLedger || types[0] }))
+        }).catch(() => {}),
+
+      api.get('/api/supplier-master', { skipGlobalLoader: true })
+        .then(res => {
+          setSuppliersData(res.data.data || [])
         }).catch(() => {}),
 
       api.get(`/api/reference-master/${encodeURIComponent('PAYMODE')}`, { skipGlobalLoader: true })
@@ -215,14 +219,33 @@ export default function GRNEntry() {
     return { ...row, total: tot.toFixed(2), discAmt: da.toFixed(2), finalPrice: (tot - da).toFixed(2), netAmt: ((tot - da) * (1 + tp / 100)).toFixed(2) }
   }
 
+  const handleSupplierChange = (name) => {
+    const sup = suppliersData.find(s => s.supplierName === name)
+    setForm(f => ({
+      ...f,
+      supplierName: name,
+      ...(sup ? {
+        contactPerson: sup.contactPerson || f.contactPerson,
+        contactNo: sup.mobile || sup.phone || f.contactNo,
+        purchaseLedger: sup.purchaseLedger || f.purchaseLedger,
+      } : {})
+    }))
+  }
+
   const selectGateEntry = (entry) => {
+    const gateSupplierName = entry.supplierName || ''
+    const sup = suppliersData.find(s => s.supplierName === gateSupplierName)
+
     setForm(f => ({
       ...f,
       gateEntryNo: entry.gateEntryNo,
-      supplierName: entry.supplierName || '',
+      supplierName: gateSupplierName,
       poNo: entry.poNo || '',
       invoiceNo: entry.invoiceNo || '',
       invoiceDate: entry.invoiceDate ? entry.invoiceDate.split('T')[0] : f.invoiceDate,
+      ...(sup ? {
+        purchaseLedger: sup.purchaseLedger || f.purchaseLedger,
+      } : {})
     }))
     const gateItems = (entry.details || []).map(d => ({
       ...emptyItem(),
@@ -246,6 +269,8 @@ export default function GRNEntry() {
             contactPerson: po.contactPerson || '',
             contactNo: po.contactNumber || po.supplier?.mobile || po.supplier?.phone || '',
             poDate: po.poDate ? po.poDate.split('T')[0] : f.poDate,
+            purchaseLedger: po.supplier?.purchaseLedger || f.purchaseLedger,
+            supplierName: po.supplier?.supplierName || f.supplierName,
           }))
           // Enrich gate items with unitPrice, discPer, taxPer from PO details
           if (po.details && po.details.length && gateItems.length) {
@@ -302,6 +327,7 @@ export default function GRNEntry() {
       contactPerson: po.contactPerson || '',
       contactNo: po.contactNumber || po.supplier?.mobile || po.supplier?.phone || '',
       supplierName: po.supplier?.supplierName || f.supplierName,
+      purchaseLedger: po.supplier?.purchaseLedger || f.purchaseLedger,
     }))
     // Populate items from PO details (itemCode, itemName, unitPrice, etc.)
     if (po.details && po.details.length) {
@@ -529,7 +555,10 @@ export default function GRNEntry() {
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Supplier Name:</label>
-                <select value={form.supplierName} onChange={e=>setField('supplierName',e.target.value)} className={inp()}><option value="">Select Supplier</option>{SUPPLIERS.map(s=><option key={s}>{s}</option>)}</select>
+                <select value={form.supplierName} onChange={e=>handleSupplierChange(e.target.value)} className={inp()}>
+                  <option value="">Select Supplier</option>
+                  {suppliersData.map(s=><option key={s.id} value={s.supplierName}>{s.supplierName}</option>)}
+                </select>
               </div>
               <div className="flex items-center gap-2">
                 <label className={`${lbl} w-[120px] shrink-0`}>Purchase Ledger :</label>

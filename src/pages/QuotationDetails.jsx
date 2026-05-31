@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import {
   ChevronRight, X, FileBarChart, FileSpreadsheet, FileText,
@@ -47,6 +48,12 @@ const fmtAmt = (v) => {
   const n = parseFloat(v)
   if (isNaN(n)) return '—'
   return n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const fmtAmtWhole = (v) => {
+  const n = Math.round(parseFloat(v))
+  if (isNaN(n)) return '—'
+  return n.toLocaleString('en-IN')
 }
 
 /* ── helpers for Format 1 PDF ── */
@@ -1102,7 +1109,7 @@ const openPrintWindow = (row) => {
     <div>Special Discount: <strong>${fmtAmt(row.specialDiscount)}</strong></div>
     <div>Freight: <strong>${fmtAmt(row.freightAmount)}</strong></div>
     <div>Tax (${row.taxPercent ?? 0}%): <strong>${fmtAmt(row.taxAmount)}</strong></div>
-    <div class="grand">Grand Total: ${fmtAmt(row.totalAmount)}</div>
+    <div class="grand">Grand Total: ${fmtAmtWhole(row.totalAmount)}</div>
   </div>
   ${row.paymentTerms ? `<div style="margin-top:16px;font-size:11px;color:#555"><strong>Payment Terms:</strong><br>${row.paymentTerms.replace(/\n/g,'<br>')}</div>` : ''}
   <br><button onclick="window.print()" style="padding:6px 18px;background:#0097A7;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">Print / Save PDF</button>
@@ -1140,8 +1147,9 @@ const exportCSV = (rows) => {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-export default function QuotationDetails({ onNavigate }) {
+export default function QuotationDetails() {
   const toast = useToast()
+  const navigate = useNavigate()
 
   const [fromDate, setFromDate]         = useState('')
   const [toDate, setToDate]             = useState('')
@@ -1214,9 +1222,11 @@ export default function QuotationDetails({ onNavigate }) {
     }
   }
 
-  /* ── edit → navigate to entry with revision ── */
+  /* ── edit → navigate to entry page with the existing data ── */
   const handleEdit = (row) => {
-    if (onNavigate) onNavigate('QuotationEntry', { editData: row })
+    // Accepted quotations create a new revision; others are edited in-place
+    const mode = row.status === 'Accepted' ? 'revision' : 'edit'
+    navigate('/quotation/quotation-entry', { state: { editData: row, mode } })
   }
 
   /* ── accept / reject (superadmin) ── */
@@ -1586,7 +1596,7 @@ export default function QuotationDetails({ onNavigate }) {
                   <div className="flex justify-between text-slate-500"><span>Tax ({viewRow.taxPercent ?? 0}%)</span><span className="tabular-nums">{fmtAmt(viewRow.taxAmount)}</span></div>
                   <div className="flex justify-between font-black text-[13px] text-[#0097A7] border-t border-slate-200 pt-1.5 mt-1">
                     <span>Grand Total</span>
-                    <span className="tabular-nums">{fmtAmt(viewRow.totalAmount)}</span>
+                    <span className="tabular-nums">{fmtAmtWhole(viewRow.totalAmount)}</span>
                   </div>
                 </div>
               </div>

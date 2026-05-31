@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { ChevronRight, Plus, Trash2, Send, X, RefreshCw, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
@@ -44,8 +45,14 @@ const inp = (err = '') =>
 const lbl = 'text-[12px] font-semibold text-slate-600 whitespace-nowrap'
 
 /* ─── component ────────────────────────────────────────────────────────────── */
-export default function QuotationEntry({ pageData }) {
+export default function QuotationEntry() {
   const toast = useToast()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const pageData = location.state || null
+  // 'revision' = Accepted quotation → new revision (POST)
+  // 'edit'     = non-Accepted quotation → update in-place (PUT)
+  const isRevisionMode = pageData?.mode === 'revision'
 
   /* master data */
   const [customers, setCustomers]     = useState([])
@@ -64,6 +71,7 @@ export default function QuotationEntry({ pageData }) {
   const [packingForwarding, setPackingForwarding]   = useState('')
   const [paymentTerms, setPaymentTerms]             = useState(DEFAULT_PAYMENT_TERMS)
   const [uploadFile, setUploadFile]                 = useState(null)
+  const [editModeId, setEditModeId]                 = useState(null)
 
   /* part autocomplete */
   const [partSuggestions, setPartSuggestions] = useState({})   // { rowIdx: Item[] }
@@ -140,32 +148,10 @@ export default function QuotationEntry({ pageData }) {
     if (!ed || masterLoading || customers.length === 0 || editApplied.current) return
     editApplied.current = true
 
-    // Derive customer address/contact from the loaded customers list
     const c = customers.find(x => x.id === ed.customerId)
     const addrParts = c ? [c.address, c.address2, c.address3, c.address4, c.city, c.state, c.pinCode].filter(Boolean) : []
 
-    setForm(f => ({
-      ...f,                                          // keeps quotationNo / financialYear from next-no fetch
-      customerId:       String(ed.customerId ?? ''),
-      customerName:     c?.customerName    ?? '',
-      customerAddress:  addrParts.join(', '),
-      customerRef:      ed.customerRef     ?? '',
-      contactPerson:    c?.contactPerson   ?? '',
-      contactNumber:    c?.mobile ?? c?.phone ?? '',
-      gstNumber:        c?.gstNo           ?? '',
-      currencyCode:     ed.currencyCode    ?? 'INR',
-      exchangeRate:     String(ed.exchangeRate ?? 1),
-      modelRef:         ed.modelRef        ?? '',
-      taxType:          ed.taxType         ?? '',
-      quotationDate:    ed.quotationDate   ? ed.quotationDate.slice(0, 10) : f.quotationDate,
-      validUntil:       ed.validUntil      ? ed.validUntil.slice(0, 10)   : '',
-      revisionNo:       String((parseInt(ed.revisionNo) || 0) + 1),
-      quotationType:    ed.quotationType   ?? '',
-      discountType:     ed.discountType    ?? 'Dis_Per',
-      showTotalsGrid:   Boolean(ed.showTotalsGrid),
-    }))
-
-    setItems(ed.details?.length > 0
+    const itemRows = ed.details?.length > 0
       ? ed.details.map(d => ({
           itemId:      d.itemId      ?? null,
           partNo:      d.partNo      ?? '',
@@ -178,8 +164,41 @@ export default function QuotationEntry({ pageData }) {
           amount:      String(d.amount    ?? ''),
         }))
       : [emptyItem()]
-    )
 
+    const commonFields = {
+      customerId:       String(ed.customerId ?? ''),
+      customerName:     c?.customerName    ?? '',
+      customerAddress:  addrParts.join(', '),
+      customerRef:      ed.customerRef     ?? '',
+      contactPerson:    c?.contactPerson   ?? '',
+      contactNumber:    c?.mobile ?? c?.phone ?? '',
+      gstNumber:        c?.gstNo           ?? '',
+      currencyCode:     ed.currencyCode    ?? 'INR',
+      exchangeRate:     String(ed.exchangeRate ?? 1),
+      modelRef:         ed.modelRef        ?? '',
+      taxType:          ed.taxType         ?? '',
+      quotationDate:    ed.quotationDate   ? ed.quotationDate.slice(0, 10) : today,
+      validUntil:       ed.validUntil      ? ed.validUntil.slice(0, 10)   : '',
+      quotationType:    ed.quotationType   ?? '',
+      discountType:     ed.discountType    ?? 'Dis_Per',
+      showTotalsGrid:   Boolean(ed.showTotalsGrid),
+    }
+
+    // Both Case 1 and Case 2 update the existing quotation (PUT) -> Keep the SAME quotationNo
+    setEditModeId(ed.id)
+
+    setForm(f => ({
+      ...f,
+      ...commonFields,
+      quotationNo:   ed.quotationNo   ?? f.quotationNo,
+      financialYear: ed.financialYear ?? f.financialYear,
+      // Case 2 (Accepted) -> bump revision. Case 1 (Draft) -> keep same revision.
+      revisionNo:    isRevisionMode
+                       ? String((parseInt(ed.revisionNo) || 0) + 1)
+                       : String(ed.revisionNo ?? 0),
+    }))
+
+    setItems(itemRows)
     setSpecialDiscount(String(ed.specialDiscount   ?? ''))
     setFreightAmount(String(ed.freightAmount        ?? ''))
     setTaxPercent(String(ed.taxPercent              ?? '18'))
@@ -333,8 +352,25 @@ export default function QuotationEntry({ pageData }) {
         items:            items.filter(r => r.partNo || r.itemName),
       }
 
-      await api.post('/api/quotation-master', payload, { loadingMessage: 'Saving quotation...' })
-      toast.success('Quotation saved successfully!')
+      let newId = null
+      if (editModeId) {
+        const res = await api.put(`/api/quotation-master/${editModeId}`, payload, { loadingMessage: 'Updating quotation...' })
+        newId = res.data?.data?.id || editModeId
+      } else {
+        const res = await api.post('/api/quotation-master', payload, { loadingMessage: 'Saving quotation...' })
+        newId = res.data?.data?.id
+      }
+      
+      if (uploadFile && newId) {
+        const formData = new FormData()
+        formData.append('document', uploadFile)
+        await api.post(`/api/quotation-master/${newId}/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          loadingMessage: 'Uploading document...'
+        })
+      }
+
+      toast.success(editModeId ? 'Quotation updated successfully!' : 'Quotation saved successfully!')
 
       /* fetch next quotation number for a fresh entry */
       try {
@@ -350,6 +386,7 @@ export default function QuotationEntry({ pageData }) {
       setFreightAmount('')
       setPackingForwarding('')
       setPaymentTerms(DEFAULT_PAYMENT_TERMS)
+      setEditModeId(null)
     } catch (err) {
       const msg = err.response?.data?.message || err.message
       console.error('[QuotationEntry] submit error:', err)
@@ -376,6 +413,7 @@ export default function QuotationEntry({ pageData }) {
     setPaymentTerms(DEFAULT_PAYMENT_TERMS)
     setUploadFile(null)
     setPartSuggestions({})
+    setEditModeId(null)
   }
 
   /* ── render ─────────────────────────────────────────────────────────────── */
@@ -383,11 +421,14 @@ export default function QuotationEntry({ pageData }) {
     <div className="p-4 space-y-4 w-full min-w-0 overflow-x-hidden">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-slate-400">
-        {/* <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span> */}
-        {/* <ChevronRight className="w-3 h-3" /> */}
-        <span className="hover:text-[#0097A7] cursor-pointer">Quotation</span>
+        <span
+          onClick={() => navigate('/quotation/quotation-details')}
+          className="hover:text-[#0097A7] cursor-pointer"
+        >Quotation Details</span>
         <ChevronRight className="w-3 h-3" />
-        <span className="text-[#0097A7] font-semibold">Quotation Entry</span>
+        <span className="text-[#0097A7] font-semibold">
+          {isRevisionMode ? 'New Revision' : editModeId ? 'Edit Quotation' : 'Quotation Entry'}
+        </span>
       </div>
 
       {/* Main form card */}
@@ -402,9 +443,23 @@ export default function QuotationEntry({ pageData }) {
 
         {/* Header bar */}
         <div className="bg-[--color-main] px-4 py-2.5 flex items-center justify-between">
-          <h2 className="text-white font-semibold text-[14px]">Quotation Entry</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-white font-semibold text-[14px]">
+              {isRevisionMode ? 'New Revision' : editModeId ? 'Edit Quotation' : 'Quotation Entry'}
+            </h2>
+            {isRevisionMode && (
+              <span className="px-2 py-0.5 bg-blue-400 text-blue-900 text-[10px] font-bold rounded-full uppercase tracking-wide">
+                Revision #{form.revisionNo} — {form.quotationNo}
+              </span>
+            )}
+            {editModeId && !isRevisionMode && (
+              <span className="px-2 py-0.5 bg-amber-400 text-amber-900 text-[10px] font-bold rounded-full uppercase tracking-wide">
+                Editing #{form.quotationNo}
+              </span>
+            )}
+          </div>
           <button onClick={handleCancel} className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-[12px] rounded transition-colors">
-            Close
+            {editModeId || isRevisionMode ? 'Cancel' : 'Close'}
           </button>
         </div>
 
@@ -662,8 +717,8 @@ export default function QuotationEntry({ pageData }) {
             className="flex items-center gap-1.5 px-5 py-2 bg-[#0097A7] hover:bg-[#007a87] disabled:opacity-60 text-white text-[12.5px] font-medium rounded shadow-sm transition-colors"
           >
             {submitLoading
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-              : <><Send className="w-4 h-4" /> Submit</>
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> {editModeId ? 'Updating…' : 'Saving…'}</>
+              : <><Send className="w-4 h-4" /> {editModeId ? 'Update' : isRevisionMode ? 'Save Revision' : 'Submit'}</>
             }
           </button>
         </div>
@@ -782,11 +837,32 @@ export default function QuotationEntry({ pageData }) {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <label className={`${lbl} w-36 shrink-0`}>Upload Document:</label>
-              <input
-                type="file"
-                onChange={e => setUploadFile(e.target.files[0])}
-                className="text-[12px] text-slate-600 border border-slate-300 rounded px-2 py-1 w-full"
-              />
+              <div className="flex-1 flex gap-2 items-center">
+                <input
+                  type="file"
+                  onChange={e => setUploadFile(e.target.files[0])}
+                  className="text-[12px] text-slate-600 border border-slate-300 rounded px-2 py-1 w-full"
+                />
+                {uploadFile ? (
+                  <button
+                    type="button"
+                    onClick={() => window.open(URL.createObjectURL(uploadFile), '_blank')}
+                    className="px-3 py-1 bg-[#0097A7] text-white text-[11px] rounded hover:bg-[#007a87] transition-colors whitespace-nowrap shadow-sm"
+                  >
+                    Preview
+                  </button>
+                ) : (
+                  pageData?.editData?.documentMimeType && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(`${api.defaults.baseURL || ''}/api/quotation-master/${pageData.editData.id}/download-document`, '_blank')}
+                      className="px-3 py-1 bg-[#0097A7] text-white text-[11px] rounded hover:bg-[#007a87] transition-colors whitespace-nowrap shadow-sm"
+                    >
+                      View Attached
+                    </button>
+                  )
+                )}
+              </div>
             </div>
             <div className="flex items-start gap-2">
               <label className={`${lbl} w-36 shrink-0 pt-1`}>Payment Terms:</label>
@@ -837,7 +913,7 @@ export default function QuotationEntry({ pageData }) {
             ['GST Amount', gst.toFixed(2)],
             ['IGST Amount', igst.toFixed(2)],
             ['G.T. Before RoundOff', totalAmt.toFixed(2)],
-            ['Grand Total', totalAmt.toFixed(2)],
+            ['Grand Total', Math.round(totalAmt)],
           ]
           return (
             <div className="grid grid-cols-5 gap-3 border-t border-slate-200 p-3 mt-2">
