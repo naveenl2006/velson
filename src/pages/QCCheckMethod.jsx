@@ -1,112 +1,400 @@
-import { useState } from 'react'
-import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { ChevronRight, Search, Plus, Save, RotateCcw, List, Edit, Trash2, Info, X, FlaskConical } from 'lucide-react'
+import api from '../services/api'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
-const PAGE_SIZES=[4,10,25,50]
-const empty={CM_vCode:'',CM_vName:'',CM_vDescription:'',CM_cStatus:'A'}
-const SEED=[
-  {id:1,CM_vCode:'VIS',CM_vName:'Visual Inspection',CM_vDescription:'Checking surface defects, colour, shape with naked eye or magnification.',CM_cStatus:'A'},
-  {id:2,CM_vCode:'DIM',CM_vName:'Dimensional Check',CM_vDescription:'Verifying dimensions against drawing tolerances using gauges/CMM.',CM_cStatus:'A'},
-  {id:3,CM_vCode:'HRD',CM_vName:'Hardness Test',CM_vDescription:'Measuring material hardness using Rockwell or Brinell scale.',CM_cStatus:'A'},
-  {id:4,CM_vCode:'SRF',CM_vName:'Surface Roughness',CM_vDescription:'Measuring Ra value of surface finish using profilometer.',CM_cStatus:'I'},
-]
+const PAGE_SIZES = [4, 10, 25, 50]
+const empty = { checkCode: '', checkName: '', description: '', status: 'A' }
 
-export default function QCCheckMethod(){
-  const [rows,setRows]=useState(SEED)
-  const [form,setForm]=useState({...empty})
-  const [errors,setErrors]=useState({})
-  const [editId,setEditId]=useState(null)
-  const [search,setSearch]=useState('')
-  const [pageSize,setPageSize]=useState(4)
-  const [page,setPage]=useState(1)
-  const [detailRow,setDetailRow]=useState(null)
+export default function QCCheckMethod() {
+  const toast = useToast()
 
-  const sf=(k,v)=>{setForm(f=>({...f,[k]:v}));setErrors(e=>({...e,[k]:''}));}
-  const validate=()=>{const e={};if(!form.CM_vCode.trim())e.CM_vCode='Required';if(!form.CM_vName.trim())e.CM_vName='Required';setErrors(e);return!Object.keys(e).length}
-  const handleSave=()=>{
-    if(!validate())return
-    if(editId!==null){setRows(r=>r.map(x=>x.id===editId?{...form,id:editId}:x));setEditId(null);}
-    else{const id=Math.max(0,...rows.map(r=>r.id))+1;setRows(r=>[...r,{...form,id}]);}
-    setForm({...empty});setErrors({});setPage(1)
+  const [rows, setRows]           = useState([])
+  const [form, setForm]           = useState({ ...empty })
+  const [errors, setErrors]       = useState({})
+  const [editId, setEditId]       = useState(null)
+  const [showForm, setShowForm]   = useState(false)
+  const [search, setSearch]       = useState('')
+  const [pageSize, setPageSize]   = useState(4)
+  const [page, setPage]           = useState(1)
+  const [detailRow, setDetailRow] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
+  const [confirming, setConfirming] = useState(false)
+
+  const fetchList = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/qc-check-method')
+      setRows(data.data || [])
+    } catch {
+      toast.error('Failed to load QC Check Methods')
+    }
+  }, [toast])
+
+  useEffect(() => { fetchList() }, [fetchList])
+
+  const sf = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
+
+  const validate = () => {
+    const e = {}
+    if (!form.checkCode.trim()) e.checkCode = 'Required'
+    if (!form.checkName.trim()) e.checkName = 'Required'
+    setErrors(e)
+    return !Object.keys(e).length
   }
-  const handleEdit=r=>{setForm({...r});setErrors({});setEditId(r.id);window.scrollTo({top:0,behavior:'smooth'})}
-  const handleDelete=id=>{if(window.confirm('Delete?'))setRows(r=>r.filter(x=>x.id!==id))}
-  const handleClear=()=>{setForm({...empty});setErrors({});setEditId(null)}
-  const filtered=rows.filter(r=>[r.CM_vCode,r.CM_vName,r.CM_vDescription,r.CM_cStatus].some(v=>String(v||'').toLowerCase().includes(search.toLowerCase())))
-  const total=Math.max(1,Math.ceil(filtered.length/pageSize))
-  const paged=filtered.slice((page-1)*pageSize,page*pageSize)
-  const pNums=()=>{if(total<=7)return Array.from({length:total},(_,i)=>i+1);const ps=[1];if(page>3)ps.push('...');for(let i=Math.max(2,page-1);i<=Math.min(total-1,page+1);i++)ps.push(i);if(page<total-2)ps.push('...');ps.push(total);return ps}
-  const inp=(e)=>`w-full border rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 transition-colors bg-white ${e?'border-red-400 focus:ring-red-300':'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'}`
-  const lbl='text-[12.5px] font-semibold text-slate-600 whitespace-nowrap'
 
-  return(
-    <div className="p-4 space-y-4 w-full min-w-0">
-      <div className="flex items-center gap-2 text-[12px] text-slate-400">
-        {/* <span className="hover:text-[#0097A7] cursor-pointer">Dashboard</span><ChevronRight className="w-3 h-3"/> */}
-        <span className="hover:text-[#0097A7] cursor-pointer">Masters</span><ChevronRight className="w-3 h-3"/>
+  const handleSave = async () => {
+    if (!validate()) return
+    const payload = {
+      checkCode:   form.checkCode.trim().toUpperCase(),
+      checkName:   form.checkName.trim(),
+      description: form.description.trim() || null,
+      status:      form.status,
+    }
+    try {
+      if (editId !== null) {
+        const { data } = await api.put(`/api/qc-check-method/${editId}`, payload, {
+          loadingMessage: 'Updating...',
+        })
+        setRows(r => r.map(x => x.id === editId ? data.data : x))
+        toast.success('QC Check Method updated successfully', 'Updated')
+        setEditId(null)
+      } else {
+        const { data } = await api.post('/api/qc-check-method', payload, {
+          loadingMessage: 'Creating...',
+        })
+        setRows(r => [data.data, ...r])
+        toast.success('QC Check Method created successfully', 'Created')
+      }
+      setForm({ ...empty }); setErrors({}); setPage(1); setShowForm(false)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save record')
+    }
+  }
+
+  const handleEdit = (r) => {
+    setForm({
+      checkCode:   r.checkCode,
+      checkName:   r.checkName,
+      description: r.description || '',
+      status:      r.status,
+    })
+    setErrors({}); setEditId(r.id)
+    setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleConfirmDelete = async () => {
+    setConfirming(true)
+    try {
+      await api.delete(`/api/qc-check-method/${confirmId}`, { loadingMessage: 'Deleting...' })
+      setRows(r => r.filter(x => x.id !== confirmId))
+      toast.success('QC Check Method deleted', 'Deleted')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete record')
+    } finally {
+      setConfirming(false)
+      setConfirmId(null)
+    }
+  }
+
+  const handleClear  = () => { setForm({ ...empty }); setErrors({}); setEditId(null) }
+  const handleCancel = () => { setForm({ ...empty }); setErrors({}); setEditId(null); setShowForm(false) }
+
+  const filtered = rows.filter(r =>
+    [r.checkCode, r.checkName, r.description].some(v =>
+      String(v || '').toLowerCase().includes(search.toLowerCase())
+    )
+  )
+  const total = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const pNums = () => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+    const ps = [1]
+    if (page > 3) ps.push('...')
+    for (let i = Math.max(2, page - 1); i <= Math.min(total - 1, page + 1); i++) ps.push(i)
+    if (page < total - 2) ps.push('...')
+    ps.push(total)
+    return ps
+  }
+
+  const inp = (err) =>
+    `w-full border rounded-md px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 transition-all bg-white ${
+      err ? 'border-red-400 focus:ring-red-200' : 'border-slate-300 focus:ring-[#0097A7]/30 focus:border-[#0097A7]'
+    }`
+  const lbl = 'block text-[12px] font-semibold text-slate-600 mb-0.5'
+
+  const COLS = ['S.No', 'Code', 'Check Name', 'Description', 'Status', 'Edit', 'Delete', 'Details']
+
+  return (
+    <div className="p-5 space-y-4 w-full min-w-0 bg-slate-50 min-h-screen">
+
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-[12px] text-slate-400">
+        <span className="hover:text-[#0097A7] cursor-pointer transition-colors">Dashboard</span>
+        <ChevronRight className="w-3 h-3" />
+        <span className="hover:text-[#0097A7] cursor-pointer transition-colors">Masters</span>
+        <ChevronRight className="w-3 h-3" />
         <span className="text-[#0097A7] font-semibold">QC Check Method Master</span>
       </div>
-      <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-[--color-main] px-4 py-2.5"><h2 className="text-white text-center font-semibold text-[14px]">{editId!==null?'Edit':'Create'} — QC Check Method Master</h2></div>
-        <div className="p-4">
-          <div className="max-w-xl space-y-3">
-            <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}><span className="text-red-500">*</span>Check Code :</label><div className="flex-1"><input value={form.CM_vCode} onChange={e=>sf('CM_vCode',e.target.value.toUpperCase())} className={inp(errors.CM_vCode)} placeholder="e.g. VIS, DIM"/>{errors.CM_vCode&&<p className="text-[11px] text-red-500 mt-0.5">{errors.CM_vCode}</p>}</div></div>
-            <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}><span className="text-red-500">*</span>Check Name :</label><div className="flex-1"><input value={form.CM_vName} onChange={e=>sf('CM_vName',e.target.value)} className={inp(errors.CM_vName)} placeholder="e.g. Visual Inspection"/>{errors.CM_vName&&<p className="text-[11px] text-red-500 mt-0.5">{errors.CM_vName}</p>}</div></div>
-            <div className="flex items-start gap-2"><label className={`${lbl} w-28 shrink-0 pt-1`}>Description :</label><textarea value={form.CM_vDescription} onChange={e=>sf('CM_vDescription',e.target.value)} rows={3} className="flex-1 border rounded px-2 py-1 text-[13px] border-slate-300 focus:outline-none focus:ring-1 focus:ring-[#0097A7]"/></div>
-            <div className="flex items-center gap-2"><label className={`${lbl} w-28 shrink-0`}>Status :</label><select value={form.CM_cStatus} onChange={e=>sf('CM_cStatus',e.target.value)} className={`w-40 ${inp(false)}`}><option value="A">A — Active</option><option value="I">I — Inactive</option></select></div>
+
+      {/* Create New Button */}
+      {!showForm && (
+        <button
+          onClick={() => { setShowForm(true); setEditId(null); setForm({ ...empty }) }}
+          className="flex items-center gap-2 px-4 py-2 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded-lg transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" /> Create New
+        </button>
+      )}
+
+      {/* Form Card */}
+      {showForm && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-5 py-3 flex items-center gap-3">
+            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+              <FlaskConical className="w-4 h-4 text-white" />
+            </div>
+            <h2 className="text-white font-semibold text-[14px] tracking-wide">
+              {editId !== null ? 'Edit' : 'Create'} — QC Check Method Master
+            </h2>
+            {editId !== null && (
+              <span className="ml-auto text-[11px] bg-white/20 text-white px-2.5 py-0.5 rounded-full font-medium">
+                Editing ID #{editId}
+              </span>
+            )}
           </div>
-          <div className="flex gap-2 pt-4 justify-end border-t border-slate-100 mt-4">
-            <button onClick={handleSave} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm"><Save className="w-4 h-4"/>{editId!==null?'Update':'Create'}</button>
-            <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm"><RotateCcw className="w-4 h-4"/>Clear</button>
-            <button onClick={()=>setPage(1)} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm"><List className="w-4 h-4"/>Display All</button>
+
+          <div className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-3 max-w-4xl">
+              <div>
+                <label className={lbl}><span className="text-red-500">*</span> Check Code</label>
+                <input
+                  value={form.checkCode}
+                  onChange={e => sf('checkCode', e.target.value.toUpperCase())}
+                  placeholder="e.g. VIS, DIM"
+                  className={inp(errors.checkCode)}
+                />
+                {errors.checkCode && <p className="text-[11px] text-red-500 mt-0.5">{errors.checkCode}</p>}
+              </div>
+
+              <div>
+                <label className={lbl}><span className="text-red-500">*</span> Check Name</label>
+                <input
+                  value={form.checkName}
+                  onChange={e => sf('checkName', e.target.value)}
+                  placeholder="e.g. Visual Inspection"
+                  className={inp(errors.checkName)}
+                />
+                {errors.checkName && <p className="text-[11px] text-red-500 mt-0.5">{errors.checkName}</p>}
+              </div>
+
+              <div>
+                <label className={lbl}>Status</label>
+                <select value={form.status} onChange={e => sf('status', e.target.value)} className={inp(false)}>
+                  <option value="A">Active</option>
+                  <option value="I">Inactive</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-4">
+                <label className={lbl}>Description</label>
+                <textarea
+                  value={form.description}
+                  onChange={e => sf('description', e.target.value)}
+                  rows={2}
+                  placeholder="Enter method description..."
+                  className={`${inp(false)} resize-none`}
+                />
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-wrap gap-2.5 pt-3 mt-3 border-t border-slate-100">
+              <button onClick={handleSave}
+                className="flex items-center gap-2 px-5 py-2 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded-lg transition-colors shadow-sm">
+                <Save className="w-4 h-4" />{editId !== null ? 'Update' : 'Create'}
+              </button>
+              <button onClick={handleClear}
+                className="flex items-center gap-2 px-5 py-2 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded-lg transition-colors shadow-sm">
+                <RotateCcw className="w-4 h-4" />Clear
+              </button>
+              <button onClick={() => { setPage(1); fetchList() }}
+                className="flex items-center gap-2 px-5 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded-lg transition-colors shadow-sm">
+                <List className="w-4 h-4" />Display All
+              </button>
+              <button onClick={handleCancel}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[13px] font-semibold rounded-lg transition-colors ml-auto">
+                <X className="w-4 h-4" />Cancel
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-[--color-main] px-4 py-2.5"><h2 className="text-white text-center font-semibold text-[14px]">QC Check Method Details</h2></div>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <div className="flex items-center gap-2 text-[13px] text-slate-600">Search:<input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} className="border border-slate-300 rounded px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#0097A7] w-40"/></div>
-          <div className="flex items-center gap-2 text-[13px] text-slate-600">Show<select value={pageSize} onChange={e=>{setPageSize(Number(e.target.value));setPage(1)}} className="border border-slate-300 rounded px-2 py-1 text-[13px]">{PAGE_SIZES.map(s=><option key={s}>{s}</option>)}</select>entries</div>
+      )}
+
+      {/* Table Card */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-5 py-3">
+          <h2 className="text-white font-semibold text-[14px] tracking-wide text-center">QC Check Method Details</h2>
         </div>
+
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              placeholder="Search methods..."
+              className="pl-8 pr-3 py-1.5 border border-slate-300 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0097A7]/30 focus:border-[#0097A7] w-52 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-2 text-[13px] text-slate-500">
+            <span>Show</span>
+            <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
+              className="border border-slate-300 rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0097A7]/30">
+              {PAGE_SIZES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <span>entries</span>
+          </div>
+        </div>
+
+        {/* Table */}
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[13px]">
-            <thead><tr className="bg-slate-50 border-b border-slate-200">{['S.No','Code','Check Name','Description','Status','Edit','Delete','Details'].map(h=><th key={h} className="text-center px-3 py-2.5 font-semibold text-slate-600 text-[12px] uppercase tracking-wide whitespace-nowrap">{h}</th>)}</tr></thead>
+            <thead>
+              <tr className="bg-slate-50 border-b-2 border-slate-200">
+                {COLS.map(h => (
+                  <th key={h} className="text-center px-3 py-3 font-bold text-slate-600 text-[11.5px] uppercase tracking-wider whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
-              {paged.length===0?<tr><td colSpan={8} className="text-center py-8 text-slate-400">No records found</td></tr>
-              :paged.map((r,idx)=>(
-                <tr key={r.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx%2===1?'bg-slate-50/50':''}`}>
-                  <td className="px-3 py-2 text-center">{(page-1)*pageSize+idx+1}</td>
-                  <td className="px-3 py-2 text-center font-mono font-bold text-[#0097A7]">{r.CM_vCode}</td>
-                  <td className="px-3 py-2 text-center font-medium">{r.CM_vName}</td>
-                  <td className="px-3 py-2 text-left max-w-xs truncate">{r.CM_vDescription}</td>
-                  <td className="px-3 py-2 text-center"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${r.CM_cStatus==='A'?'bg-green-100 text-green-700':'bg-slate-100 text-slate-500'}`}>{r.CM_cStatus==='A'?'Active':'Inactive'}</span></td>
-                  <td className="px-3 py-2 text-center"><button onClick={()=>handleEdit(r)} className="px-3 py-1.5 bg-[--color-main] hover:bg-[#3498db] text-white text-[12px] rounded transition-colors"><Edit className="w-4 h-4"/></button></td>
-                  <td className="px-3 py-2 text-center"><button onClick={()=>handleDelete(r.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors"><Trash2 className="w-4 h-4"/></button></td>
-                  <td className="px-3 py-2 text-center"><button onClick={()=>setDetailRow(r)} className="px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] rounded transition-colors"><Info className="w-4 h-4"/></button></td>
-                </tr>
-              ))}
+              {paged.length === 0
+                ? <tr><td colSpan={COLS.length} className="text-center py-12 text-slate-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <FlaskConical className="w-8 h-8 text-slate-200" />
+                      <span>No records found</span>
+                    </div>
+                  </td></tr>
+                : paged.map((r, idx) => (
+                  <tr key={r.id} className={`border-b border-slate-100 hover:bg-[#0097A7]/5 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
+                    <td className="px-3 py-2.5 text-center text-slate-500 font-medium">{(page - 1) * pageSize + idx + 1}</td>
+                    <td className="px-3 py-2.5 text-center font-bold font-mono text-[#0097A7]">{r.checkCode}</td>
+                    <td className="px-3 py-2.5 text-center font-medium text-slate-700">{r.checkName}</td>
+                    <td className="px-3 py-2.5 text-left max-w-[220px]">
+                      <span className="block truncate text-slate-500">{r.description || '—'}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ring-1 ${
+                        r.status === 'A'
+                          ? 'bg-green-50 text-green-700 ring-green-200'
+                          : 'bg-slate-100 text-slate-500 ring-slate-200'
+                      }`}>
+                        {r.status === 'A' ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <button onClick={() => handleEdit(r)} title="Edit"
+                        className="inline-flex items-center justify-center w-8 h-8 bg-[#0097A7] hover:bg-[#007a87] text-white rounded-lg transition-colors shadow-sm">
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <button onClick={() => setConfirmId(r.id)} title="Delete"
+                        className="inline-flex items-center justify-center w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors shadow-sm">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <button onClick={() => setDetailRow(r)} title="Details"
+                        className="inline-flex items-center justify-center w-8 h-8 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors shadow-sm">
+                        <Info className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
-          <span className="text-[12px] text-slate-500">Showing {filtered.length===0?0:(page-1)*pageSize+1} to {Math.min(page*pageSize,filtered.length)} of {filtered.length} entries</span>
+
+        {/* Pagination */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-t border-slate-100 bg-slate-50/60">
+          <span className="text-[12px] text-slate-500">
+            Showing <span className="font-semibold text-slate-700">{filtered.length === 0 ? 0 : (page - 1) * pageSize + 1}</span> to{' '}
+            <span className="font-semibold text-slate-700">{Math.min(page * pageSize, filtered.length)}</span> of{' '}
+            <span className="font-semibold text-slate-700">{filtered.length}</span> entries
+          </span>
           <div className="flex items-center gap-1">
-            <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
-            {pNums().map((n,i)=>n==='...'?<span key={`e${i}`} className="px-2 text-slate-400 text-[12px]">…</span>:<button key={n} onClick={()=>setPage(n)} className={`w-8 h-8 text-[12px] rounded border transition-colors ${page===n?'bg-[#0097A7] text-white border-[#0097A7]':'border-slate-300 hover:bg-slate-100 text-slate-600'}`}>{n}</button>)}
-            <button onClick={()=>setPage(p=>Math.min(total,p+1))} disabled={page===total} className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 text-[12px] border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium text-slate-600 transition-colors">
+              Previous
+            </button>
+            {pNums().map((n, i) =>
+              n === '...'
+                ? <span key={`e${i}`} className="px-1.5 text-slate-400 text-[13px]">…</span>
+                : <button key={n} onClick={() => setPage(n)}
+                    className={`w-8 h-8 text-[12px] rounded-lg border font-semibold transition-colors ${page === n ? 'bg-[#0097A7] text-white border-[#0097A7] shadow-sm' : 'border-slate-300 hover:bg-slate-100 text-slate-600'}`}>
+                    {n}
+                  </button>
+            )}
+            <button onClick={() => setPage(p => Math.min(total, p + 1))} disabled={page === total}
+              className="px-3 py-1.5 text-[12px] border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium text-slate-600 transition-colors">
+              Next
+            </button>
           </div>
         </div>
       </div>
-      {detailRow&&<div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-          <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-6 py-4 flex items-center justify-between"><h2 className="text-white font-bold text-[15px]">QC Check Method Details</h2><button onClick={()=>setDetailRow(null)} className="text-white/80 hover:text-white"><X className="w-5 h-5"/></button></div>
-          <div className="p-5 space-y-1.5">
-            {[['Code',detailRow.CM_vCode],['Name',detailRow.CM_vName],['Status',detailRow.CM_cStatus==='A'?'Active':'Inactive'],['Description',detailRow.CM_vDescription]].map(([l,v])=>(
-              <div key={l} className="flex flex-col py-1 border-b border-slate-100"><span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{l}</span><span className="text-[13px] text-slate-800 font-medium">{v||'—'}</span></div>
-            ))}
+
+      {/* Confirm Delete */}
+      <ConfirmDialog
+        open={confirmId !== null}
+        message="Delete this QC Check Method? This action cannot be undone."
+        confirming={confirming}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmId(null)}
+      />
+
+      {/* Detail Modal */}
+      {detailRow && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <FlaskConical className="w-4 h-4 text-white" />
+                </div>
+                <h2 className="text-white font-bold text-[15px]">Method Details</h2>
+              </div>
+              <button onClick={() => setDetailRow(null)} className="text-white/70 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              {[
+                ['Code',        detailRow.checkCode],
+                ['Check Name',  detailRow.checkName],
+                ['Status',      detailRow.status === 'A' ? 'Active' : 'Inactive'],
+                ['Description', detailRow.description],
+                ['Created By',  detailRow.createdBy],
+                ['Created Date', detailRow.createdAt ? new Date(detailRow.createdAt).toLocaleDateString() : null],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-start justify-between py-2.5 border-b border-slate-100 last:border-0">
+                  <span className="text-[12px] font-semibold text-slate-400 uppercase tracking-wider w-28 shrink-0">{label}</span>
+                  <span className="text-[13px] text-slate-800 font-medium text-right flex-1">{value || '—'}</span>
+                </div>
+              ))}
+            </div>
+            <div className="px-6 pb-5 pt-2">
+              <button onClick={() => setDetailRow(null)}
+                className="w-full py-2.5 text-sm font-semibold text-white bg-[#0097A7] hover:bg-[#007a87] rounded-xl transition-colors">
+                Close
+              </button>
+            </div>
           </div>
-          <div className="px-6 pb-5 flex justify-end"><button onClick={()=>setDetailRow(null)} className="px-5 py-2 text-sm font-semibold text-white bg-[#0097A7] hover:bg-[#007a87] rounded-lg transition-colors">Close</button></div>
         </div>
-      </div>}
+      )}
     </div>
   )
 }
