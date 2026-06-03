@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import { 
@@ -7,7 +7,7 @@ import {
   Plus, Save, Edit, Check, List, Barcode
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import axios from 'axios'
+import api from '../services/api'
 
 // ── Ultra-compact, premium UI primitives ──
 const Label = ({ children, required }) => (
@@ -35,7 +35,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
       onChange={onChange}
       className="w-full px-2.5 py-1 pr-6 text-[13px] h-[32px] border border-slate-300 rounded bg-white text-slate-700 appearance-none focus:outline-none focus:ring-1 focus:ring-[#0097A7] focus:border-[#0097A7] transition-all duration-150 hover:border-slate-400 cursor-pointer"
     >
-      <option value="">{placeholder}</option>
+      {placeholder && <option value="">{placeholder}</option>}
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
     <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
@@ -46,36 +46,59 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   </div>
 )
 
-const SEED_BOOKINGS = [
-  { id: 1, bookingId: 1813, bookingDate: '2026-04-15', customerName: 'APC DRILLING AND CONSTRUCTION PVT LTD', customerCode: 'CD1150183', customerVehicleCount: 1, vehicleSerialNo: 'CD1150183', serialNo: 'CD1150183', vehicleNo: 'KA-01-A-1234', serviceJobNo: '26-27/S000029', vehicleModelNo: 'VEDC', modelSubType: 'Crawler', vehicleName: 'Rig A', status: 'Pending', remarks: 'Seeded initial record.' },
-  { id: 2, bookingId: 1814, bookingDate: '2026-04-13', customerName: 'SM DRILLING COMPANY', customerCode: 'SM Drilling 28', customerVehicleCount: 1, vehicleSerialNo: 'GH21188', serialNo: 'GH21188', vehicleNo: 'KA-02-B-5678', serviceJobNo: '24-25/S000002', vehicleModelNo: 'CORE DRILL', modelSubType: 'Trailer', vehicleName: 'Rig B', status: 'Confirmed', remarks: 'Seeded initial record.' },
-  { id: 3, bookingId: 1815, bookingDate: '2026-04-09', customerName: 'SIVASAKTHI', customerCode: 'SIVA SAKTHI V2I', customerVehicleCount: 2, vehicleSerialNo: 'CD1150184', serialNo: 'CD1150184', vehicleNo: 'TN-09-C-9999', serviceJobNo: '24-25/S000003', vehicleModelNo: 'V2I', modelSubType: 'Truck Mount', vehicleName: 'Rig C', status: 'In-Service', remarks: 'Seeded initial record.' },
-  { id: 4, bookingId: 1816, bookingDate: '2026-02-19', customerName: 'APC DRILLING AND CONSTRUCTION PVT LTD', customerCode: 'APC EDC 150 TRACK 3', customerVehicleCount: 1, vehicleSerialNo: 'CD1150184', serialNo: 'CD1150184', vehicleNo: 'AP-16-D-4444', serviceJobNo: '24-25/S000004', vehicleModelNo: 'CORE DRILL', modelSubType: 'Crawler', vehicleName: 'Rig D', status: 'Confirmed', remarks: 'Seeded record.' },
-  { id: 5, bookingId: 1817, bookingDate: '2026-02-19', customerName: 'APC DRILLING AND CONSTRUCTION PVT LTD', customerCode: 'APC EDC 150 TRACK 4', customerVehicleCount: 1, vehicleSerialNo: 'CD1150185', serialNo: 'CD1150185', vehicleNo: 'TS-08-E-5555', serviceJobNo: '24-25/S000005', vehicleModelNo: 'CORE DRILL', modelSubType: 'Crawler', vehicleName: 'Rig E', status: 'Pending', remarks: 'Seeded record.' },
-  { id: 6, bookingId: 1818, bookingDate: '2026-02-19', customerName: 'APC DRILLING AND CONSTRUCTION PVT LTD', customerCode: 'APC EDC 150 TRACK 5', customerVehicleCount: 1, vehicleSerialNo: 'CD1150186', serialNo: 'CD1150186', vehicleNo: 'MH-12-F-6666', serviceJobNo: '24-25/S000006', vehicleModelNo: 'CORE DRILL', modelSubType: 'Crawler', vehicleName: 'Rig F', status: 'In-Service', remarks: 'Seeded record.' },
-  { id: 7, bookingId: 1819, bookingDate: '2026-01-29', customerName: 'APC DRILLING CONSTRUCTION', customerCode: 'APC EDC 200 TRACK 6', customerVehicleCount: 1, vehicleSerialNo: 'CD1150187', serialNo: 'CD1150187', vehicleNo: 'KA-51-M-8888', serviceJobNo: '24-25/S000007', vehicleModelNo: 'CORE DRILL', modelSubType: 'Trailer', vehicleName: 'Rig G', status: 'Pending', remarks: 'Seeded record.' }
-]
+// Helper to calculate financial year
+const getFinancialYear = (dateStr) => {
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '26-27'
+  const month = date.getMonth() + 1
+  const year = date.getFullYear()
+  const startYear = month >= 4 ? year : year - 1
+  const endYear = startYear + 1
+  const yy = String(startYear).slice(-2)
+  const nextYY = String(endYear).slice(-2)
+  return `${yy}-${nextYY}`
+}
+
+// Helper to generate next SO job number
+const generateJobNumber = (dateStr, existingBookings) => {
+  const fy = getFinancialYear(dateStr)
+  const prefix = `${fy}/SO`
+  const matching = existingBookings.filter(b => b.serviceJobNo && b.serviceJobNo.startsWith(prefix))
+  let maxSeq = 0
+  matching.forEach(b => {
+    const suffix = b.serviceJobNo.slice(prefix.length)
+    const seq = parseInt(suffix, 10) || 0
+    if (seq > maxSeq) maxSeq = seq
+  })
+  const nextSeq = maxSeq + 1
+  return `${prefix}${String(nextSeq).padStart(5, '0')}`
+}
 
 export default function BookingEntryNew() {
   const toast = useToast()
   const [form, setForm] = useState({
-    bookingId: 1820,
+    bookingId: 1,
     bookingDate: new Date().toISOString().split('T')[0],
     customerName: '',
     customerVehicleCount: '',
+    chooseOption: '',
     vehicleSerialNo: '',
     customerCode: '',
     serialNo: '',
     vehicleNo: '',
-    serviceJobNo: '26-27/S000029',
+    serviceJobNo: '26-27/SO00001',
     vehicleModelNo: '',
     modelSubType: '',
     vehicleName: '',
-    status: 'Pending',
+    status: 'Open',
     remarks: ''
   })
 
   const [bookings, setBookings] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [vehicles, setVehicles] = useState([])
+  const [statuses, setStatuses] = useState(['Open', 'Close'])
+  
   const [editingId, setEditingId] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredBookings, setFilteredBookings] = useState([])
@@ -85,22 +108,66 @@ export default function BookingEntryNew() {
   const [showFilterPanel, setShowFilterPanel] = useState(false)
   const [filterStatus, setFilterStatus] = useState('')
   const [filterModel, setFilterModel] = useState('')
+  const [filterCustomer, setFilterCustomer] = useState('')
+  const [filterBookingDate, setFilterBookingDate] = useState('')
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const loadAllData = async () => {
       try {
-        const res = await axios.get('/api/service-booking')
-        const parsed = res.data?.data || []
-        setBookings(parsed)
-        if (parsed.length > 0) {
-          const maxId = Math.max(...parsed.map(b => b.bookingId))
-          setForm(f => ({ ...f, bookingId: maxId + 1 }))
+        const [bookingsRes, customersRes, vehiclesRes, statusesRes] = await Promise.all([
+          api.get('/api/service-booking').catch(err => {
+            console.warn('Failed to fetch service bookings', err)
+            return { data: { data: [] } }
+          }),
+          api.get('/api/customer-master').catch(err => {
+            console.error('Failed to fetch customers', err)
+            return { data: { data: [] } }
+          }),
+          api.get('/api/vehicle-master').catch(err => {
+            console.error('Failed to fetch vehicles', err)
+            return { data: { data: [] } }
+          }),
+          api.get('/api/reference-master/Service_Booking_Status').catch(err => {
+            console.error('Failed to fetch status options', err)
+            return { data: { data: [] } }
+          })
+        ])
+
+        const parsedBookings = bookingsRes.data?.data || []
+        setBookings(parsedBookings)
+
+        const parsedCustomers = customersRes.data?.data || []
+        setCustomers(parsedCustomers)
+
+        const parsedVehicles = vehiclesRes.data?.data || []
+        setVehicles(parsedVehicles)
+
+        if (statusesRes && statusesRes.data?.data) {
+          const loadedStatuses = statusesRes.data.data
+            .map(r => r.description ? r.description.trim() : '')
+            .filter(Boolean)
+          if (loadedStatuses.length > 0) {
+            setStatuses(loadedStatuses)
+          }
         }
+
+        const nextBookingId = parsedBookings.length > 0 
+          ? Math.max(...parsedBookings.map(b => parseInt(b.bookingId, 10)).filter(num => !isNaN(num))) + 1 
+          : 1
+        const todayStr = new Date().toISOString().split('T')[0]
+        const nextJobNo = generateJobNumber(todayStr, parsedBookings)
+
+        setForm(f => ({
+          ...f,
+          bookingId: nextBookingId,
+          bookingDate: todayStr,
+          serviceJobNo: nextJobNo
+        }))
       } catch (err) {
-        console.error('Failed to fetch bookings', err)
+        console.error('Failed to load initial data', err)
       }
     }
-    fetchBookings()
+    loadAllData()
   }, [])
 
   // Dynamic reactive filtering whenever search queries or advanced filters change
@@ -110,25 +177,150 @@ export default function BookingEntryNew() {
       // 1. Text Search
       if (searchQuery) {
         const matchesQuery = 
-          b.customerName.toLowerCase().includes(q) ||
+          (b.customerName || '').toLowerCase().includes(q) ||
           (b.customerCode || '').toLowerCase().includes(q) ||
-          b.serviceJobNo.toLowerCase().includes(q) ||
-          b.vehicleModelNo.toLowerCase().includes(q) ||
+          (b.serviceJobNo || '').toLowerCase().includes(q) ||
+          (b.vehicleModelNo || '').toLowerCase().includes(q) ||
           (b.vehicleNo || '').toLowerCase().includes(q) ||
-          b.vehicleName.toLowerCase().includes(q)
+          (b.vehicleName || '').toLowerCase().includes(q)
         if (!matchesQuery) return false
       }
       // 2. Status Filter
       if (filterStatus && b.status !== filterStatus) return false
       // 3. Model Filter
       if (filterModel && b.vehicleModelNo !== filterModel) return false
+      // 4. Customer Filter
+      if (filterCustomer && b.customerName !== filterCustomer) return false
+      // 5. Booking Date Filter
+      if (filterBookingDate && b.bookingDate !== filterBookingDate) return false
       
       return true
     })
     setFilteredBookings(results)
-  }, [bookings, searchQuery, filterStatus, filterModel])
+  }, [bookings, searchQuery, filterStatus, filterModel, filterCustomer, filterBookingDate])
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  const handleDateChange = (dateVal) => {
+    setForm(f => {
+      const nextJobNo = editingId !== null ? f.serviceJobNo : generateJobNumber(dateVal, bookings)
+      return {
+        ...f,
+        bookingDate: dateVal,
+        serviceJobNo: nextJobNo
+      }
+    })
+  }
+
+  const handleCustomerChange = (customerNameVal) => {
+    const cust = customers.find(c => c.customerName === customerNameVal)
+    if (!cust) {
+      setForm(f => ({
+        ...f,
+        customerName: customerNameVal,
+        customerCode: '',
+        customerVehicleCount: '',
+        chooseOption: '',
+        vehicleSerialNo: '',
+        serialNo: '',
+        vehicleNo: '',
+        vehicleModelNo: '',
+        modelSubType: '',
+        vehicleName: ''
+      }))
+      return
+    }
+
+    const customerVehicles = vehicles.filter(v => Number(v.customerId) === Number(cust.id))
+    const count = customerVehicles.length
+
+    setForm(f => ({
+      ...f,
+      customerName: customerNameVal,
+      customerCode: cust.cCode || '',
+      customerVehicleCount: count,
+      chooseOption: '',
+      vehicleSerialNo: '',
+      serialNo: '',
+      vehicleNo: '',
+      vehicleModelNo: '',
+      modelSubType: '',
+      vehicleName: ''
+    }))
+  }
+
+  const chooseOptions = useMemo(() => {
+    const count = Number(form.customerVehicleCount) || 0
+    if (count <= 0) return []
+    const opts = []
+    for (let i = 1; i <= count; i++) {
+      opts.push(String(i))
+    }
+    return opts
+  }, [form.customerVehicleCount])
+
+  const jobNoOptions = useMemo(() => {
+    const list = bookings.map(b => b.serviceJobNo).filter(Boolean)
+    if (form.serviceJobNo && !list.includes(form.serviceJobNo)) {
+      list.unshift(form.serviceJobNo)
+    }
+    return list
+  }, [bookings, form.serviceJobNo])
+
+  const uniqueCustomerNames = useMemo(() => {
+    const fromBookings = bookings.map(b => b.customerName).filter(Boolean)
+    return Array.from(new Set(fromBookings)).sort()
+  }, [bookings])
+
+  const uniqueModels = useMemo(() => {
+    const fromBookings = bookings.map(b => b.vehicleModelNo).filter(Boolean)
+    return Array.from(new Set(fromBookings)).sort()
+  }, [bookings])
+
+  const handleServiceJobNoChange = (val) => {
+    if (!val) return
+    const matching = bookings.find(b => b.serviceJobNo === val)
+    if (matching) {
+      handleEdit(matching)
+      toast.success(`Loaded booking details for Job No: ${val}`)
+    } else {
+      setForm(f => ({ ...f, serviceJobNo: val }))
+    }
+  }
+
+  const handleChooseOptionChange = (optionVal) => {
+    if (!optionVal) {
+      setForm(f => ({
+        ...f,
+        chooseOption: '',
+        vehicleSerialNo: '',
+        serialNo: '',
+        vehicleNo: '',
+        vehicleModelNo: '',
+        modelSubType: '',
+        vehicleName: ''
+      }))
+      return
+    }
+
+    const cust = customers.find(c => c.customerName === form.customerName)
+    if (!cust) return
+
+    const customerVehicles = vehicles.filter(v => Number(v.customerId) === Number(cust.id))
+    const index = parseInt(optionVal, 10) - 1
+    const vehicle = customerVehicles[index]
+
+    setForm(f => ({
+      ...f,
+      chooseOption: optionVal,
+      vehicleSerialNo: vehicle?.serialNumber || '',
+      serialNo: vehicle?.serialNumber || '',
+      vehicleNo: vehicle?.vehicleNumber || '',
+      vehicleModelNo: vehicle?.modelName || '',
+      modelSubType: vehicle?.modelSubType || '',
+      vehicleName: vehicle?.vehicleName || ''
+    }))
+  }
 
   const handleSave = async () => {
     if (!form.customerName || !form.vehicleModelNo || !form.modelSubType || !form.vehicleName) {
@@ -144,19 +336,19 @@ export default function BookingEntryNew() {
       
       let updatedBookings
       if (editingId !== null) {
-        const res = await axios.put(`/api/service-booking/${editingId}`, payload)
+        const res = await api.put(`/api/service-booking/${editingId}`, payload)
         updatedBookings = bookings.map(b => b.id === editingId ? res.data.data : b)
         toast.success('Booking updated successfully.')
         setEditingId(null)
       } else {
-        const res = await axios.post('/api/service-booking', payload)
+        const res = await api.post('/api/service-booking', payload)
         updatedBookings = [res.data.data, ...bookings]
         toast.success('Booking entry saved successfully.')
       }
 
       setBookings(updatedBookings)
       setFilteredBookings(updatedBookings)
-      handleClear()
+      handleClear(updatedBookings)
     } catch (err) {
       console.error('Failed to save booking', err)
       toast.error('Failed to save booking. ' + (err.response?.data?.message || err.message))
@@ -164,7 +356,19 @@ export default function BookingEntryNew() {
   }
 
   const handleEdit = (row) => {
-    setForm(row)
+    const cust = customers.find(c => c.customerName === row.customerName)
+    let selectedOption = ''
+    if (cust) {
+      const customerVehicles = vehicles.filter(v => Number(v.customerId) === Number(cust.id))
+      const idx = customerVehicles.findIndex(v => v.serialNumber === row.vehicleSerialNo)
+      if (idx !== -1) {
+        selectedOption = String(idx + 1)
+      }
+    }
+    setForm({
+      ...row,
+      chooseOption: selectedOption
+    })
     setEditingId(row.id)
     toast.warning(`Editing Booking #${row.bookingId}`)
   }
@@ -172,12 +376,12 @@ export default function BookingEntryNew() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this Booking record?')) {
       try {
-        await axios.delete(`/api/service-booking/${id}`)
+        await api.delete(`/api/service-booking/${id}`)
         const updated = bookings.filter(b => b.id !== id)
         setBookings(updated)
         setFilteredBookings(updated)
         toast.error('Booking deleted successfully.')
-        handleClear()
+        handleClear(updated)
       } catch (err) {
         console.error('Failed to delete booking', err)
         toast.error('Failed to delete booking.')
@@ -185,22 +389,28 @@ export default function BookingEntryNew() {
     }
   }
 
-  const handleClear = () => {
-    const nextBookingId = bookings.length > 0 ? Math.max(...bookings.map(b => b.bookingId)) + 1 : 1820
+  const handleClear = (customBookings) => {
+    const listToUse = customBookings && Array.isArray(customBookings) ? customBookings : bookings
+    const nextBookingId = listToUse.length > 0 
+      ? Math.max(...listToUse.map(b => parseInt(b.bookingId, 10)).filter(num => !isNaN(num))) + 1 
+      : 1
+    const todayStr = new Date().toISOString().split('T')[0]
+    const nextJobNo = generateJobNumber(todayStr, listToUse)
     setForm({
       bookingId: nextBookingId,
-      bookingDate: new Date().toISOString().split('T')[0],
+      bookingDate: todayStr,
       customerName: '',
       customerVehicleCount: '',
+      chooseOption: '',
       vehicleSerialNo: '',
       customerCode: '',
       serialNo: '',
       vehicleNo: '',
-      serviceJobNo: '26-27/S' + Math.floor(100000 + Math.random() * 900000),
+      serviceJobNo: nextJobNo,
       vehicleModelNo: '',
       modelSubType: '',
       vehicleName: '',
-      status: 'Pending',
+      status: statuses.includes('Open') ? 'Open' : (statuses[0] || 'Open'),
       remarks: ''
     })
     setEditingId(null)
@@ -252,7 +462,7 @@ export default function BookingEntryNew() {
             <div class="details">
               <div class="details-row"><span class="label">Booking ID:</span><span>#${form.bookingId}</span></div>
               <div class="details-row"><span class="label">Date:</span><span>${form.bookingDate}</span></div>
-              <div class="details-row"><span class="label">Job No:</span><span>${form.serviceJobNo}</span></div>
+              <div class="details-row"><span class="label">Service Job No:</span><span>${form.serviceJobNo}</span></div>
               <div class="details-row"><span class="label">Customer:</span><span style="max-width: 200px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${form.customerName}</span></div>
               <div class="details-row"><span class="label">Vehicle:</span><span>${form.vehicleName} (${form.vehicleNo || '—'})</span></div>
               <div class="details-row"><span class="label">Model/SN:</span><span>${form.vehicleModelNo} / ${form.vehicleSerialNo || '—'}</span></div>
@@ -336,10 +546,8 @@ export default function BookingEntryNew() {
             td { padding: 8px; border: 1px solid #e2e8f0; font-size: 12px; }
             .text-center { text-align: center; }
             .status-badge { font-weight: bold; text-transform: uppercase; font-size: 9px; padding: 2px 6px; border-radius: 4px; display: inline-block; }
-            .status-Pending { background: #fef3c7; color: #d97706; }
-            .status-Confirmed { background: #ecfdf5; color: #059669; }
-            .status-In-Service { background: #eff6ff; color: #2563eb; }
-            .status-Completed { background: #f0fdf4; color: #16a34a; }
+            .status-Open { background: #ecfdf5; color: #059669; }
+            .status-Close { background: #f1f5f9; color: #64748b; }
             .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
           </style>
         </head>
@@ -480,10 +688,10 @@ export default function BookingEntryNew() {
       doc.text(b.vehicleModelNo, 215, currentY + 4.5)
       doc.text(b.vehicleName, 238, currentY + 4.5)
       
-      if (b.status === 'Confirmed' || b.status === 'Completed') {
+      if (b.status === 'Open') {
         doc.setTextColor(5, 150, 105)
-      } else if (b.status === 'Pending') {
-        doc.setTextColor(217, 119, 6)
+      } else if (b.status === 'Close') {
+        doc.setTextColor(100, 116, 139)
       } else {
         doc.setTextColor(37, 99, 235)
       }
@@ -575,7 +783,7 @@ export default function BookingEntryNew() {
                   <Label>Date :</Label>
                 </div>
                 <div className="col-span-3">
-                  <Input type="date" value={form.bookingDate} onChange={u('bookingDate')} />
+                  <Input type="date" value={form.bookingDate} onChange={e => handleDateChange(e.target.value)} />
                 </div>
               </div>
 
@@ -586,10 +794,10 @@ export default function BookingEntryNew() {
                 </div>
                 <div className="col-span-8">
                   <Select 
-                    options={['APC DRILLING AND CONSTRUCTION PVT LTD', 'SM DRILLING COMPANY', 'SIVASAKTHI', 'APC DRILLING CONSTRUCTION', 'VKS Mining Services']} 
+                    options={customers.map(c => c.customerName)} 
                     placeholder="Search Customer..." 
                     value={form.customerName} 
-                    onChange={u('customerName')} 
+                    onChange={e => handleCustomerChange(e.target.value)} 
                   />
                 </div>
               </div>
@@ -600,21 +808,21 @@ export default function BookingEntryNew() {
                   <Label>Customer Vehicle Count :</Label>
                 </div>
                 <div className="col-span-8">
-                  <Input type="number" value={form.customerVehicleCount} onChange={u('customerVehicleCount')} placeholder="Customer Vehicle Count" />
+                  <Input type="number" value={form.customerVehicleCount} readOnly className="!font-bold text-slate-600 bg-slate-50" placeholder="Customer Vehicle Count" />
                 </div>
               </div>
 
-              {/* Row 4: Vehicle Serial No */}
+              {/* Row 4: Choose Option */}
               <div className="grid grid-cols-12 gap-2 items-center">
                 <div className="col-span-4 text-right pr-1">
-                  <Label>Vehicle Serial No :</Label>
+                  <Label>Choose Option :</Label>
                 </div>
                 <div className="col-span-8">
                   <Select 
-                    options={['CD1150183', 'GH21188', 'CD1150184', 'CD1150185', 'CD1150186', 'CD1150187']} 
-                    placeholder="Select Serial No..." 
-                    value={form.vehicleSerialNo} 
-                    onChange={u('vehicleSerialNo')} 
+                    options={chooseOptions} 
+                    placeholder="Choose Option..." 
+                    value={form.chooseOption || ''} 
+                    onChange={e => handleChooseOptionChange(e.target.value)} 
                   />
                 </div>
               </div>
@@ -625,7 +833,7 @@ export default function BookingEntryNew() {
                   <Label>Customer Code :</Label>
                 </div>
                 <div className="col-span-8">
-                  <Input value={form.customerCode} onChange={u('customerCode')} placeholder="Customer Code" />
+                  <Input value={form.customerCode} readOnly className="!font-bold text-slate-600 bg-slate-50" placeholder="Customer Code" />
                 </div>
               </div>
 
@@ -655,10 +863,15 @@ export default function BookingEntryNew() {
               {/* Row 1: Service Job No */}
               <div className="grid grid-cols-12 gap-2 items-center">
                 <div className="col-span-4 text-right pr-1">
-                  <Label>Job No :</Label>
+                  <Label>Service Job No :</Label>
                 </div>
                 <div className="col-span-8">
-                  <Input value={form.serviceJobNo} readOnly className="!font-bold text-slate-600 bg-slate-50" />
+                  <Select 
+                    options={jobNoOptions} 
+                    placeholder="Select Service Job No..." 
+                    value={form.serviceJobNo} 
+                    onChange={e => handleServiceJobNoChange(e.target.value)} 
+                  />
                 </div>
               </div>
 
@@ -668,12 +881,7 @@ export default function BookingEntryNew() {
                   <Label required>Vehicle Model No :</Label>
                 </div>
                 <div className="col-span-8">
-                  <Select 
-                    options={['VEDC', 'CORE DRILL', 'V2I', 'V9', 'V10', 'V2i']} 
-                    placeholder="Select Model..." 
-                    value={form.vehicleModelNo} 
-                    onChange={u('vehicleModelNo')} 
-                  />
+                  <Input value={form.vehicleModelNo} readOnly className="!font-bold text-slate-600 bg-slate-50" placeholder="Vehicle Model No" />
                 </div>
               </div>
 
@@ -683,12 +891,7 @@ export default function BookingEntryNew() {
                   <Label required>Model Subtype :</Label>
                 </div>
                 <div className="col-span-8">
-                  <Select 
-                    options={['Crawler', 'Trailer', 'Truck Mount', 'Sling Mount']} 
-                    placeholder="Select Sub Type..." 
-                    value={form.modelSubType} 
-                    onChange={u('modelSubType')} 
-                  />
+                  <Input value={form.modelSubType} readOnly className="!font-bold text-slate-600 bg-slate-50" placeholder="Model Subtype" />
                 </div>
               </div>
 
@@ -698,12 +901,7 @@ export default function BookingEntryNew() {
                   <Label required>Vehicle Name :</Label>
                 </div>
                 <div className="col-span-8">
-                  <Select 
-                    options={['Rig A', 'Rig B', 'Rig C', 'Rig D', 'Rig E', 'Rig F', 'Rig G']} 
-                    placeholder="Select Vehicle Name..." 
-                    value={form.vehicleName} 
-                    onChange={u('vehicleName')} 
-                  />
+                  <Input value={form.vehicleName} readOnly className="!font-bold text-slate-600 bg-slate-50" placeholder="Vehicle Name" />
                 </div>
               </div>
 
@@ -714,8 +912,7 @@ export default function BookingEntryNew() {
                 </div>
                 <div className="col-span-8">
                   <Select 
-                    options={['Pending', 'Confirmed', 'In-Service', 'Completed']} 
-                    placeholder="Select Status..." 
+                    options={statuses}  
                     value={form.status} 
                     onChange={u('status')} 
                   />
@@ -803,6 +1000,77 @@ export default function BookingEntryNew() {
             </div>
           </div>
 
+          {/* Advanced Filter Panel */}
+          {showFilterPanel && (
+            <div className="max-w-7xl mx-auto mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg shadow-inner grid grid-cols-12 gap-4 items-end transition-all duration-300">
+              <div className="col-span-3">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Filter by Customer</label>
+                <select
+                  value={filterCustomer}
+                  onChange={e => setFilterCustomer(e.target.value)}
+                  className="w-full px-2 py-1 text-[13px] h-[32px] border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7] focus:border-[#0097A7] transition-all"
+                >
+                  <option value="">All Customers</option>
+                  {uniqueCustomerNames.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-3">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Filter by Booking Date</label>
+                <input
+                  type="date"
+                  value={filterBookingDate}
+                  onChange={e => setFilterBookingDate(e.target.value)}
+                  className="w-full px-2.5 py-1 text-[13px] h-[32px] border border-slate-300 rounded bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0097A7] focus:border-[#0097A7] transition-all"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Filter by Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="w-full px-2 py-1 text-[13px] h-[32px] border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7] focus:border-[#0097A7] transition-all"
+                >
+                  <option value="">All Statuses</option>
+                  {statuses.map(st => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Filter by Vehicle Model no</label>
+                <select
+                  value={filterModel}
+                  onChange={e => setFilterModel(e.target.value)}
+                  className="w-full px-2 py-1 text-[13px] h-[32px] border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0097A7] focus:border-[#0097A7] transition-all"
+                >
+                  <option value="">All Models</option>
+                  {uniqueModels.map(md => (
+                    <option key={md} value={md}>{md}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2">
+                <button
+                  onClick={() => {
+                    setFilterCustomer('')
+                    setFilterBookingDate('')
+                    setFilterStatus('')
+                    setFilterModel('')
+                  }}
+                  className="w-full h-[32px] bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[12px] uppercase rounded transition-all active:scale-95 flex items-center justify-center gap-1"
+                >
+                  <RotateCcw size={12} /> Reset
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Solid sub-banner for Booking list */}
           <div className="max-w-7xl mx-auto bg-[#0097A7] text-white px-4 py-1.5 rounded-t-lg font-bold text-xs uppercase tracking-wider shadow-sm">
             Bookings List
@@ -834,6 +1102,7 @@ export default function BookingEntryNew() {
                       if (tool.l === 'Dos') handlePrintBookingList();
                       else if (tool.l === 'Excel') handleExportExcel();
                       else if (tool.l === 'Pdf') handleExportPdf();
+                      else if (tool.l === 'Filter') setShowFilterPanel(prev => !prev);
                       else toast.success(`${tool.l} tool activated.`);
                     }}
                     className="flex items-center gap-0.5 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[12px] font-bold uppercase rounded shadow-sm transition-all active:scale-95"
@@ -845,25 +1114,30 @@ export default function BookingEntryNew() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1300px]">
+              <table className="w-full text-left border-collapse min-w-[1600px]">
                 <thead className="bg-slate-50 text-[12px] uppercase text-slate-400 font-bold border-b border-slate-200">
                   <tr className="h-8">
+                    <th className="px-3 py-1 border-r border-slate-100 w-16 text-center">ID</th>
                     <th className="px-3 py-1 border-r border-slate-100 w-16 text-center">S.No</th>
-                    <th className="px-3 py-1 border-r border-slate-100 w-24 text-center">Booking Id</th>
-                    <th className="px-3 py-1 border-r border-slate-100 w-28">Booking Date</th>
-                    <th className="px-3 py-1 border-r border-slate-100 w-[280px]">Customer Name</th>
+                    <th className="px-3 py-1 border-r border-slate-100 w-28 text-center">Booking Date</th>
+                    <th className="px-3 py-1 border-r border-slate-100 w-[240px]">Customer Name</th>
                     <th className="px-3 py-1 border-r border-slate-100">Customer Code</th>
-                    <th className="px-3 py-1 border-r border-slate-100 text-center w-24">Vehicle Count</th>
                     <th className="px-3 py-1 border-r border-slate-100">Serial No</th>
                     <th className="px-3 py-1 border-r border-slate-100">Vehicle No</th>
                     <th className="px-3 py-1 border-r border-slate-100">Service Job.No</th>
-                    <th className="px-3 py-1">Model No</th>
+                    <th className="px-3 py-1 border-r border-slate-100">Model No</th>
+                    <th className="px-3 py-1 border-r border-slate-100">Sub Model</th>
+                    <th className="px-3 py-1 border-r border-slate-100">Vehicle Name</th>
+                    <th className="px-3 py-1 border-r border-slate-100">Remarks</th>
+                    <th className="px-3 py-1 border-r border-slate-100 text-center">Vehicle Count.No</th>
+                    <th className="px-3 py-1 border-r border-slate-100 text-center">Financial Year</th>
+                    <th className="px-3 py-1">Created_D</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-[12.5px]">
                   {filteredBookings.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-16 text-center text-slate-300 italic">
+                      <td colSpan={15} className="py-16 text-center text-slate-300 italic">
                         No Booking records found.
                       </td>
                     </tr>
@@ -874,16 +1148,21 @@ export default function BookingEntryNew() {
                         onClick={() => handleEdit(row)}
                         className={`hover:bg-[#0097A7]/5 cursor-pointer transition-colors h-9 ${editingId === row.id ? 'bg-[#0097A7]/10 font-semibold' : ''}`}
                       >
-                        <td className="px-3 py-1 border-r border-slate-50 text-center text-slate-500 font-bold bg-slate-50/50">{idx + 1}</td>
                         <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-[#0097A7]">{row.bookingId}</td>
+                        <td className="px-3 py-1 border-r border-slate-50 text-center text-slate-500 font-bold bg-slate-50/50">{idx + 1}</td>
                         <td className="px-3 py-1 border-r border-slate-50 font-bold text-slate-500">{row.bookingDate}</td>
                         <td className="px-3 py-1 border-r border-slate-50 font-bold text-slate-700">{row.customerName}</td>
                         <td className="px-3 py-1 border-r border-slate-50 text-slate-600 font-medium">{row.customerCode || '—'}</td>
-                        <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-slate-500">{row.customerVehicleCount || 1}</td>
                         <td className="px-3 py-1 border-r border-slate-50 font-semibold text-slate-600">{row.serialNo || '—'}</td>
                         <td className="px-3 py-1 border-r border-slate-50 font-mono text-slate-700">{row.vehicleNo || '—'}</td>
                         <td className="px-3 py-1 border-r border-slate-50 font-bold text-[#0097A7]">{row.serviceJobNo}</td>
-                        <td className="px-3 py-1 font-bold text-slate-500">{row.vehicleModelNo}</td>
+                        <td className="px-3 py-1 border-r border-slate-50 font-bold text-slate-500">{row.vehicleModelNo}</td>
+                        <td className="px-3 py-1 border-r border-slate-50 text-slate-600">{row.modelSubType || '—'}</td>
+                        <td className="px-3 py-1 border-r border-slate-50 text-slate-700 font-medium">{row.vehicleName || '—'}</td>
+                        <td className="px-3 py-1 border-r border-slate-50 text-slate-600 truncate max-w-[150px]">{row.remarks || '—'}</td>
+                        <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-slate-500">{row.customerVehicleCount || 1}</td>
+                        <td className="px-3 py-1 border-r border-slate-50 text-center text-slate-500 font-medium">{getFinancialYear(row.bookingDate)}</td>
+                        <td className="px-3 py-1 text-slate-500">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—'}</td>
                       </tr>
                     ))
                   )}

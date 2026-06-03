@@ -3,7 +3,8 @@ import {
   ChevronRight, X, Trash2, Save
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import axios from 'axios'
+import api from '../services/api'
+
 
 // ── Ultra-compact, premium UI primitives ──
 const Label = ({ children, required }) => (
@@ -84,7 +85,7 @@ export default function ServiceQuotation() {
   useEffect(() => {
     const fetchQuotations = async () => {
       try {
-        const res = await axios.get('/api/service-quotation')
+        const res = await api.get('/api/service-quotation')
         const parsed = res.data?.data || []
         const editId = localStorage.getItem('velson_edit_service_quotation_id')
 
@@ -253,11 +254,11 @@ export default function ServiceQuotation() {
 
     try {
       if (editingId !== null) {
-        await axios.put(`/api/service-quotation/${editingId}`, newQuotation)
+        await api.put(`/api/service-quotation/${editingId}`, newQuotation, { loadingMessage: 'Updating quotation...' })
         toast.success(`Service Quotation Qu. #${quNo} Updated Successfully. Total Bill Amt: ${totalBillAmt.toFixed(2)}`)
         setEditingId(null)
       } else {
-        await axios.post('/api/service-quotation', newQuotation)
+        await api.post('/api/service-quotation', newQuotation, { loadingMessage: 'Saving quotation...' })
         toast.success(`Service Quotation Qu. #${quNo} Saved Successfully. Total Bill Amt: ${totalBillAmt.toFixed(2)}`)
       }
     } catch (err) {

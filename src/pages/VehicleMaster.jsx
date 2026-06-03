@@ -56,6 +56,7 @@ function DetailModal({ row, onClose }) {
             ['Date',              dateStr],
             ['Customer Name',     row.customer?.customerName],
             ['Customer Code',     row.customer?.cCode],
+            ['Address',           row.address],
             ['Vehicle Count',     row.vehicleCount],
             ['Vehicle Number',    row.vehicleNumber],
             ['Model Name',        row.modelName],
@@ -215,8 +216,15 @@ export default function VehicleMaster() {
   }
 
   const handleCustomerChange = (customerId) => {
-    const existingCount = rows.filter(r => r.customerId === Number(customerId)).length
-    setForm(f => ({ ...f, customerId, vehicleCount: String(existingCount + 1) }))
+    const customerRows = rows.filter(r => r.customerId === Number(customerId))
+    const maxCount = customerRows.reduce((max, r) => Math.max(max, Number(r.vehicleCount) || 0), 0)
+    const cust = customers.find(c => c.id === Number(customerId))
+    setForm(f => ({
+      ...f,
+      customerId,
+      vehicleCount: String(maxCount + 1),
+      address: cust?.address || ''
+    }))
     setErrors(e => ({ ...e, customerId: '' }))
   }
 

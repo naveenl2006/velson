@@ -4,7 +4,8 @@ import {
   ChevronRight, X, Trash2, Edit, Search, Printer, List, Download, FileSpreadsheet, Filter, Settings, Save, RotateCcw
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import axios from 'axios'
+import api from '../services/api'
+
 
 // ── Ultra-compact, premium UI primitives ──
 const Label = ({ children, required }) => (
@@ -43,13 +44,6 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   </div>
 )
 
-// Legacy screenshot seeds for active Job options
-const LEGACY_JOBS = [
-  { serviceJobNo: '26-27/S000027', customerCode: 'LM191', customerName: 'MANJUNATHA ROCK DRILLS', bookingId: 1811, bookingDate: '2026-04-15', serialNo: 'V3/042600009', vehicleNo: 'KA-01-A-1111', vehicleModelNo: 'V3', modelSubType: 'VELSON TYPE', vehicleName: 'NEW FABRICATION', count: 17 },
-  { serviceJobNo: '26-27/S000028', customerCode: 'LM964', customerName: 'AJANTHA MINING PRIVATE LIMITED', bookingId: 1812, bookingDate: '2026-04-15', serialNo: 'V10/102400035', vehicleNo: 'KA-02-B-2222', vehicleModelNo: 'V10', modelSubType: 'GH600LC', vehicleName: 'KOBELCO', count: 1 },
-  { serviceJobNo: '26-27/S000029', customerCode: 'CD1150183', customerName: 'APC DRILLING AND CONSTRUCTION PVT LTD', bookingId: 1813, bookingDate: '2026-04-15', serialNo: 'CD1150183', vehicleNo: 'KA-01-A-1234', vehicleModelNo: 'VEDC', modelSubType: 'Crawler', vehicleName: 'Rig A', count: 1 }
-]
-
 const STANDARD_ASSEMBLIES = [
   { id: 1, name: 'Engine System & Mounts' },
   { id: 2, name: 'Hydraulic Main Pump & Valves' },
@@ -63,27 +57,6 @@ const STANDARD_ASSEMBLIES = [
   { id: 10, name: 'Feed Cylinder Assembly' }
 ]
 
-const SEED_SERVICE_ENTRIES = [
-  {
-    id: 9901,
-    serviceJobNo: '26-27/S000028',
-    customerCode: 'LM964',
-    customerName: 'AJANTHA MINING PRIVATE LIMITED',
-    bookingId: 1812,
-    bookingDate: '2026-04-15',
-    serialNo: 'V10/102400035',
-    vehicleNo: 'KA-02-B-2222',
-    vehicleModelNo: 'V10',
-    modelSubType: 'GH600LC',
-    vehicleName: 'KOBELCO',
-    status: 'In-Service',
-    remarks: 'General service and seal replacement',
-    servicePartNo: 'SP-9910',
-    vehicleCount: 1,
-    checkedAssemblies: [1, 2, 5]
-  }
-]
-
 export default function ServiceDetailsEntry() {
   const toast = useToast()
 
@@ -93,6 +66,11 @@ export default function ServiceDetailsEntry() {
   const [filteredServiceList, setFilteredServiceList] = useState([])
   const [selectedRowId, setSelectedRowId] = useState(null)
   const [editingId, setEditingId] = useState(null)
+
+  const [modelOptions, setModelOptions] = useState([])
+  const [subTypeOptions, setSubTypeOptions] = useState([])
+  const [vehicleNameOptions, setVehicleNameOptions] = useState([])
+  const [statusOptions, setStatusOptions] = useState([])
 
   // Form states
   const [serviceJobNo, setServiceJobNo] = useState('')
@@ -106,7 +84,7 @@ export default function ServiceDetailsEntry() {
   const [vehicleModelNo, setVehicleModelNo] = useState('')
   const [modelSubType, setModelSubType] = useState('')
   const [vehicleName, setVehicleName] = useState('')
-  const [status, setStatus] = useState('In-Service')
+  const [status, setStatus] = useState('Open')
   const [remarks, setRemarks] = useState('')
   const [servicePartNo, setServicePartNo] = useState('')
 
@@ -119,7 +97,7 @@ export default function ServiceDetailsEntry() {
     const fetchData = async () => {
       try {
         // 1. Gather all unique Booking records for Job selection
-        const bookingsRes = await axios.get('/api/service-booking')
+        const bookingsRes = await api.get('/api/service-booking')
         const parsed = bookingsRes.data?.data || []
         const parsedFormatted = parsed.map(b => ({
           serviceJobNo: b.serviceJobNo || '—',
@@ -134,12 +112,37 @@ export default function ServiceDetailsEntry() {
           vehicleName: b.vehicleName,
           count: b.customerVehicleCount || 1
         }))
-        // Merge and filter duplicate Job Nos from legacy jobs just in case
-        const allJobs = [...parsedFormatted, ...LEGACY_JOBS.filter(j => !parsedFormatted.some(p => p.serviceJobNo === j.serviceJobNo))]
-        setJobsList(allJobs)
+        setJobsList(parsedFormatted)
 
-        // 2. Load service details entries
-        const detailsRes = await axios.get('/api/service-detail')
+        // 2. Gather unique options for Model, Sub Type and Vehicle Name
+        const vehiclesRes = await api.get('/api/vehicle-master')
+        const vehiclesList = vehiclesRes.data?.data || []
+        const uniqueModels = [...new Set([
+          ...vehiclesList.map(v => v.modelName).filter(Boolean),
+          'VEDC', 'CORE DRILL', 'V2I', 'V3', 'V10', 'V2i'
+        ])]
+        const uniqueSubTypes = [...new Set([
+          ...vehiclesList.map(v => v.modelSubType).filter(Boolean),
+          'Crawler', 'Trailer', 'Truck Mount', 'Sling Mount', 'VELSON TYPE', 'GH600LC'
+        ])]
+        const uniqueNames = [...new Set([
+          ...vehiclesList.map(v => v.vehicleName).filter(Boolean),
+          'Rig A', 'Rig B', 'Rig C', 'Rig D', 'Rig E', 'Rig F', 'Rig G', 'NEW FABRICATION', 'KOBELCO'
+        ])]
+        setModelOptions(uniqueModels)
+        setSubTypeOptions(uniqueSubTypes)
+        setVehicleNameOptions(uniqueNames)
+
+        // 3. Gather reference master status options for Service Booking Status
+        const statusesRes = await api.get('/api/reference-master/Service_Booking_Status').catch(err => {
+          console.error('Failed to fetch status options', err)
+          return { data: { data: [] } }
+        })
+        const loadedStatuses = (statusesRes.data?.data || []).map(r => r.description).filter(Boolean)
+        setStatusOptions(loadedStatuses.length > 0 ? loadedStatuses : ['Open', 'Close'])
+
+        // 4. Load service details entries
+        const detailsRes = await api.get('/api/service-detail')
         setServiceDetailsList(detailsRes.data?.data || [])
       } catch (err) {
         console.error('Failed to fetch data', err)
@@ -230,12 +233,12 @@ export default function ServiceDetailsEntry() {
     try {
       let updatedList
       if (editingId !== null) {
-        const res = await axios.put(`/api/service-detail/${editingId}`, newEntry)
+        const res = await api.put(`/api/service-detail/${editingId}`, newEntry, { loadingMessage: 'Updating record...' })
         updatedList = serviceDetailsList.map(s => s.id === editingId ? res.data.data : s)
         toast.success(`Service details log for Job ${serviceJobNo} updated successfully!`)
         setEditingId(null)
       } else {
-        const res = await axios.post('/api/service-detail', newEntry)
+        const res = await api.post('/api/service-detail', newEntry, { loadingMessage: 'Saving record...' })
         updatedList = [res.data.data, ...serviceDetailsList]
         toast.success(`Service details log for Job ${serviceJobNo} created successfully!`)
       }
@@ -275,7 +278,7 @@ export default function ServiceDetailsEntry() {
     }
     if (window.confirm('Are you sure you want to delete this Service Details Entry?')) {
       try {
-        await axios.delete(`/api/service-detail/${selectedRowId}`)
+        await api.delete(`/api/service-detail/${selectedRowId}`, { loadingMessage: 'Deleting record...' })
         const updated = serviceDetailsList.filter(s => s.id !== selectedRowId)
         setServiceDetailsList(updated)
         toast.error('Service entry deleted successfully.')
@@ -299,7 +302,7 @@ export default function ServiceDetailsEntry() {
     setVehicleModelNo('')
     setModelSubType('')
     setVehicleName('')
-    setStatus('In-Service')
+    setStatus(statusOptions[0] || 'Open')
     setRemarks('')
     setServicePartNo('')
     setCheckedAssemblies([])
@@ -431,7 +434,7 @@ export default function ServiceDetailsEntry() {
                   </div>
                 </div>
 
-                {/* Row 4: Booking ID */}
+                {/* Row 4: Booking ID (Commented out)
                 <div className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-4 text-right pr-1">
                     <Label>Booking ID :</Label>
@@ -440,8 +443,9 @@ export default function ServiceDetailsEntry() {
                     <Input value={bookingId} readOnly className="text-center font-bold bg-slate-50 text-slate-500 h-[26px] text-[11px]" />
                   </div>
                 </div>
+                */}
                 
-                {/* Row 4.5: Booking Date */}
+                {/* Row 4.5: Booking Date (Commented out)
                 <div className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-4 text-right pr-1">
                     <Label>Booking Date :</Label>
@@ -450,6 +454,7 @@ export default function ServiceDetailsEntry() {
                     <Input type="date" value={bookingDate} readOnly className="bg-slate-50 text-slate-500 font-bold h-[26px] text-[11px]" />
                   </div>
                 </div>
+                */}
 
                 {/* Row 5: Serial No */}
                 <div className="grid grid-cols-12 gap-2 items-center">
@@ -478,7 +483,7 @@ export default function ServiceDetailsEntry() {
                   </div>
                   <div className="col-span-8">
                     <Select 
-                      options={['VEDC', 'CORE DRILL', 'V2I', 'V3', 'V10', 'V2i']} 
+                      options={modelOptions} 
                       placeholder="Select Model..." 
                       value={vehicleModelNo} 
                       onChange={e => setVehicleModelNo(e.target.value)} 
@@ -493,7 +498,7 @@ export default function ServiceDetailsEntry() {
                   </div>
                   <div className="col-span-8">
                     <Select 
-                      options={['Crawler', 'Trailer', 'Truck Mount', 'Sling Mount', 'VELSON TYPE', 'GH600LC']} 
+                      options={subTypeOptions} 
                       placeholder="Select Sub Type..." 
                       value={modelSubType} 
                       onChange={e => setModelSubType(e.target.value)} 
@@ -508,7 +513,7 @@ export default function ServiceDetailsEntry() {
                   </div>
                   <div className="col-span-8">
                     <Select 
-                      options={['Rig A', 'Rig B', 'Rig C', 'Rig D', 'Rig E', 'Rig F', 'Rig G', 'NEW FABRICATION', 'KOBELCO']} 
+                      options={vehicleNameOptions} 
                       placeholder="Select Vehicle Name..." 
                       value={vehicleName} 
                       onChange={e => setVehicleName(e.target.value)} 
@@ -523,7 +528,7 @@ export default function ServiceDetailsEntry() {
                   </div>
                   <div className="col-span-8">
                     <Select 
-                      options={['Pending', 'Confirmed', 'In-Service', 'Completed']} 
+                      options={statusOptions} 
                       placeholder="Select Status..." 
                       value={status} 
                       onChange={e => setStatus(e.target.value)} 
@@ -546,7 +551,7 @@ export default function ServiceDetailsEntry() {
                   </div>
                 </div>
 
-                {/* Row 12: Service Part No */}
+                {/* Row 12: Service Part No (Commented out)
                 <div className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-4 text-right pr-1">
                     <Label>Service Part No :</Label>
@@ -555,6 +560,7 @@ export default function ServiceDetailsEntry() {
                     <Input value={servicePartNo} onChange={e => setServicePartNo(e.target.value)} placeholder="Service Part Number" />
                   </div>
                 </div>
+                */}
 
               </div>
 
@@ -602,7 +608,7 @@ export default function ServiceDetailsEntry() {
                             />
                           </td>
                           <td className="px-3 py-1 flex items-center gap-2">
-                            <span className="text-[#0097A7] font-bold text-[14px]">*</span>
+                            {/* <span className="text-[#0097A7] font-bold text-[14px]">*</span> */}
                             <span className="text-slate-600 font-semibold">{a.name}</span>
                           </td>
                         </tr>
@@ -644,12 +650,12 @@ export default function ServiceDetailsEntry() {
               </div>
 
               <div className="flex items-center gap-1.5 flex-wrap">
-                <button 
+                {/* <button 
                   onClick={handleSave} 
                   className="flex items-center gap-1 px-3.5 py-1 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded shadow-sm h-[28px] transition-all active:scale-95 whitespace-nowrap"
                 >
-                  Save All
-                </button>
+                  Save All  
+                </button> */}
                 <button 
                   onClick={handleSave} 
                   className="flex items-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-800 border border-slate-600 text-white text-[12px] font-bold rounded shadow-sm h-[28px] transition-all active:scale-95 whitespace-nowrap"

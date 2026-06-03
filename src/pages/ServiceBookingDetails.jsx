@@ -5,7 +5,8 @@ import {
   ChevronRight, X, Trash2, Edit, Search, Printer, List, Download, FileSpreadsheet, Filter, Settings
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import axios from 'axios'
+import api from '../services/api'
+
 
 // ── Ultra-compact, premium UI primitives ──
 const Label = ({ children, required }) => (
@@ -105,7 +106,7 @@ export default function ServiceBookingDetails() {
   // Load from backend
   const fetchData = async () => {
     try {
-      const res = await axios.get('/api/service-booking')
+      const res = await api.get('/api/service-booking')
       const parsed = res.data?.data || []
       
       const formattedParsed = parsed.map(b => ({
@@ -197,7 +198,7 @@ export default function ServiceBookingDetails() {
 
     if (window.confirm('Are you sure you want to delete this Service Booking?')) {
       try {
-        await axios.delete(`/api/service-booking/${selectedId}`)
+        await api.delete(`/api/service-booking/${selectedId}`, { loadingMessage: 'Deleting booking...' })
         
         const updated = bookingsList.filter(b => b.id !== selectedId)
         setBookingsList(updated)

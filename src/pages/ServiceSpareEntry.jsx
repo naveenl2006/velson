@@ -4,7 +4,8 @@ import {
   ChevronRight, FileSpreadsheet, Search, Save, Edit, Trash2, RotateCcw, Image
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import axios from 'axios'
+import api from '../services/api'
+
 
 // ── Ultra-compact, premium UI primitives ──
 const Label = ({ children, required }) => (
@@ -66,35 +67,6 @@ const BOM_PARTS = [
   { id: 19, partNo: 'VM-200130-V2-1', partName: 'MRC PIN & LOCK ASSM 2-1',          fasterQty: 6,  unit: 'Set', rate: 450   },
   { id: 20, partNo: 'VM-200183-V7',   partName: 'PIPE LINE CLAMP & WELDABL',        fasterQty: 8,  unit: 'Nos', rate: 320   },
 ]
-
-const LEGACY_JOBS = [
-  { serviceJobNo: '26-27/S000027', customerCode: 'LM191',      customerName: 'MANJUNATHA ROCK DRILLS',             bookingId: 1811, bookingDate: '2026-04-15', serialNo: 'V3/042600009',    vehicleNo: 'KA-01-A-1111', vehicleModelNo: 'V3',   modelSubType: 'VELSON TYPE', vehicleName: 'NEW FABRICATION', count: 17 },
-  { serviceJobNo: '26-27/S000028', customerCode: 'LM964',      customerName: 'AJANTHA MINING PRIVATE LIMITED',      bookingId: 1812, bookingDate: '2026-04-15', serialNo: 'V10/102400035',   vehicleNo: 'KA-02-B-2222', vehicleModelNo: 'V10',  modelSubType: 'GH600LC',     vehicleName: 'KOBELCO',        count: 1  },
-  { serviceJobNo: '25-26/S000448', customerCode: 'CD1150183',  customerName: 'S.R EXPORTS',                         bookingId: 1582, bookingDate: '2026-08-01', serialNo: 'V7/012600029',    vehicleNo: 'V7',           vehicleModelNo: 'V7',   modelSubType: 'Crawler',     vehicleName: 'LEYLAND',        count: 7  },
-]
-
-const SEED_SPARES = [
-  {
-    id: 9901,
-    serviceJobNo: '25-26/S000448',
-    customerCode: 'CD1150183',
-    customerName: 'S.R EXPORTS',
-    bookingId: 1582,
-    bookingDate: '2026-08-01',
-    serialNo: 'V7/012600029',
-    vehicleNo: 'V7',
-    vehicleModelNo: 'V7',
-    modelSubType: 'Crawler',
-    vehicleName: 'LEYLAND',
-    servicePartNo: 'SP-1001',
-    displayOrder: 1,
-    status: 'Open',
-    selectedParts: [1, 2, 3, 7],
-    totalAmount: 24050,
-    savedDate: '2026-08-01'
-  }
-]
-
 export default function ServiceSpareEntry() {
   const toast = useToast()
 
@@ -138,7 +110,7 @@ export default function ServiceSpareEntry() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const bookingsRes = await axios.get('/api/service-booking')
+        const bookingsRes = await api.get('/api/service-booking')
         const bookings = bookingsRes.data?.data || []
         const formatted = bookings.map(b => ({
           serviceJobNo: b.serviceJobNo || '—',
@@ -153,10 +125,9 @@ export default function ServiceSpareEntry() {
           vehicleName: b.vehicleName || '—',
           count: b.customerVehicleCount || 1
         }))
-        const allJobs = [...formatted, ...LEGACY_JOBS.filter(j => !formatted.some(f => f.serviceJobNo === j.serviceJobNo))]
-        setJobsList(allJobs)
+        setJobsList(formatted)
 
-        const sparesRes = await axios.get('/api/service-spare')
+        const sparesRes = await api.get('/api/service-spare')
         setSparesList(sparesRes.data?.data || [])
       } catch (err) {
         console.error('Failed to fetch initial data', err)
@@ -255,12 +226,12 @@ export default function ServiceSpareEntry() {
     try {
       let updated
       if (editingId !== null) {
-        const res = await axios.put(`/api/service-spare/${editingId}`, newEntry)
+        const res = await api.put(`/api/service-spare/${editingId}`, newEntry, { loadingMessage: 'Updating record...' })
         updated = sparesList.map(s => s.id === editingId ? res.data.data : s)
         toast.success(`Spare entry for Job ${serviceJobNo} updated!`)
         setEditingId(null)
       } else {
-        const res = await axios.post('/api/service-spare', newEntry)
+        const res = await api.post('/api/service-spare', newEntry, { loadingMessage: 'Saving record...' })
         updated = [res.data.data, ...sparesList]
         toast.success(`Spare entry for Job ${serviceJobNo} saved!`)
       }
@@ -303,7 +274,7 @@ export default function ServiceSpareEntry() {
     }
     if (window.confirm('Delete this spare entry?')) {
       try {
-        await axios.delete(`/api/service-spare/${selectedRowId}`)
+        await api.delete(`/api/service-spare/${selectedRowId}`, { loadingMessage: 'Deleting record...' })
         const updated = sparesList.filter(s => s.id !== selectedRowId)
         setSparesList(updated)
         toast.error('Spare entry deleted successfully.')
@@ -427,10 +398,11 @@ export default function ServiceSpareEntry() {
                 <div className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-5 text-right pr-1"><Label required>Service Job No :</Label></div>
                   <div className="col-span-7">
-                    <Input 
-                      value={serviceJobNo} 
-                      onChange={e => setServiceJobNo(e.target.value)} 
-                      placeholder="Enter Job No..." 
+                    <Select
+                      options={jobsList.map(j => j.serviceJobNo).filter(Boolean)}
+                      placeholder="Select Job No..."
+                      value={serviceJobNo}
+                      onChange={e => setServiceJobNo(e.target.value)}
                     />
                   </div>
                 </div>

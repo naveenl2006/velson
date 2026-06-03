@@ -6,7 +6,8 @@ import {
   ChevronRight, Search, Edit, Trash2, Printer, FileSpreadsheet, FileDown, Filter, Settings
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import axios from 'axios'
+import api from '../services/api'
+
 
 // ── UI Primitives ──
 const Label = ({ children }) => (
@@ -103,7 +104,7 @@ export default function ServiceDetailsReport() {
     const loadData = async () => {
       let rows = [...SEED_REPORT_ROWS]
       try {
-        const res = await axios.get('/api/service-booking')
+        const res = await api.get('/api/service-booking')
         const bookings = res.data?.data || []
         let nextId = rows.length + 1
         

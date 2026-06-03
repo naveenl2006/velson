@@ -5,7 +5,8 @@ import {
   ChevronRight, X, Trash2, Edit, Search, Printer, List, Download, FileSpreadsheet, Filter, Settings
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
-import axios from 'axios'
+import api from '../services/api'
+
 
 // ── Ultra-compact UI primitives matching the template ──
 const Label = ({ children, required }) => (
@@ -132,7 +133,7 @@ export default function ServiceQuotationDetails() {
   // Fetch data from backend
   const fetchData = async () => {
     try {
-      const res = await axios.get('/api/service-quotation')
+      const res = await api.get('/api/service-quotation')
       const parsed = res.data?.data || []
       setDataList(parsed)
       if (parsed.length > 0) {
@@ -199,7 +200,7 @@ export default function ServiceQuotationDetails() {
 
     if (window.confirm('Are you sure you want to delete this Service Quotation?')) {
       try {
-        await axios.delete(`/api/service-quotation/${selectedId}`)
+        await api.delete(`/api/service-quotation/${selectedId}`, { loadingMessage: 'Deleting quotation...' })
         
         const updated = dataList.filter(q => q.id !== selectedId)
         setDataList(updated)
