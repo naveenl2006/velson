@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import {
   ChevronRight, Search, Printer, X, Trash2, Download,
-  FileSpreadsheet, FileJson, Filter, Settings, Image as ImageIcon, RotateCcw, List
+  FileSpreadsheet, FileJson, Filter, Settings, Image as ImageIcon, RotateCcw, List, FileText
 } from 'lucide-react'
+import api from '../services/api'
+import { jsPDF } from 'jspdf'
+import ExcelJS from 'exceljs'
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
@@ -41,7 +44,7 @@ const Select = ({ options, placeholder, value, onChange, className = "", disable
 )
 
 export default function BOMCreationReport() {
-  const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0])
+  const [fromDate, setFromDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
   const [customer, setCustomer] = useState('')
   const [serialNo, setSerialNo] = useState('')
@@ -50,45 +53,375 @@ export default function BOMCreationReport() {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searching, setSearching] = useState(false)
+  const fetchBoms = async () => {
+    try {
+      const res = await api.get('/api/bom-creation')
+      const boms = res.data?.data || []
+      setData(boms)
+      setFilteredData(boms)
+    } catch (err) {
+      console.error('Error fetching BOMs', err)
+    }
+  }
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('velson_bom_creations') || localStorage.getItem('velson_bom_uploads') || '[]')
-    setData(saved)
-    setFilteredData(saved)
+    fetchBoms()
   }, [])
+
+  // Reactive filtering at runtime
+  useEffect(() => {
+    const start = new Date(fromDate)
+    start.setHours(0,0,0,0)
+    const end = new Date(toDate)
+    end.setHours(23,59,59,999)
+
+    const result = data.filter(r => {
+      const d = new Date(r.date)
+      const dateMatch = d >= start && d <= end
+      const custMatch = customer ? r.customerName === customer : true
+      const serialMatch = serialNo ? (r.serialJobNo === serialNo || r.serviceJobNo === serialNo) : true
+      const assemblyMatch = isAll ? true : (assemblyPartNo ? r.assemblyPartNo === assemblyPartNo : true)
+      return dateMatch && custMatch && serialMatch && assemblyMatch
+    })
+    setFilteredData(result)
+  }, [data, fromDate, toDate, customer, serialNo, assemblyPartNo, isAll])
 
   const handleSearch = () => {
     setSearching(true)
-    setTimeout(() => {
-      const start = new Date(fromDate)
-      const end = new Date(toDate)
-      const result = data.filter(r => {
-        const d = new Date(r.date)
-        const dateMatch = d >= start && d <= end
-        const custMatch = customer ? r.customerName === customer : true
-        const serialMatch = serialNo ? r.serialJobNo === serialNo : true
-        const assemblyMatch = isAll ? true : (assemblyPartNo ? r.assemblyPartNo === assemblyPartNo : true)
-        return dateMatch && custMatch && serialMatch && assemblyMatch
-      })
-      setFilteredData(result)
-      setSearching(false)
-    }, 600)
+    fetchBoms().finally(() => {
+      setTimeout(() => {
+        setSearching(false)
+      }, 400)
+    })
   }
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete BOM Creation record?')) {
-      localStorage.removeItem('velson_bom_creations')
-      localStorage.removeItem('velson_bom_uploads')
-      setData([])
-      setFilteredData([])
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this BOM Creation record?')) {
+      try {
+        await api.delete(`/api/bom-creation/${id}`)
+        const next = data.filter(r => r.id !== id)
+        setData(next)
+        setFilteredData(filteredData.filter(r => r.id !== id))
+      } catch (err) {
+        console.error('Error deleting record', err)
+        alert('Error deleting record from database.')
+      }
     }
+  }
+
+  const handleDeleteAllFiltered = async () => {
+    if (filteredData.length === 0) {
+      alert('No records selected in current filter.');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete all ${filteredData.length} records matching the current filters?`)) {
+      try {
+        await Promise.all(filteredData.map(r => api.delete(`/api/bom-creation/${r.id}`)));
+        fetchBoms();
+      } catch (err) {
+        console.error('Error during bulk deletion', err);
+        alert('Error deleting some records. Reloading list.');
+        fetchBoms();
+      }
+    }
+  }
+
+  // --- Export Actions ---
+
+  const handleExportExcel = async () => {
+    if (filteredData.length === 0) {
+      alert('No data available to export.')
+      return
+    }
+    try {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('BOM Creations')
+
+      worksheet.columns = [
+        { header: 'S.No', key: 'sno', width: 8 },
+        { header: 'BOM No', key: 'bomNo', width: 15 },
+        { header: 'Customer Name', key: 'customerName', width: 30 },
+        { header: 'Customer Code', key: 'customerCode', width: 15 },
+        { header: 'Service Job No', key: 'serviceJobNo', width: 25 },
+        { header: 'Assembly Part Name', key: 'assemblyPartNo', width: 25 },
+        { header: 'Model Name', key: 'model', width: 20 },
+        { header: 'Created Date', key: 'date', width: 15 },
+        { header: 'Status', key: 'status', width: 12 },
+      ]
+
+      filteredData.forEach((row, idx) => {
+        worksheet.addRow({
+          sno: idx + 1,
+          bomNo: row.bomNo,
+          customerName: row.customerName,
+          customerCode: row.customerCode || 'N/A',
+          serviceJobNo: row.serialJobNo || row.serviceJobNo || 'N/A',
+          assemblyPartNo: row.assemblyPartNo || 'N/A',
+          model: row.model || 'N/A',
+          date: row.date ? row.date.split('T')[0] : 'N/A',
+          status: row.status || 'Created',
+        })
+      })
+
+      worksheet.getRow(1).font = { bold: true }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `bom_creation_report_${new Date().toISOString().split('T')[0]}.xlsx`
+      link.click()
+    } catch (err) {
+      console.error(err)
+      alert('Error exporting to Excel')
+    }
+  }
+
+  const handleExportDoc = () => {
+    if (filteredData.length === 0) {
+      alert('No data available to export.')
+      return
+    }
+
+    let htmlContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <title>BOM Creation Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background-color: #0097A7; color: white; padding: 8px; border: 1px solid #ddd; text-align: left; }
+          td { padding: 8px; border: 1px solid #ddd; }
+          h2 { color: #333; }
+        </style>
+      </head>
+      <body>
+        <h2>Customerwise BOM Creation Report</h2>
+        <p>Report Date: ${new Date().toLocaleDateString()}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>BOM No</th>
+              <th>Customer Name</th>
+              <th>Customer Code</th>
+              <th>Service Job No</th>
+              <th>Assembly Part Name</th>
+              <th>Model Name</th>
+              <th>Created Date</th>
+            </tr>
+          </thead>
+          <tbody>
+    `
+
+    filteredData.forEach((row, idx) => {
+      htmlContent += `
+        <tr>
+          <td>${idx + 1}</td>
+          <td><b>${row.bomNo}</b></td>
+          <td>${row.customerName}</td>
+          <td>${row.customerCode || 'N/A'}</td>
+          <td>${row.serialJobNo || row.serviceJobNo || 'N/A'}</td>
+          <td>${row.assemblyPartNo || 'N/A'}</td>
+          <td>${row.model || 'N/A'}</td>
+          <td>${row.date ? row.date.split('T')[0] : 'N/A'}</td>
+        </tr>
+      `
+    })
+
+    htmlContent += `
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `
+
+    const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `bom_creation_report_${new Date().toISOString().split('T')[0]}.doc`
+    link.click()
+  }
+
+  const handleExportPdf = () => {
+    if (filteredData.length === 0) {
+      alert('No data available to export.')
+      return
+    }
+
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    })
+
+    doc.setFillColor(0, 151, 167)
+    doc.rect(0, 0, 297, 20, 'F')
+
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('Helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.text('VELSON ERP - CUSTOMERWISE BOM CREATION REPORT', 15, 13)
+
+    doc.setTextColor(100, 116, 139)
+    doc.setFont('Helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.text(`Total Records: ${filteredData.length}`, 240, 28)
+    doc.text(`Generated Date: ${new Date().toLocaleDateString()}`, 15, 28)
+
+    let startY = 32
+    doc.setFillColor(51, 65, 85)
+    doc.rect(15, startY, 267, 8, 'F')
+
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('Helvetica', 'bold')
+    doc.setFontSize(8.5)
+    doc.text('S.No', 17, startY + 5.5)
+    doc.text('BOM No', 28, startY + 5.5)
+    doc.text('Customer Name', 55, startY + 5.5)
+    doc.text('Customer Code', 115, startY + 5.5)
+    doc.text('Service Job No', 145, startY + 5.5)
+    doc.text('Assembly Part Name', 195, startY + 5.5)
+    doc.text('Model Name', 240, startY + 5.5)
+    doc.text('Date', 265, startY + 5.5)
+
+    let currentY = startY + 8
+    doc.setFont('Helvetica', 'normal')
+    doc.setFontSize(8)
+
+    filteredData.forEach((row, idx) => {
+      if (idx % 2 === 1) {
+        doc.setFillColor(248, 250, 252)
+        doc.rect(15, currentY, 267, 7, 'F')
+      }
+
+      doc.setTextColor(51, 65, 85)
+      doc.text(String(idx + 1), 17, currentY + 4.5)
+
+      doc.setTextColor(0, 151, 167)
+      doc.setFont('Helvetica', 'bold')
+      doc.text(row.bomNo, 28, currentY + 4.5)
+
+      doc.setTextColor(15, 23, 42)
+      doc.text(row.customerName.length > 28 ? row.customerName.substring(0, 28) + '...' : row.customerName, 55, currentY + 4.5)
+
+      doc.setTextColor(51, 65, 85)
+      doc.setFont('Helvetica', 'normal')
+      doc.text(row.customerCode || 'N/A', 115, currentY + 4.5)
+      doc.text(row.serialJobNo || row.serviceJobNo || 'N/A', 145, currentY + 4.5)
+      doc.text(row.assemblyPartNo || 'N/A', 195, currentY + 4.5)
+      doc.text(row.model || 'N/A', 240, currentY + 4.5)
+      doc.text(row.date ? row.date.split('T')[0] : 'N/A', 265, currentY + 4.5)
+
+      doc.setDrawColor(241, 245, 249)
+      doc.line(15, currentY + 7, 282, currentY + 7)
+
+      currentY += 7
+
+      if (currentY > 185) {
+        doc.addPage()
+        doc.setFillColor(51, 65, 85)
+        doc.rect(15, 10, 267, 8, 'F')
+        doc.setTextColor(255, 255, 255)
+        doc.setFont('Helvetica', 'bold')
+        doc.text('S.No', 17, 15.5)
+        doc.text('BOM No', 28, 15.5)
+        doc.text('Customer Name', 55, 15.5)
+        doc.text('Customer Code', 115, 15.5)
+        doc.text('Service Job No', 145, 15.5)
+        doc.text('Assembly Part Name', 195, 15.5)
+        doc.text('Model Name', 240, 15.5)
+        doc.text('Date', 265, 15.5)
+        currentY = 18
+        doc.setFont('Helvetica', 'normal')
+        doc.setFontSize(8)
+      }
+    })
+
+    doc.save(`bom_creation_report_${new Date().toISOString().split('T')[0]}.pdf`)
+  }
+
+  const handlePrintReport = () => {
+    if (filteredData.length === 0) {
+      alert('No records available to print.')
+      return
+    }
+    const printWindow = window.open('', '_blank', 'width=950,height=750')
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Customerwise BOM Creation Report</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #333; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0097A7; padding-bottom: 15px; margin-bottom: 20px; }
+            h1 { margin: 0; color: #0097A7; font-size: 24px; text-transform: uppercase; font-weight: 800; }
+            p { margin: 3px 0; font-size: 12px; color: #666; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th { background: #0097A7; color: white; font-size: 11px; text-transform: uppercase; font-weight: bold; padding: 10px 8px; border: 1px solid #0097A7; text-align: left; }
+            td { padding: 10px 8px; border: 1px solid #e2e8f0; font-size: 12px; }
+            .text-center { text-align: center; }
+            .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1>VELSON ERP</h1>
+              <p>Customerwise BOM Creation Report</p>
+            </div>
+            <div style="text-align: right;">
+              <h2 style="margin:0; font-size:16px; color:#475569;">BOM Registry</h2>
+              <p>Total Records: ${filteredData.length}</p>
+              <p>Generated: ${new Date().toLocaleString()}</p>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%">S.No</th>
+                <th style="width: 12%">BOM No</th>
+                <th style="width: 25%">Customer Name</th>
+                <th style="width: 12%">Customer Code</th>
+                <th style="width: 18%">Service Job No</th>
+                <th style="width: 15%">Assembly Part</th>
+                <th style="width: 13%">Model</th>
+                <th style="width: 10%">Created Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredData.map((row, idx) => `
+                <tr>
+                  <td class="text-center">${idx + 1}</td>
+                  <td style="font-weight: bold; color: #0097A7;">${row.bomNo}</td>
+                  <td><b>${row.customerName}</b></td>
+                  <td>${row.customerCode || 'N/A'}</td>
+                  <td>${row.serialJobNo || row.serviceJobNo || 'N/A'}</td>
+                  <td>${row.assemblyPartNo || 'N/A'}</td>
+                  <td>${row.model || 'N/A'}</td>
+                  <td>${row.date ? row.date.split('T')[0] : 'N/A'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            VELSON ERP - System Generated Report - Confidentially Printed
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
   }
 
   return (
     <div className="bg-[#f4f6f8] min-h-full pb-10">
       <div className="px-6 py-6">
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-black tracking-tight">
-          {/* <span>Dashboard</span> <ChevronRight size={12} />  */}
           <span>BOM</span> <ChevronRight size={12} /> <span className="text-[#0097A7]">BOM Creation Report</span>
         </div>
 
@@ -99,10 +432,10 @@ export default function BOMCreationReport() {
               <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">Customerwise BOM Creation Report</h2>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded shadow-sm">
+              <button onClick={handlePrintReport} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded shadow-sm">
                 <Printer size={15} /> Print Report
               </button>
-              <button onClick={handleDelete} className="flex items-center gap-1.5 px-4 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-[11px] font-bold rounded shadow-sm transition-all">
+              <button onClick={handleDeleteAllFiltered} className="flex items-center gap-1.5 px-4 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-[11px] font-bold rounded shadow-sm transition-all">
                 <Trash2 size={15} /> Delete
               </button>
               <button onClick={() => window.history.back()} className="flex items-center gap-1.5 px-4 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-black rounded transition-all shadow-sm">
@@ -155,7 +488,7 @@ export default function BOMCreationReport() {
                     <div className="col-span-2"><Label>Booking Serial No</Label></div>
                     <div className="col-span-10">
                       <Select
-                        options={Array.from(new Set(data.map(r => r.serialJobNo).filter(Boolean)))}
+                        options={Array.from(new Set(data.map(r => r.serialJobNo || r.serviceJobNo).filter(Boolean)))}
                         placeholder="--- All Serial Numbers ---"
                         value={serialNo}
                         onChange={e => setSerialNo(e.target.value)}
@@ -200,6 +533,7 @@ export default function BOMCreationReport() {
                 {[
                   { icon: <List size={14} />, l: 'LS' },
                   { icon: <Printer size={14} />, l: 'DOS' },
+                  { icon: <FileText size={14} className="text-blue-500" />, l: 'DOC' },
                   { icon: <FileSpreadsheet size={14} className="text-green-600" />, l: 'xls' },
                   { icon: <Download size={14} className="text-red-500" />, l: 'PDF' },
                   { icon: <Filter size={14} className="text-[#0097A7]" />, l: 'Filter' },
@@ -208,7 +542,10 @@ export default function BOMCreationReport() {
                   <button
                     key={tool.l}
                     onClick={() => {
-                      if (tool.l === 'DOS') window.print();
+                      if (tool.l === 'DOS') handlePrintReport();
+                      else if (tool.l === 'DOC') handleExportDoc();
+                      else if (tool.l === 'xls') handleExportExcel();
+                      else if (tool.l === 'PDF') handleExportPdf();
                       else alert(`${tool.l} clicked!`);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-bold rounded-lg shadow-sm transition-all active:scale-95"
@@ -232,12 +569,13 @@ export default function BOMCreationReport() {
                     <th className="px-5 py-4 border-r border-slate-100">Model Name</th>
                     <th className="px-5 py-4 border-r border-slate-100">Created Date</th>
                     <th className="px-5 py-4 text-center">Created By</th>
+                    <th className="px-5 py-4 text-center w-24">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 text-[12px]">
                   {filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-24 text-center text-slate-200 italic">
+                      <td colSpan={10} className="py-24 text-center text-slate-200 italic">
                         No BOM creation records match the selected filters.
                       </td>
                     </tr>
@@ -248,11 +586,16 @@ export default function BOMCreationReport() {
                         <td className="px-5 py-2 border-r border-slate-50 font-black text-[#0097A7]">{row.bomNo}</td>
                         <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-700">{row.customerName}</td>
                         <td className="px-5 py-2 border-r border-slate-50 text-slate-500 font-medium">{row.customerCode || 'N/A'}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-600 uppercase text-[11px] truncate max-w-[300px]">{row.serialJobNo || 'N/A'}</td>
+                        <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-600 uppercase text-[11px] truncate max-w-[300px]">{row.serialJobNo || row.serviceJobNo || 'N/A'}</td>
                         <td className="px-5 py-2 border-r border-slate-50">{row.assemblyPartNo || 'N/A'}</td>
                         <td className="px-5 py-2 border-r border-slate-50">{row.model || 'N/A'}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-400">{row.date}</td>
-                        <td className="px-5 py-2 text-center font-black text-slate-700 text-[11px]">superadmin</td>
+                        <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-400">{row.date ? row.date.split('T')[0] : 'N/A'}</td>
+                        <td className="px-5 py-2 text-center font-black text-slate-700 text-[11px]">{row.createdBy || 'superadmin'}</td>
+                        <td className="px-5 py-2 text-center">
+                          <button onClick={() => handleDelete(row.id)} className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -260,7 +603,7 @@ export default function BOMCreationReport() {
               </table>
             </div>
 
-            <div className="mt-8 bg-slate-900 rounded-2xl p-6 shadow-2xl flex items-center justify-between border border-slate-800">
+            {/* <div className="mt-8 bg-slate-900 rounded-2xl p-6 shadow-2xl flex items-center justify-between border border-slate-800">
               <div className="flex items-center gap-12">
                 <div>
                   <p className="text-white/30 text-[9px] font-black uppercase tracking-widest mb-1">Total Recordset</p>
@@ -279,7 +622,7 @@ export default function BOMCreationReport() {
                   Request Data Audit
                 </button>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

@@ -44,7 +44,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 export default function BOMCreation() {
   const toast = useToast()
   const fileInputRef = useRef(null)
-  
+
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     bomNo: '',
@@ -64,6 +64,7 @@ export default function BOMCreation() {
   const [isCreating, setIsCreating] = useState(false)
   const [excelData, setExcelData] = useState([])
   const [selectedRows, setSelectedRows] = useState([])
+  const [skippedRecords, setSkippedRecords] = useState([])
 
   // Master lists loaded from API
   const [customers, setCustomers] = useState([])
@@ -71,15 +72,16 @@ export default function BOMCreation() {
   const [bookings, setBookings] = useState([])
   const [itemGroups, setItemGroups] = useState([])
   const [itemMasterList, setItemMasterList] = useState([])
-
   // Helper to compute next BOM No based on sequence
   const getNextBOMNo = (records) => {
     const bomNumbers = records
-      .map(r => r.bomNo)
-      .filter(no => no && no.startsWith('BOM-'))
-      .map(no => parseInt(no.replace('BOM-', ''), 10))
-      .filter(num => !isNaN(num))
-    const max = bomNumbers.length > 0 ? Math.max(...bomNumbers) : 1000
+      .map(r => {
+        if (!r.bomNo) return null
+        const match = r.bomNo.match(/\d+$/)
+        return match ? parseInt(match[0], 10) : null
+      })
+      .filter(num => num !== null && !isNaN(num))
+    const max = bomNumbers.length > 0 ? Math.max(...bomNumbers) : 0
     return `BOM-${max + 1}`
   }
 
@@ -107,9 +109,17 @@ export default function BOMCreation() {
   }, [])
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('velson_bom_creations') || localStorage.getItem('velson_bom_uploads') || '[]')
-    setCreatedRecords(saved)
-    setForm(f => ({ ...f, bomNo: getNextBOMNo(saved) }))
+    const loadBoms = async () => {
+      try {
+        const res = await api.get('/api/bom-creation')
+        const records = res.data?.data || []
+        setCreatedRecords(records)
+        setForm(f => ({ ...f, bomNo: getNextBOMNo(records) }))
+      } catch (err) {
+        console.error('Error fetching BOM list', err)
+      }
+    }
+    loadBoms()
   }, [])
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -179,9 +189,13 @@ export default function BOMCreation() {
     }
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!form.customerName) {
       toast.warning('Please fill required fields (Customer Name).')
+      return
+    }
+    if (!form.serviceJobNo) {
+      toast.warning('Please fill required fields (Service Job No).')
       return
     }
     if (excelData.length > 0 && selectedRows.length === 0) {
@@ -189,29 +203,34 @@ export default function BOMCreation() {
       return
     }
     setIsCreating(true)
-    setTimeout(() => {
-      const existing = JSON.parse(localStorage.getItem('velson_bom_creations') || localStorage.getItem('velson_bom_uploads') || '[]')
-      
-      const newRecord = {
+    try {
+      const payload = {
         ...form,
-        id: Date.now(),
-        status: 'Created',
         excelRows: excelData.filter((_, idx) => selectedRows.includes(idx))
       }
-      const updated = [newRecord, ...existing]
-      localStorage.setItem('velson_bom_creations', JSON.stringify(updated))
-      setCreatedRecords(updated)
+      const res = await api.post('/api/bom-creation', payload)
+      if (res.data?.success) {
+        const savedRecord = res.data.data
+        const updated = [savedRecord, ...createdRecords]
+        setCreatedRecords(updated)
+        toast.success('BOM Uploaded & Saved Successfully!')
+        handleClear(updated)
+      } else {
+        toast.error(res.data?.message || 'Error saving BOM record.')
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Error saving BOM to database. ' + (err.response?.data?.message || err.message))
+    } finally {
       setIsCreating(false)
-      toast.success('BOM Uploaded & Saved Successfully!')
-      handleClear()
-    }, 1000)
+    }
   }
 
-  const handleClear = () => {
-    const saved = JSON.parse(localStorage.getItem('velson_bom_creations') || localStorage.getItem('velson_bom_uploads') || '[]')
+  const handleClear = (customRecords) => {
+    const records = customRecords && Array.isArray(customRecords) ? customRecords : createdRecords
     setForm({
       date: new Date().toISOString().split('T')[0],
-      bomNo: getNextBOMNo(saved),
+      bomNo: getNextBOMNo(records),
       customerName: '',
       customerCode: '',
       vehicleCount: '',
@@ -225,6 +244,7 @@ export default function BOMCreation() {
     })
     setExcelData([])
     setSelectedRows([])
+    setSkippedRecords([])
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -253,7 +273,7 @@ export default function BOMCreation() {
         const buffer = event.target.result
         const workbook = new ExcelJS.Workbook()
         await workbook.xlsx.load(buffer)
-        
+
         const worksheet = workbook.worksheets[0]
         if (!worksheet) {
           toast.warning('The selected Excel file is empty.')
@@ -267,11 +287,11 @@ export default function BOMCreation() {
           headers[colNumber] = cell.value ? String(cell.value).trim() : `Column ${colNumber}`
         })
 
-        // Map rows to JSON objects
+        // Map rows to JSON objects (keep raw structure for image mapping first)
         const parsedRows = []
         worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
           if (rowNumber === 1) return // Skip header row
-          
+
           const rowData = {}
           // Initialize columns with empty values
           headers.forEach((header, index) => {
@@ -280,7 +300,7 @@ export default function BOMCreation() {
               rowData[header] = cell.value !== null && cell.value !== undefined ? String(cell.value) : ''
             }
           })
-          parsedRows.push(rowData)
+          parsedRows.push({ rowNumber, data: rowData })
         })
 
         // Map embedded images to their target cell row/col indexes
@@ -302,19 +322,82 @@ export default function BOMCreation() {
           if (parsedRows[rowIdx]) {
             const headerName = headers[colIdx]
             if (headerName) {
-              parsedRows[rowIdx][headerName] = imgSrc
+              parsedRows[rowIdx].data[headerName] = imgSrc
             }
           }
         })
 
-        if (parsedRows.length === 0) {
-          toast.warning('No data records found in Excel worksheet.')
+        // Find headers for Part No and Part Name
+        const partNoHeader = headers.find(h => {
+          if (!h) return false
+          const l = h.toLowerCase()
+          return l.includes('part number') || l.includes('part no') || l === 'part' || l === 'partno'
+        })
+
+        const partNameHeader = headers.find(h => {
+          if (!h) return false
+          const l = h.toLowerCase()
+          return l.includes('part name') || l.includes('name') || l.includes('desc') || l.includes('description')
+        })
+
+        const validRows = []
+        const skipped = []
+        parsedRows.forEach((rowObj) => {
+          const row = rowObj.data
+          const rowNum = rowObj.rowNumber
+          const partNoVal = partNoHeader ? String(row[partNoHeader] || '').trim() : ''
+
+          const imgVal = Object.values(row).find(val => 
+            typeof val === 'string' && (val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/uploads/') || val.startsWith('/api/'))
+          ) || null
+
+          if (!partNoVal) {
+            skipped.push({
+              row: rowNum,
+              partNo: '—',
+              partName: partNameHeader ? String(row[partNameHeader] || '').trim() : '—',
+              image: imgVal,
+              reason: 'Part Number is missing in Excel row'
+            })
+            return
+          }
+
+          // Search in Item Master list loaded on mount
+          const matchedItem = itemMasterList.find(
+            item => String(item.partNo || '').trim().toLowerCase() === partNoVal.toLowerCase()
+          )
+
+          if (!matchedItem) {
+            skipped.push({
+              row: rowNum,
+              partNo: partNoVal,
+              partName: partNameHeader ? String(row[partNameHeader] || '').trim() : '—',
+              image: imgVal,
+              reason: 'Part Number not found in Item Master'
+            })
+            return
+          }
+
+          // Fetch official Part Name from Item Master and override Excel spelling errors
+          if (partNameHeader) {
+            row[partNameHeader] = matchedItem.partName
+          }
+
+          validRows.push(row)
+        })
+
+        setSkippedRecords(skipped)
+
+        if (validRows.length === 0) {
+          toast.warning('No valid parts matching Item Master were found in the sheet.')
+          setExcelData([])
+          setSelectedRows([])
           return
         }
 
-        setExcelData(parsedRows)
-        setSelectedRows(parsedRows.map((_, idx) => idx))
-        toast.success('Excel file with embedded images parsed successfully!')
+        setExcelData(validRows)
+        setSelectedRows(validRows.map((_, idx) => idx))
+        toast.success(`BOM file processed successfully! Loaded ${validRows.length} parts, skipped ${skipped.length} parts.`)
       } catch (err) {
         console.error(err)
         toast.error('Error reading Excel file.')
@@ -370,13 +453,13 @@ export default function BOMCreation() {
     if (!form.assemblyPartNo) return null
     const item = itemMasterList.find(it => it.partNo === form.assemblyPartNo)
     if (!item) return null
-    
+
     // Check if back-end provides hasImage (derived property) or is direct database column check
     const hasImg = item.hasImage || !!item.imageMimeType
     if (hasImg) {
       return `/api/item-master/${item.id}/download-image`
     }
-    
+
     if (item.imagePath) {
       if (item.imagePath.startsWith('http') || item.imagePath.startsWith('/')) {
         return item.imagePath
@@ -402,14 +485,23 @@ export default function BOMCreation() {
     }
   }
 
+  const handleCellEdit = (rowIdx, key, newVal) => {
+    setExcelData(prev => prev.map((row, idx) => {
+      if (idx === rowIdx) {
+        return { ...row, [key]: newVal }
+      }
+      return row
+    }))
+  }
+
   return (
     <div className="bg-[#f4f6f8] min-h-full pb-10">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        accept=".xlsx, .xls, .csv" 
-        className="hidden" 
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".xlsx, .xls, .csv"
+        className="hidden"
       />
       <div className="px-6 py-6">
         {/* Breadcrumb */}
@@ -465,11 +557,11 @@ export default function BOMCreation() {
                   </div>
                   <div>
                     <Label>Choose Vehicle</Label>
-                    <Select 
-                      options={vehicleOptions} 
-                      value={selectedVehicleLabel} 
-                      onChange={e => handleVehicleSelect(e.target.value)} 
-                      placeholder="Select..." 
+                    <Select
+                      options={vehicleOptions}
+                      value={selectedVehicleLabel}
+                      onChange={e => handleVehicleSelect(e.target.value)}
+                      placeholder="Select..."
                     />
                   </div>
                 </div>
@@ -534,10 +626,10 @@ export default function BOMCreation() {
                 <Label>Model Visualization</Label>
                 <div className="aspect-square w-full bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-300 overflow-hidden relative">
                   {selectedPartImage ? (
-                    <img 
-                      src={selectedPartImage} 
-                      alt="Part Preview" 
-                      className="w-full h-full object-contain p-2" 
+                    <img
+                      src={selectedPartImage}
+                      alt="Part Preview"
+                      className="w-full h-full object-contain p-2"
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center">
@@ -563,7 +655,7 @@ export default function BOMCreation() {
                     <thead className="bg-[#fcfdfe] text-[11px] uppercase text-slate-500 font-bold border-b border-slate-200 sticky top-0 z-10">
                       <tr>
                         <th className="px-5 py-3 border-r border-slate-200 w-16 text-center">
-                          <input 
+                          <input
                             type="checkbox"
                             className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
                             checked={excelData.length > 0 && selectedRows.length === excelData.length}
@@ -579,27 +671,33 @@ export default function BOMCreation() {
                       {excelData.map((row, idx) => (
                         <tr key={idx} className={`hover:bg-slate-50 transition-colors ${selectedRows.includes(idx) ? 'bg-[#0097A7]/5' : ''}`}>
                           <td className="px-5 py-2.5 border-r border-slate-200 text-center">
-                            <input 
+                            <input
                               type="checkbox"
                               className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
                               checked={selectedRows.includes(idx)}
                               onChange={(e) => handleRowCheckboxChange(idx, e.target.checked)}
                             />
                           </td>
-                          {Object.values(row).map((val, colIdx) => {
+                          {Object.entries(row).map(([key, val], colIdx) => {
                             const valStr = String(val).trim();
-                            const isImg = valStr.startsWith('http://') || 
-                                          valStr.startsWith('https://') || 
-                                          valStr.startsWith('/api/') || 
-                                          valStr.startsWith('/uploads/') || 
-                                          valStr.startsWith('data:image/');
+                            const isImg = valStr.startsWith('http://') ||
+                              valStr.startsWith('https://') ||
+                              valStr.startsWith('/api/') ||
+                              valStr.startsWith('/uploads/') ||
+                              valStr.startsWith('data:image/');
                             return (
-                              <td key={colIdx} className="px-5 py-2.5 border-r border-slate-200 text-slate-700 text-sm">
+                              <td
+                                key={colIdx}
+                                contentEditable={!isImg}
+                                suppressContentEditableWarning
+                                onBlur={(e) => handleCellEdit(idx, key, e.target.textContent)}
+                                className="px-5 py-2.5 border-r border-slate-200 text-slate-700 text-sm outline-none focus:bg-slate-50"
+                              >
                                 {isImg ? (
-                                  <img 
-                                    src={valStr} 
-                                    alt="Preview" 
-                                    className="max-h-12 max-w-[100px] object-contain rounded border border-slate-100" 
+                                  <img
+                                    src={valStr}
+                                    alt="Preview"
+                                    className="max-h-12 max-w-[100px] object-contain rounded border border-slate-100"
                                     onError={(e) => { e.target.style.display = 'none'; }}
                                   />
                                 ) : (
@@ -608,6 +706,52 @@ export default function BOMCreation() {
                               </td>
                             );
                           })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {skippedRecords.length > 0 && (
+              <div className="mt-8 border border-rose-200 bg-rose-50/30 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2.5 h-4 bg-rose-500 rounded-full" />
+                  <h4 className="text-[12px] font-black text-rose-700 uppercase tracking-widest">
+                    Skipped Rows (Not found in Item Master: {skippedRecords.length})
+                  </h4>
+                </div>
+                <div className="border border-rose-100 rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
+                  <table className="w-full text-left border-collapse text-xs bg-white">
+                    <thead className="bg-rose-50 text-[10px] uppercase text-rose-700 font-bold border-b border-rose-100 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 w-20 text-center">Row No</th>
+                        <th className="px-4 py-2 w-24 text-center">Image</th>
+                        <th className="px-4 py-2 w-48">Part Number</th>
+                        <th className="px-4 py-2">Part Name / Description</th>
+                        <th className="px-4 py-2">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-50 text-slate-600">
+                      {skippedRecords.map((r, i) => (
+                        <tr key={i} className="hover:bg-rose-50/20">
+                          <td className="px-4 py-2 text-center font-bold text-slate-400">{r.row}</td>
+                          <td className="px-4 py-2 text-center">
+                            {r.image ? (
+                              <img
+                                src={r.image}
+                                alt="Part Preview"
+                                className="max-h-10 max-w-[80px] object-contain rounded border border-rose-100 mx-auto"
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <span className="text-slate-300 font-bold text-[10px]">No Image</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 font-mono font-bold text-rose-600">{r.partNo}</td>
+                          <td className="px-4 py-2">{r.partName}</td>
+                          <td className="px-4 py-2 text-rose-500 font-medium">{r.reason}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -668,4 +812,4 @@ export default function BOMCreation() {
     </div>
   )
 }
-
+

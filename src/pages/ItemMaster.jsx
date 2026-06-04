@@ -161,7 +161,7 @@ const emptyForm = {
   groupId: '', partNo: '', outsourcePartNo: '', partName: '',
   modelId: '', brand: '', description: '', size: '', weight: '',
   unitId: '', hsnCode: '', purchaseRate: '', marginPercent: '', rate: '',
-  currencyId: '', taxId: '', subGroupId: '', storeId: '',
+  currencyId: '', taxId: '', subGroupId: '', storeId: '', routeCardNo: '',
   rackNo: '', location: '', itemTypeId: '', qcTypeId: '',
   materialGradeId: '', materialTypeId: '', rawMaterialId: '',
   rmLength: '', rawMaterialWt: '', fgMaterialWt: '',
@@ -654,7 +654,7 @@ function IndexView({ onCreate, onEdit, onView, dropdowns }) {
 
                       {/* R.C.No. */}
                       <td className={`${tdCls} text-slate-500 text-[11px]`}>
-                        {item.pdfPath ? item.pdfPath.split('/').pop() : ''}
+                        {item.routeCardNo || (item.pdfPath ? item.pdfPath.split('/').pop() : '')}
                       </td>
 
                       {/* Image */}
@@ -804,6 +804,7 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, onSaved }) 
   const [imageFile, setImageFile]   = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [pdfFile, setPdfFile]       = useState(null)
+  const [existingPdf, setExistingPdf] = useState(false)
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0]
@@ -814,7 +815,7 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, onSaved }) 
   }
 
   const clearImage = () => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview)
+    if (imagePreview && !imagePreview.startsWith('/api')) URL.revokeObjectURL(imagePreview)
     setImageFile(null)
     setImagePreview(null)
   }
@@ -837,11 +838,20 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, onSaved }) 
       })
       setForm(f)
       setPartNoAutoGen(false)
+      if (editItem.hasImage) {
+        setImagePreview(`/api/item-master/${editItem.id}/download-image`)
+      }
+      if (editItem.hasPdf) {
+        setExistingPdf(true)
+      } else {
+        setExistingPdf(false)
+      }
     } else {
       setForm({ ...emptyForm })
       setPartNoAutoGen(false)
+      setExistingPdf(false)
     }
-  }, [editItem]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editItem?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-preview part number when item group changes (new item only)
   useEffect(() => {
@@ -1075,6 +1085,10 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, onSaved }) 
                 <Label>Store Name</Label>
                 <Select options={opts.stores} placeholder="---Select Store---" value={form.storeId} onChange={u('storeId')} loading={dropdownsLoading} />
               </div>
+              <div>
+                <Label>Route Card No</Label>
+                <Input placeholder="Route Card No" value={form.routeCardNo} onChange={u('routeCardNo')} />
+              </div>
               <Row>
                 <div>
                   <Label>Rack Number</Label>
@@ -1172,7 +1186,7 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, onSaved }) 
               {/* ── PDF upload + preview ── */}
               <div>
                 <Label>Upload Drawing PDF</Label>
-                {pdfFile ? (
+                {pdfFile || existingPdf ? (
                   <div className="flex items-center gap-3 px-4 py-3 border-2 border-red-300 rounded-lg bg-red-50">
                     <div className="w-9 h-9 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1180,12 +1194,12 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, onSaved }) 
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-red-700 truncate">{pdfFile.name}</p>
-                      <p className="text-[11px] text-red-400">{(pdfFile.size / 1024).toFixed(1)} KB</p>
+                      <p className="text-xs font-semibold text-red-700 truncate">{pdfFile ? pdfFile.name : (editItem?.routeCardNo || 'Saved PDF Document')}</p>
+                      <p className="text-[11px] text-red-400">{pdfFile ? `${(pdfFile.size / 1024).toFixed(1)} KB` : 'Already saved'}</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setPdfFile(null)}
+                      onClick={() => { setPdfFile(null); setExistingPdf(false); }}
                       className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-[11px] font-bold shadow transition-colors flex-shrink-0"
                       title="Remove PDF"
                     >✕</button>
@@ -1287,7 +1301,7 @@ function PreviewView({ item, dropdowns, onBack, onCreate, onViewUploads }) {
     { label: 'Currency',            value: item.currencyName || resolve(dropdowns.currencies,     item.currencyId) },
     { label: 'GST Per',             value: item.taxPercent != null ? `${item.taxPercent}.00` : (resolve(dropdowns.taxes, item.taxId, 'taxPercent', null) != null ? `${resolve(dropdowns.taxes, item.taxId, 'taxPercent')}%` : '—') },
     { label: 'Sub Group',           value: item.subGroupName || resolve(dropdowns.subGroups,      item.subGroupId) },
-    { label: 'Store Name',          value: item.storeName    || resolve(dropdowns.stores,         item.storeId) },
+    { label: 'Store Name -> R.C.No.', value: `${item.storeName || resolve(dropdowns.stores, item.storeId)} -> ${item.routeCardNo || '—'}` },
     { label: 'Rack Number',         value: item.rackNo || '—' },
     { label: 'Location',            value: item.location || '—' },
     { label: 'Remarks',             value: item.remarks || '—' },
@@ -1303,7 +1317,6 @@ function PreviewView({ item, dropdowns, onBack, onCreate, onViewUploads }) {
     { label: 'Reorder Level',       value: item.reorderLevel != null ? item.reorderLevel : '—' },
     { label: 'Min Stock',           value: item.minStock != null ? item.minStock : '—' },
     { label: 'Current Stock',       value: item.currentStock ?? 0 },
-    { label: 'Route Card Number',   value: item.routeCardNo || '—' },
     { label: 'Created Date',        value: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—' },
     { label: 'Created By',          value: item.createdBy || '—' },
     { label: 'Updated Date',        value: item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—' },
