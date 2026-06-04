@@ -25,17 +25,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 )
 
 const STORAGE_KEY = 'velson_job_card_entries'
-const PRODUCTS = [
-  { value: 'VE-70071', label: 'VE-70071 — CENTER SLIDER SENSING PLATE' },
-  { value: 'VE-70073', label: 'VE-70073 — CENTER SLIDER SENSING PLATE 2' },
-  { value: 'VE-70074', label: 'VE-70074 — CENTER SLIDER SENSING SHAFT 35MM' },
-  { value: 'VE-70075', label: 'VE-70075 — CENTER SLIDER SENSING SHAFT 48MM' },
-  { value: 'VE-70076', label: 'VE-70076 — CENTER SLIDER SENSING SHAFT 85MM' },
-  { value: 'VE-70077', label: 'VE-70077 — CENTER SLIDER SENSING BAR 50MM' },
-  { value: 'VE-70078', label: 'VE-70078 — ELECTRICAL CONTROL BOX BOTTOM BUSH 25x10x40' },
-  { value: 'VE-70079', label: 'VE-70079 — CENTER SLIDER SENSING BAR 150MM' },
-  { value: 'VE-70080', label: 'VE-70080 — COMMON WIRE SUPPORT PIECE 16MM' },
-]
+
 const MODELS = ['Model A', 'Model B', 'Model C']
 const PRIORITIES = ['High', 'Medium', 'Low']
 const UNITS = ['Nos', 'Kg', 'Mtr', 'Set', 'Pair', 'Ltr']
@@ -47,10 +37,10 @@ export default function JobCardEntry() {
   const [form, setForm] = useState({
     jobNo: String(nextJobNo),
     model: '', qtyV: '', currentDate: new Date().toISOString().split('T')[0],
-    product: '', priority: '', requiredDate: new Date().toISOString().split('T')[0],
-    note: '', mrNo: '',
+    priority: '', requiredDate: new Date().toISOString().split('T')[0],
+    note: '',
   })
-  const [lineItems, setLineItems] = useState([{ id: 1, partNo: '', partName: '', planQty: '', rmIssueQty: '', unit: '', notes: '' }])
+  const [lineItems, setLineItems] = useState([{ id: 1, partNo: '', partName: '', planQty: '', unit: '' }])
   const [savedJobs, setSavedJobs] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [partImage, setPartImage] = useState(null)
@@ -78,25 +68,11 @@ export default function JobCardEntry() {
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const handleProductChange = (e) => {
-    const val = e.target.value
-    const prod = PRODUCTS.find(p => p.value === val)
-    setForm(f => ({ ...f, product: val }))
-    if (prod && lineItems.length > 0) {
-      const updated = [...lineItems]
-      const empty = updated.findIndex(li => !li.partNo)
-      const idx = empty >= 0 ? empty : updated.length - 1
-      updated[idx] = { ...updated[idx], partNo: prod.value, partName: prod.label.split(' — ')[1] || '' }
-      setLineItems(updated)
-    }
-  }
-
-  const addLine = () => setLineItems(prev => [...prev, { id: Date.now(), partNo: '', partName: '', planQty: '', rmIssueQty: '', unit: '', notes: '' }])
+  const addLine = () => setLineItems(prev => [...prev, { id: Date.now(), partNo: '', partName: '', planQty: '', unit: '' }])
   const removeLine = (id) => setLineItems(prev => prev.length > 1 ? prev.filter(l => l.id !== id) : prev)
   const updateLine = (id, key, val) => setLineItems(prev => prev.map(l => l.id === id ? { ...l, [key]: val } : l))
 
   const handleSave = () => {
-    if (!form.product) { toast.warning('Please select a Product.'); return }
     const job = { ...form, partImage, lineItems: lineItems.filter(l => l.partNo), savedAt: new Date().toISOString(), id: Date.now() }
     const updated = [job, ...savedJobs]
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -113,15 +89,15 @@ export default function JobCardEntry() {
   }
 
   const handleClear = () => {
-    setForm({ jobNo: String(nextJobNo), model: '', qtyV: '', currentDate: new Date().toISOString().split('T')[0], product: '', priority: '', requiredDate: new Date().toISOString().split('T')[0], note: '', mrNo: '' })
-    setLineItems([{ id: Date.now(), partNo: '', partName: '', planQty: '', rmIssueQty: '', unit: '', notes: '' }])
+    setForm({ jobNo: String(nextJobNo), model: '', qtyV: '', currentDate: new Date().toISOString().split('T')[0], priority: '', requiredDate: new Date().toISOString().split('T')[0], note: '' })
+    setLineItems([{ id: Date.now(), partNo: '', partName: '', planQty: '', unit: '' }])
     clearImage()
   }
 
   const filtered = savedJobs.filter(j => {
     if (!searchTerm) return true
     const q = searchTerm.toLowerCase()
-    return j.jobNo?.toLowerCase().includes(q) || j.product?.toLowerCase().includes(q) || j.model?.toLowerCase().includes(q)
+    return j.jobNo?.toLowerCase().includes(q) || j.model?.toLowerCase().includes(q)
   })
 
   return (
@@ -147,8 +123,7 @@ export default function JobCardEntry() {
           </div>
 
           <div className="p-6">
-            {/* ── Row 1: Job No, Model, Qty, Date ── */}
-            <div className="grid grid-cols-12 gap-4 items-end">
+            <div className="grid grid-cols-12 gap-4 items-start">
               <div className="col-span-2">
                 <Label required>Job No</Label>
                 <Input value={form.jobNo} readOnly className="!font-bold text-[#0097A7]" />
@@ -165,53 +140,39 @@ export default function JobCardEntry() {
                 <Label>Current Date</Label>
                 <Input type="date" value={form.currentDate} onChange={u('currentDate')} />
               </div>
-              <div className="col-span-3 flex gap-2 justify-end">
-                <button onClick={handleSave} className="flex items-center gap-1.5 px-5 py-[7px] bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg transition-all shadow-md active:scale-95"><Save size={14} /> Save</button>
-                <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-[7px] bg-white hover:bg-red-50 text-red-600 text-[12px] font-bold rounded-lg border border-red-200 transition-all shadow-sm active:scale-95"><Trash2 size={14} /> Delete</button>
-              </div>
-            </div>
 
-            {/* ── Row 2: Product, Priority, Required Date, Part Image ── */}
-            <div className="grid grid-cols-12 gap-4 items-end mt-4">
-              <div className="col-span-4">
-                <Label required>Product</Label>
-                <Select options={PRODUCTS} value={form.product} onChange={handleProductChange} placeholder="Select Product..." />
-              </div>
-              <div className="col-span-2">
-                <Label>Priority</Label>
-                <Select options={PRIORITIES} value={form.priority} onChange={u('priority')} placeholder="Select..." />
-              </div>
-              <div className="col-span-2">
-                <Label>Required Date</Label>
-                <Input type="date" value={form.requiredDate} onChange={u('requiredDate')} />
-              </div>
-              <div className="col-span-4">
+              {/* Part Image spans 3 rows on the right */}
+              <div className="col-span-3 row-span-3">
                 <Label>Part Image</Label>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 {partImage ? (
                   <div className="relative bg-slate-50 border border-slate-200 rounded-xl overflow-hidden group">
-                    <img src={partImage} alt="Part" className="w-full h-[90px] object-contain p-1" />
-                    <button onClick={clearImage} className="absolute top-1 right-1 bg-white/90 hover:bg-red-50 rounded-full p-0.5 text-slate-400 hover:text-red-600 transition-all shadow-sm"><X size={14} /></button>
-                    <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-1 right-1 bg-white/90 hover:bg-[#0097A7]/10 rounded-full p-1 text-slate-400 hover:text-[#0097A7] transition-all shadow-sm"><Upload size={12} /></button>
+                    <img src={partImage} alt="Part" className="w-full h-[200px] object-contain p-2" />
+                    <button onClick={clearImage} className="absolute top-2 right-2 bg-white/90 hover:bg-red-50 rounded-full p-1 text-slate-400 hover:text-red-600 transition-all shadow-sm"><X size={16} /></button>
+                    <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-2 right-2 bg-white/90 hover:bg-[#0097A7]/10 rounded-full p-1.5 text-slate-400 hover:text-[#0097A7] transition-all shadow-sm"><Upload size={14} /></button>
                   </div>
                 ) : (
-                  <div onClick={() => fileInputRef.current?.click()} className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center py-4 gap-2 text-slate-300 hover:border-[#0097A7] hover:bg-[#0097A7]/5 transition-all cursor-pointer group">
+                  <div onClick={() => fileInputRef.current?.click()} className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center h-[200px] gap-2 text-slate-300 hover:border-[#0097A7] hover:bg-[#0097A7]/5 transition-all cursor-pointer group">
                     <ImageIcon size={22} strokeWidth={1.5} className="group-hover:text-[#0097A7] transition-colors" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-[#0097A7]">Click to upload</span>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* ── Row 3: Note, MR No ── */}
-            <div className="grid grid-cols-12 gap-4 items-end mt-4 bg-[#e8f5e9] p-3 rounded-lg border border-green-200">
-              <div className="col-span-2 text-[11px] font-bold text-green-800 uppercase">Note</div>
-              <div className="col-span-6">
-                <Input value={form.note} onChange={u('note')} placeholder="Enter notes..." />
+              <div className="col-span-5">
+                <Label>Priority</Label>
+                <Select options={PRIORITIES} value={form.priority} onChange={u('priority')} placeholder="Select..." />
               </div>
-              <div className="col-span-1 text-[11px] font-bold text-green-800 uppercase text-right">MR No.</div>
-              <div className="col-span-3">
-                <Input value={form.mrNo} onChange={u('mrNo')} placeholder="Material Request No..." />
+              <div className="col-span-4">
+                <Label>Required Date</Label>
+                <Input type="date" value={form.requiredDate} onChange={u('requiredDate')} />
+              </div>
+
+              <div className="col-span-9 bg-[#e8f5e9] p-3 rounded-lg border border-green-200 flex items-center gap-4">
+                <div className="w-16 text-[11px] font-bold text-green-800 uppercase shrink-0">Note</div>
+                <div className="flex-1">
+                  <Input value={form.note} onChange={u('note')} placeholder="Enter notes..." />
+                </div>
               </div>
             </div>
 
@@ -219,7 +180,11 @@ export default function JobCardEntry() {
             <div className="mt-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest border-l-4 border-[#0097A7] pl-3">Line Items</h3>
-                <button onClick={addLine} className="flex items-center gap-1 px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[11px] font-bold rounded-lg transition-all shadow-sm active:scale-95"><Plus size={13} /> Add Row</button>
+                <div className="flex items-center gap-2">
+                  <button onClick={addLine} className="flex items-center gap-1.5 px-3 py-[7px] bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg transition-all shadow-sm active:scale-95"><Plus size={14} /> Add Row</button>
+                  <button onClick={handleSave} className="flex items-center gap-1.5 px-5 py-[7px] bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg transition-all shadow-md active:scale-95"><Save size={14} /> Save</button>
+                  <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-[7px] bg-white hover:bg-red-50 text-red-600 text-[12px] font-bold rounded-lg border border-red-200 transition-all shadow-sm active:scale-95"><Trash2 size={14} /> Delete</button>
+                </div>
               </div>
               <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
@@ -230,9 +195,7 @@ export default function JobCardEntry() {
                       <th className="px-3 py-3 border-r border-slate-200">Part No</th>
                       <th className="px-3 py-3 border-r border-slate-200">Part Name</th>
                       <th className="px-3 py-3 border-r border-slate-200 w-24">Plan Qty</th>
-                      <th className="px-3 py-3 border-r border-slate-200 w-24">RM Issue Qty</th>
-                      <th className="px-3 py-3 border-r border-slate-200 w-20">Unit</th>
-                      <th className="px-3 py-3">Notes</th>
+                      <th className="px-3 py-3 w-20">Unit</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -254,20 +217,12 @@ export default function JobCardEntry() {
                           <input type="number" value={li.planQty} onChange={e => updateLine(li.id, 'planQty', e.target.value)} placeholder="0"
                             className="w-full px-2 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7] text-center" />
                         </td>
-                        <td className="px-2 py-1.5 border-r border-slate-200">
-                          <input type="number" value={li.rmIssueQty} onChange={e => updateLine(li.id, 'rmIssueQty', e.target.value)} placeholder="0"
-                            className="w-full px-2 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7] text-center" />
-                        </td>
-                        <td className="px-2 py-1.5 border-r border-slate-200">
+                        <td className="px-2 py-1.5">
                           <select value={li.unit} onChange={e => updateLine(li.id, 'unit', e.target.value)}
                             className="w-full px-1 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7]">
                             <option value="">--</option>
                             {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                           </select>
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <input value={li.notes} onChange={e => updateLine(li.id, 'notes', e.target.value)} placeholder="Notes..."
-                            className="w-full px-2 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7]" />
                         </td>
                       </tr>
                     ))}
@@ -295,7 +250,6 @@ export default function JobCardEntry() {
                     <tr>
                       <th className="px-4 py-3 border-r border-slate-200 w-14 text-center">S.No</th>
                       <th className="px-4 py-3 border-r border-slate-200">Job No</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Product</th>
                       <th className="px-4 py-3 border-r border-slate-200">Model</th>
                       <th className="px-4 py-3 border-r border-slate-200 text-center">Qty</th>
                       <th className="px-4 py-3 border-r border-slate-200">Priority</th>
@@ -313,7 +267,6 @@ export default function JobCardEntry() {
                       <tr key={job.id} className="hover:bg-slate-50 transition-colors h-11">
                         <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-400 font-bold text-[12px]">{idx + 1}</td>
                         <td className="px-4 py-2 border-r border-slate-200 font-bold text-[#0097A7] text-[12px]">{job.jobNo}</td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-slate-700 text-[12px] font-semibold">{PRODUCTS.find(p => p.value === job.product)?.label.split(' — ')[1] || job.product}</td>
                         <td className="px-4 py-2 border-r border-slate-200 text-slate-600 text-[12px]">{job.model || '—'}</td>
                         <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-600 text-[12px]">{job.qtyV || '—'}</td>
                         <td className="px-4 py-2 border-r border-slate-200 text-[12px]">

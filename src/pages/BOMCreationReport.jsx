@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, Fragment } from 'react'
 import {
   ChevronRight, Search, Printer, X, Trash2, Download,
-  FileSpreadsheet, FileJson, Filter, Settings, Image as ImageIcon, RotateCcw, List, FileText
+  FileSpreadsheet, FileJson, Filter, Settings, Image as ImageIcon, RotateCcw, List, FileText, ChevronDown
 } from 'lucide-react'
 import api from '../services/api'
 import { jsPDF } from 'jspdf'
 import ExcelJS from 'exceljs'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 
 // ── Shared UI primitives ──
 const Label = ({ children }) => (
@@ -44,15 +46,27 @@ const Select = ({ options, placeholder, value, onChange, className = "", disable
 )
 
 export default function BOMCreationReport() {
+  const toast = useToast()
   const [fromDate, setFromDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
   const [customer, setCustomer] = useState('')
   const [serialNo, setSerialNo] = useState('')
   const [assemblyPartNo, setAssemblyPartNo] = useState('')
-  const [isAll, setIsAll] = useState(false)
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searching, setSearching] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [selectedId, setSelectedId] = useState(null)
+  const [selectedPartImage, setSelectedPartImage] = useState(null)
+  const [expandedBomId, setExpandedBomId] = useState(null)
+  const [selectedChildRow, setSelectedChildRow] = useState(null)
+  const [lightboxImage, setLightboxImage] = useState(null)
+
+  useEffect(() => {
+    setSelectedChildRow(null)
+  }, [expandedBomId])
+
   const fetchBoms = async () => {
     try {
       const res = await api.get('/api/bom-creation')
@@ -70,21 +84,85 @@ export default function BOMCreationReport() {
 
   // Reactive filtering at runtime
   useEffect(() => {
-    const start = new Date(fromDate)
-    start.setHours(0,0,0,0)
-    const end = new Date(toDate)
-    end.setHours(23,59,59,999)
+    const start = fromDate ? new Date(fromDate) : null
+    if (start && !isNaN(start.getTime())) {
+      start.setHours(0,0,0,0)
+    }
+    const end = toDate ? new Date(toDate) : null
+    if (end && !isNaN(end.getTime())) {
+      end.setHours(23,59,59,999)
+    }
 
     const result = data.filter(r => {
       const d = new Date(r.date)
-      const dateMatch = d >= start && d <= end
+      const startValid = start && !isNaN(start.getTime())
+      const endValid = end && !isNaN(end.getTime())
+      const dateMatch = (!startValid || d >= start) && (!endValid || d <= end)
       const custMatch = customer ? r.customerName === customer : true
       const serialMatch = serialNo ? (r.serialJobNo === serialNo || r.serviceJobNo === serialNo) : true
-      const assemblyMatch = isAll ? true : (assemblyPartNo ? r.assemblyPartNo === assemblyPartNo : true)
+      const assemblyMatch = assemblyPartNo ? r.assemblyPartNo === assemblyPartNo : true
       return dateMatch && custMatch && serialMatch && assemblyMatch
     })
     setFilteredData(result)
-  }, [data, fromDate, toDate, customer, serialNo, assemblyPartNo, isAll])
+  }, [data, fromDate, toDate, customer, serialNo, assemblyPartNo])
+
+  useEffect(() => {
+    let partNo = null
+    let inlineImg = null
+
+    if (selectedChildRow) {
+      const keys = Object.keys(selectedChildRow)
+      const partNoKey = keys.find(k => {
+        const l = k.toLowerCase()
+        return l.includes('part number') || l.includes('part no') || l === 'part' || l === 'partno'
+      })
+      if (partNoKey) {
+        partNo = selectedChildRow[partNoKey]
+      }
+      
+      inlineImg = Object.values(selectedChildRow).find(val => 
+        typeof val === 'string' && (val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/uploads/') || val.startsWith('/api/'))
+      ) || null
+    } else {
+      const selectedRow = data.find(r => r.id === selectedId)
+      partNo = selectedRow?.assemblyPartNo
+    }
+
+    if (!partNo) {
+      setSelectedPartImage(inlineImg || null)
+      return
+    }
+
+    const controller = new AbortController()
+    api.get(`/api/item-master?limit=1&search=${encodeURIComponent(partNo)}`, { signal: controller.signal })
+      .then(res => {
+        const item = res.data?.data?.[0]
+        if (item) {
+          const hasImg = item.hasImage || !!item.imageMimeType
+          if (hasImg) {
+            setSelectedPartImage(`/api/item-master/${item.id}/download-image`)
+          } else if (item.imagePath) {
+            if (item.imagePath.startsWith('http') || item.imagePath.startsWith('/')) {
+              setSelectedPartImage(item.imagePath)
+            } else {
+              setSelectedPartImage(`/uploads/${item.imagePath}`)
+            }
+          } else {
+            setSelectedPartImage(inlineImg || null)
+          }
+        } else {
+          setSelectedPartImage(inlineImg || null)
+        }
+      })
+      .catch(err => {
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          console.error('Error loading part image', err)
+        }
+        setSelectedPartImage(inlineImg || null)
+      })
+
+    return () => controller.abort()
+  }, [selectedId, selectedChildRow, data])
 
   const handleSearch = () => {
     setSearching(true)
@@ -95,42 +173,41 @@ export default function BOMCreationReport() {
     })
   }
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this BOM Creation record?')) {
-      try {
-        await api.delete(`/api/bom-creation/${id}`)
-        const next = data.filter(r => r.id !== id)
-        setData(next)
-        setFilteredData(filteredData.filter(r => r.id !== id))
-      } catch (err) {
-        console.error('Error deleting record', err)
-        alert('Error deleting record from database.')
-      }
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const id = deleteTarget.id
+      await api.delete(`/api/bom-creation/${id}`)
+      const next = data.filter(r => r.id !== id)
+      setData(next)
+      setFilteredData(filteredData.filter(r => r.id !== id))
+      setDeleteTarget(null)
+      setSelectedId(null)
+    } catch (err) {
+      console.error('Error deleting record', err)
+      toast.error('Error deleting record from database.')
+      setDeleteTarget(null)
+    } finally {
+      setDeleting(false)
     }
   }
 
-  const handleDeleteAllFiltered = async () => {
-    if (filteredData.length === 0) {
-      alert('No records selected in current filter.');
-      return;
-    }
-    if (window.confirm(`Are you sure you want to delete all ${filteredData.length} records matching the current filters?`)) {
-      try {
-        await Promise.all(filteredData.map(r => api.delete(`/api/bom-creation/${r.id}`)));
-        fetchBoms();
-      } catch (err) {
-        console.error('Error during bulk deletion', err);
-        alert('Error deleting some records. Reloading list.');
-        fetchBoms();
-      }
-    }
+  const handleClearFilters = () => {
+    setFromDate('')
+    setToDate('')
+    setCustomer('')
+    setSerialNo('')
+    setAssemblyPartNo('')
+    setSelectedId(null)
+    setSelectedChildRow(null)
   }
 
   // --- Export Actions ---
 
   const handleExportExcel = async () => {
     if (filteredData.length === 0) {
-      alert('No data available to export.')
+      toast.warning('No data available to export.')
       return
     }
     try {
@@ -173,13 +250,13 @@ export default function BOMCreationReport() {
       link.click()
     } catch (err) {
       console.error(err)
-      alert('Error exporting to Excel')
+      toast.error('Error exporting to Excel')
     }
   }
 
   const handleExportDoc = () => {
     if (filteredData.length === 0) {
-      alert('No data available to export.')
+      toast.warning('No data available to export.')
       return
     }
 
@@ -245,7 +322,7 @@ export default function BOMCreationReport() {
 
   const handleExportPdf = () => {
     if (filteredData.length === 0) {
-      alert('No data available to export.')
+      toast.warning('No data available to export.')
       return
     }
 
@@ -343,7 +420,7 @@ export default function BOMCreationReport() {
 
   const handlePrintReport = () => {
     if (filteredData.length === 0) {
-      alert('No records available to print.')
+      toast.warning('No records available to print.')
       return
     }
     const printWindow = window.open('', '_blank', 'width=950,height=750')
@@ -418,6 +495,117 @@ export default function BOMCreationReport() {
     printWindow.document.close()
   }
 
+  const handleExportChildExcel = async (bomRecord) => {
+    if (!bomRecord || !bomRecord.excelRows || bomRecord.excelRows.length === 0) return
+    try {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet(`BOM_${bomRecord.bomNo}_Details`)
+
+      const headers = Object.keys(bomRecord.excelRows[0] || {})
+      const columns = [
+        { header: 'S.No', key: 'sno', width: 8 },
+        ...headers.map(h => ({ header: h, key: h, width: 20 }))
+      ]
+      worksheet.columns = columns
+
+      bomRecord.excelRows.forEach((row, idx) => {
+        const rowData = { sno: idx + 1 }
+        headers.forEach(h => {
+          rowData[h] = row[h] || ''
+        })
+        worksheet.addRow(rowData)
+      })
+
+      worksheet.getRow(1).font = { bold: true }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `BOM_${bomRecord.bomNo}_Child_Entries_${new Date().toISOString().split('T')[0]}.xlsx`
+      link.click()
+    } catch (err) {
+      console.error(err)
+      toast.error('Error exporting child entries to Excel')
+    }
+  }
+
+  const handlePrintChildBOM = (bomRecord) => {
+    if (!bomRecord || !bomRecord.excelRows || bomRecord.excelRows.length === 0) return
+    const printWindow = window.open('', '_blank', 'width=950,height=750')
+    const headers = Object.keys(bomRecord.excelRows[0] || {})
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>BOM Child Entries - ${bomRecord.bomNo}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #333; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0097A7; padding-bottom: 15px; margin-bottom: 20px; }
+            h1 { margin: 0; color: #0097A7; font-size: 20px; text-transform: uppercase; font-weight: 800; }
+            p { margin: 3px 0; font-size: 12px; color: #666; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th { background: #0097A7; color: white; font-size: 10px; text-transform: uppercase; font-weight: bold; padding: 8px 6px; border: 1px solid #0097A7; text-align: left; }
+            td { padding: 8px 6px; border: 1px solid #e2e8f0; font-size: 11px; }
+            .text-center { text-align: center; }
+            .footer { text-align: center; margin-top: 40px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1>BOM Child Entries</h1>
+              <p>BOM No: <b>${bomRecord.bomNo}</b></p>
+              <p>Customer: ${bomRecord.customerName} (${bomRecord.customerCode || 'N/A'})</p>
+            </div>
+            <div style="text-align: right;">
+              <p>Service Job No: ${bomRecord.serviceJobNo || bomRecord.serialJobNo || 'N/A'}</p>
+              <p>Model: ${bomRecord.model || 'N/A'}</p>
+              <p>Printed: ${new Date().toLocaleString()}</p>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%">S.No</th>
+                \${headers.map(h => \`<th>\${h}</th>\`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              \${bomRecord.excelRows.map((row, idx) => \`
+                <tr>
+                  <td class="text-center">\${idx + 1}</td>
+                  \${headers.map(h => {
+                    const val = row[h];
+                    const valStr = String(val).trim();
+                    const isImg = valStr.startsWith('http://') ||
+                      valStr.startsWith('https://') ||
+                      valStr.startsWith('/api/') ||
+                      valStr.startsWith('/uploads/') ||
+                      valStr.startsWith('data:image/');
+                    if (isImg) {
+                      return \`<td><img src="\${valStr}" style="max-height: 40px; max-width: 80px; object-fit: contain;" /></td>\`;
+                    }
+                    return \`<td>\${valStr}</td>\`;
+                  }).join('')}
+                </tr>
+              \`).join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            VELSON ERP - System Generated BOM Report
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
   return (
     <div className="bg-[#f4f6f8] min-h-full pb-10">
       <div className="px-6 py-6">
@@ -435,7 +623,19 @@ export default function BOMCreationReport() {
               <button onClick={handlePrintReport} className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold rounded shadow-sm">
                 <Printer size={15} /> Print Report
               </button>
-              <button onClick={handleDeleteAllFiltered} className="flex items-center gap-1.5 px-4 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-[11px] font-bold rounded shadow-sm transition-all">
+              <button
+                onClick={() => {
+                  if (!selectedId) {
+                    toast.warning('Please select a record first.')
+                    return
+                  }
+                  const row = data.find(r => r.id === selectedId)
+                  if (row) {
+                    setDeleteTarget(row)
+                  }
+                }}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-[11px] font-bold rounded shadow-sm transition-all"
+              >
                 <Trash2 size={15} /> Delete
               </button>
               <button onClick={() => window.history.back()} className="flex items-center gap-1.5 px-4 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-black rounded transition-all shadow-sm">
@@ -458,16 +658,16 @@ export default function BOMCreationReport() {
                   </div>
                   <button
                     onClick={handleSearch}
-                    className="flex items-center gap-2 px-6 py-2 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-bold rounded-lg shadow-md transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg shadow-sm transition-all active:scale-95 whitespace-nowrap"
                   >
-                    {searching ? <RotateCcw size={16} className="animate-spin" /> : <Search size={16} />}
+                    {searching ? <RotateCcw size={14} className="animate-spin" /> : <Search size={14} />}
                     Search
                   </button>
                   <button
                     onClick={handleSearch}
-                    className="flex items-center gap-2 px-6 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-[13px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-[12px] font-bold rounded-lg transition-all shadow-sm active:scale-95 whitespace-nowrap"
                   >
-                    {searching ? <RotateCcw size={16} className="animate-spin" /> : <Search size={16} className="text-[#0097A7]" />}
+                    {searching ? <RotateCcw size={14} className="animate-spin" /> : <Search size={14} className="text-[#0097A7]" />}
                     Search Details
                   </button>
                 </div>
@@ -503,28 +703,47 @@ export default function BOMCreationReport() {
                         placeholder="--- All Assembly Parts ---"
                         value={assemblyPartNo}
                         onChange={e => setAssemblyPartNo(e.target.value)}
-                        disabled={isAll}
                       />
                     </div>
-                    <div className="col-span-2 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="allParts"
-                        checked={isAll}
-                        onChange={e => setIsAll(e.target.checked)}
-                        className="w-4 h-4 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7] cursor-pointer"
-                      />
-                      <label htmlFor="allParts" className="text-[11px] font-bold text-slate-500 uppercase cursor-pointer select-none">ALL</label>
+                    <div className="col-span-2 flex items-center justify-end">
+                      <button
+                        onClick={handleClearFilters}
+                        className="flex items-center gap-1 px-3 py-[7px] bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 text-[12px] font-bold rounded-lg shadow-sm transition-all active:scale-95 whitespace-nowrap w-full justify-center"
+                      >
+                        <RotateCcw size={14} className="text-slate-500" />
+                        Reset Search
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="col-span-4 flex flex-col items-center justify-center border-l border-slate-100 pl-8">
-                <div className="w-24 h-24 bg-white rounded-3xl border-2 border-dashed border-slate-100 flex items-center justify-center text-slate-100">
-                  <ImageIcon size={40} />
+                <div
+                  onClick={() => selectedPartImage && setLightboxImage(selectedPartImage)}
+                  className={`w-48 h-48 bg-white rounded-2xl border border-slate-200 flex items-center justify-center text-slate-300 overflow-hidden relative shadow-sm transition-all duration-300 ${
+                    selectedPartImage ? 'cursor-zoom-in hover:shadow-md hover:scale-[1.02] hover:border-[#0097A7]/40' : ''
+                  }`}
+                >
+                  {selectedPartImage ? (
+                    <img
+                      src={selectedPartImage}
+                      alt="Part Preview"
+                      className="w-full h-full object-contain p-2"
+                    />
+                  ) : (
+                    <ImageIcon size={48} className="text-slate-300" />
+                  )}
                 </div>
-                <p className="text-[10px] font-black text-slate-300 mt-2 uppercase tracking-widest">Part Preview</p>
+                <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-widest">Part Preview</p>
+                {selectedPartImage && (
+                  <span
+                    onClick={() => setLightboxImage(selectedPartImage)}
+                    className="text-[9px] text-[#0097A7] font-semibold mt-1 cursor-pointer hover:underline"
+                  >
+                    Click to enlarge
+                  </span>
+                )}
               </div>
             </div>
 
@@ -536,7 +755,7 @@ export default function BOMCreationReport() {
                   { icon: <FileText size={14} className="text-blue-500" />, l: 'DOC' },
                   { icon: <FileSpreadsheet size={14} className="text-green-600" />, l: 'xls' },
                   { icon: <Download size={14} className="text-red-500" />, l: 'PDF' },
-                  { icon: <Filter size={14} className="text-[#0097A7]" />, l: 'Filter' },
+                  { icon: <Filter size={14} className="text-[#0097A7]" />, l: 'Clear Filter' },
                   { icon: <Settings size={14} className="text-slate-500" />, l: 'Setting' },
                 ].map(tool => (
                   <button
@@ -546,7 +765,8 @@ export default function BOMCreationReport() {
                       else if (tool.l === 'DOC') handleExportDoc();
                       else if (tool.l === 'xls') handleExportExcel();
                       else if (tool.l === 'PDF') handleExportPdf();
-                      else alert(`${tool.l} clicked!`);
+                      else if (tool.l === 'Clear Filter') handleClearFilters();
+                      else toast.info(`${tool.l} clicked!`);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-bold rounded-lg shadow-sm transition-all active:scale-95"
                   >
@@ -557,7 +777,7 @@ export default function BOMCreationReport() {
             </div>
 
             <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse min-w-[1300px]">
+              <table className="w-full text-left border-collapse">
                 <thead className="bg-[#fcfdfe] text-[9px] uppercase text-slate-400 font-black border-b border-slate-200">
                   <tr>
                     <th className="px-5 py-4 border-r border-slate-100 w-16 text-center">S.No</th>
@@ -581,22 +801,147 @@ export default function BOMCreationReport() {
                     </tr>
                   ) : (
                     filteredData.map((row, idx) => (
-                      <tr key={row.id} className="hover:bg-[#0097A7]/5 transition-colors h-14 group">
-                        <td className="px-5 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 font-black text-[#0097A7]">{row.bomNo}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-700">{row.customerName}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 text-slate-500 font-medium">{row.customerCode || 'N/A'}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-600 uppercase text-[11px] truncate max-w-[300px]">{row.serialJobNo || row.serviceJobNo || 'N/A'}</td>
-                        <td className="px-5 py-2 border-r border-slate-50">{row.assemblyPartNo || 'N/A'}</td>
-                        <td className="px-5 py-2 border-r border-slate-50">{row.model || 'N/A'}</td>
-                        <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-400">{row.date ? row.date.split('T')[0] : 'N/A'}</td>
-                        <td className="px-5 py-2 text-center font-black text-slate-700 text-[11px]">{row.createdBy || 'superadmin'}</td>
-                        <td className="px-5 py-2 text-center">
-                          <button onClick={() => handleDelete(row.id)} className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
+                      <Fragment key={row.id}>
+                        <tr
+                          onClick={() => {
+                            setSelectedId(row.id === selectedId ? null : row.id)
+                            setSelectedChildRow(null)
+                          }}
+                          className={`cursor-pointer transition-colors h-14 group ${row.id === selectedId ? 'bg-[#0097A7]/10 hover:bg-[#0097A7]/15 font-semibold' : 'hover:bg-[#0097A7]/5'}`}
+                        >
+                          <td className="px-5 py-2 border-r border-slate-50 text-center text-slate-300 font-bold">{idx + 1}</td>
+                          <td className="px-5 py-2 border-r border-slate-50 font-black text-[#0097A7]">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setExpandedBomId(row.id === expandedBomId ? null : row.id)
+                                }}
+                                className="p-1 rounded bg-[#0097A7]/10 hover:bg-[#0097A7]/20 text-[#0097A7] transition-all flex items-center justify-center animate-none"
+                                title={row.id === expandedBomId ? "Collapse Child Entries" : "View Child Entries"}
+                              >
+                                {row.id === expandedBomId ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                              </button>
+                              <span>{row.bomNo}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-700">{row.customerName}</td>
+                          <td className="px-5 py-2 border-r border-slate-50 text-slate-500 font-medium">{row.customerCode || 'N/A'}</td>
+                          <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-600 uppercase text-[11px] truncate max-w-[300px]">{row.serialJobNo || row.serviceJobNo || 'N/A'}</td>
+                          <td className="px-5 py-2 border-r border-slate-50">{row.assemblyPartNo || 'N/A'}</td>
+                          <td className="px-5 py-2 border-r border-slate-50">{row.model || 'N/A'}</td>
+                          <td className="px-5 py-2 border-r border-slate-50 font-bold text-slate-400">{row.date ? row.date.split('T')[0] : 'N/A'}</td>
+                          <td className="px-5 py-2 text-center font-black text-slate-700 text-[11px]">{row.createdBy || 'superadmin'}</td>
+                          <td className="px-5 py-2 text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTarget(row)
+                              }}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 transition-colors shadow-sm border border-rose-100"
+                              title="Delete Record"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                        {row.id === expandedBomId && (
+                          <tr className="bg-slate-50/70 hover:bg-slate-50/70">
+                            <td colSpan={10} className="px-8 py-4 border-b border-slate-200">
+                              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 overflow-x-auto">
+                                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                                  <h4 className="text-[11px] font-black text-[#0097A7] uppercase tracking-widest">
+                                    Child Entries for BOM: {row.bomNo}
+                                  </h4>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleExportChildExcel(row)
+                                      }}
+                                      className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-bold rounded shadow-sm transition-all"
+                                      title="Export Excel"
+                                    >
+                                      <FileSpreadsheet size={12} className="text-green-600" /> Export Excel
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handlePrintChildBOM(row)
+                                      }}
+                                      className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-bold rounded shadow-sm transition-all"
+                                      title="Print BOM"
+                                    >
+                                      <Printer size={12} className="text-slate-600" /> Print
+                                    </button>
+                                  </div>
+                                </div>
+                                {!row.excelRows || row.excelRows.length === 0 ? (
+                                  <div className="text-center text-slate-400 py-6 italic text-[11px]">
+                                    No child entries saved for this BOM.
+                                  </div>
+                                ) : (
+                                  <table className="w-full text-left border-collapse text-[11px]">
+                                    <thead className="bg-slate-50/80 text-[10px] uppercase text-slate-400 font-bold border-b border-slate-200">
+                                      <tr>
+                                        <th className="px-4 py-2 border-r border-slate-100 w-12 text-center">S.No</th>
+                                        {Object.keys(row.excelRows[0] || {}).map((header, hIdx) => (
+                                          <th key={hIdx} className="px-4 py-2 border-r border-slate-100">{header}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                      {row.excelRows.map((childRow, childIdx) => (
+                                        <tr
+                                          key={childIdx}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setSelectedChildRow(childRow === selectedChildRow ? null : childRow)
+                                            setSelectedId(row.id)
+                                          }}
+                                          className={`cursor-pointer transition-colors ${
+                                            childRow === selectedChildRow
+                                              ? 'bg-[#0097A7]/10 hover:bg-[#0097A7]/15 font-semibold'
+                                              : 'hover:bg-[#0097A7]/5'
+                                          }`}
+                                        >
+                                          <td className="px-4 py-1.5 border-r border-slate-50 text-center text-slate-400 font-bold">{childIdx + 1}</td>
+                                          {Object.entries(childRow).map(([key, val], colIdx) => {
+                                            const valStr = String(val).trim();
+                                            const isImg = valStr.startsWith('http://') ||
+                                              valStr.startsWith('https://') ||
+                                              valStr.startsWith('/api/') ||
+                                              valStr.startsWith('/uploads/') ||
+                                              valStr.startsWith('data:image/');
+                                            return (
+                                              <td key={colIdx} className="px-4 py-1.5 border-r border-slate-50 text-slate-600">
+                                                {isImg ? (
+                                                  <img
+                                                    src={valStr}
+                                                    alt="Preview"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setLightboxImage(valStr);
+                                                    }}
+                                                    className="max-h-12 max-w-[80px] object-contain rounded border border-slate-200 cursor-zoom-in hover:scale-105 hover:shadow-sm transition-all duration-200"
+                                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                                  />
+                                                ) : (
+                                                  valStr
+                                                )}
+                                              </td>
+                                            );
+                                          })}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))
                   )}
                 </tbody>
@@ -626,6 +971,46 @@ export default function BOMCreationReport() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete BOM Record"
+        message={`Are you sure you want to delete BOM "${deleteTarget?.bomNo}"? This cannot be undone.`}
+        confirming={deleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Image Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 transition-opacity duration-300"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-4 shadow-2xl max-w-3xl max-h-[85vh] relative flex flex-col items-center transition-all duration-300 scale-100"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-slate-800 flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95"
+            >
+              <X size={18} />
+            </button>
+            <div className="overflow-hidden rounded-xl border border-slate-100 flex items-center justify-center bg-slate-50 max-w-full max-h-[70vh]">
+              <img
+                src={lightboxImage}
+                alt="Enlarged Part Preview"
+                className="max-w-full max-h-[65vh] object-contain p-2"
+              />
+            </div>
+            <p className="text-[11px] font-bold text-slate-400 mt-3 uppercase tracking-wider">
+              Part Image View
+            </p>
+          </div>
+        </div>
+      )}
+
+
     </div>
   )
 }
