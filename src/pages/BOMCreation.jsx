@@ -791,10 +791,10 @@ export default function BOMCreation() {
                     ) : (
                       createdRecords.map((row, idx) => (
                         <tr key={row.id} className="hover:bg-slate-50 transition-colors h-14">
-                          <td className="px-5 py-2 border-r border-slate-200 text-center text-slate-400 font-bold">{idx + 1}</td>
-                          <td className="px-5 py-2 border-r border-slate-200 font-black text-slate-700">{row.customerName}</td>
-                          <td className="px-5 py-2 border-r border-slate-200 font-bold text-[#0097A7]">{row.bomNo}</td>
-                          <td className="px-5 py-2 border-r border-slate-200">{row.model}</td>
+                          <td className="px-5 py-2 border-r border-slate-200 text-center text-[12px] text-slate-400 font-bold">{idx + 1}</td>
+                          <td className="px-5 py-2 border-r border-slate-200 font-black text-[13px] text-slate-700">{row.customerName}</td>
+                          <td className="px-5 py-2 border-r border-slate-200 font-bold text-[12px] text-[#0097A7]">{row.bomNo}</td>
+                          <td className="px-5 py-2 border-r border-slate-200 text-[13px]">{row.model}</td>
                           <td className="px-5 py-2 border-r border-slate-200 text-[12px] text-slate-500">{row.fileName}</td>
                           <td className="px-5 py-2 text-center">
                             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Created</span>

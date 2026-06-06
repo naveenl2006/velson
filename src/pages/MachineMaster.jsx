@@ -1,3 +1,5 @@
+MachineMaster.jsx 
+
 import { useState, useEffect } from 'react'
 import { Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, X } from 'lucide-react'
 import api from '../services/api'
@@ -14,6 +16,7 @@ const empty = {
   currency: '', vendorId: '', installationPlace: '', remarks: '',
   yearOfFG: today, dateOfPurchase: today,
   dateOfInstallation: today, warantyExpDate: today, amcExpDate: today,
+  manufacture: '', price: '',
 }
 
 const toDateStr = (v) => (v ? new Date(v).toISOString().split('T')[0] : '')
@@ -27,8 +30,8 @@ const lbl = 'text-[12.5px] font-semibold text-slate-600 whitespace-nowrap'
 
 function Panel({ children }) {
   return (
-    <div className="border border-blue-400 rounded overflow-hidden">
-      <div className="h-[5px] bg-[#1a6fa8]" />
+    <div className="border border-[#0097A7] rounded overflow-hidden">
+      <div className="h-[5px] bg-gradient-to-r from-[#0097A7] to-[#00BCD4]" />
       <div className="p-3 space-y-2">{children}</div>
     </div>
   )
@@ -55,16 +58,21 @@ function FR({ label, fk, required, form, sf, errors, readOnly, type = 'text', pl
   )
 }
 
-function FRSelect({ label, fk, required, form, sf, errors, options, placeholder }) {
+function FRSelect({ label, fk, required, form, sf, errors, options, placeholder, loading }) {
   return (
     <div className="flex items-center gap-2">
       <label className={`${lbl} w-36 shrink-0`}>
         {required && <span className="text-red-500">*</span>}{label} :
       </label>
       <div className="flex-1">
-        <select value={form[fk] || ''} onChange={e => sf(fk, e.target.value)} className={inp(errors[fk])}>
-          <option value="">{placeholder || `--- Select ${label} ---`}</option>
-          {options.map(o => <option key={o}>{o}</option>)}
+        <select 
+          value={form[fk] || ''} 
+          onChange={e => sf(fk, e.target.value)} 
+          disabled={loading}
+          className={loading ? `${inp(errors[fk])} bg-slate-50 cursor-not-allowed` : inp(errors[fk])}
+        >
+          <option value="">{loading ? 'Loading…' : (placeholder || `--- Select ${label} ---`)}</option>
+          {!loading && options.map(o => <option key={o}>{o}</option>)}
         </select>
         {errors[fk] && <p className="text-[11px] text-red-500 mt-0.5">{errors[fk]}</p>}
       </div>
@@ -79,18 +87,22 @@ export default function MachineMaster() {
   const [form, setForm] = useState({ ...empty })
   const [errors, setErrors] = useState({})
   const [editId, setEditId] = useState(null)
+  const [selectedRow, setSelectedRow] = useState(null)
   const [search, setSearch] = useState('')
   const [pageSize, setPageSize] = useState(5)
   const [page, setPage] = useState(1)
   const [detailRow, setDetailRow] = useState(null)
   const [vendors, setVendors] = useState([])
   const [categories, setCategories] = useState([])
+  const [currencies, setCurrencies] = useState([])
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [dropdownsLoading, setDropdownsLoading] = useState(false)
 
   useEffect(() => {
     fetchAll()
     fetchDropdowns()
+    fetchNextCode()
   }, [])
 
   const fetchAll = async () => {
@@ -102,15 +114,32 @@ export default function MachineMaster() {
     }
   }
 
-  const fetchDropdowns = () => {
-    Promise.allSettled([
-      api.get('/api/supplier-master', { skipGlobalLoader: true })
-        .then(res => setVendors((res.data.data || []).map(s => s.supplierName).filter(Boolean)))
-        .catch(() => {}),
-      api.get(`/api/reference-master/${encodeURIComponent('Machine Category')}`, { skipGlobalLoader: true })
-        .then(res => setCategories((res.data.data || []).map(r => r.description || r.code).filter(Boolean)))
-        .catch(() => {}),
-    ])
+  const fetchNextCode = async () => {
+    try {
+      const res = await api.get('/api/machine-master/next-code')
+      setForm(f => ({ ...f, machineCode: res.data.nextCode || '' }))
+    } catch (err) {
+      console.error('[MachineMaster] fetchNextCode:', err)
+    }
+  }
+
+  const fetchDropdowns = async () => {
+    setDropdownsLoading(true)
+    try {
+      await Promise.allSettled([
+        api.get('/api/supplier-master')
+          .then(res => setVendors((res.data.data || []).map(s => s.supplierName).filter(Boolean)))
+          .catch(() => {}),
+        api.get(`/api/reference-master/${encodeURIComponent('Machine Category')}`)
+          .then(res => setCategories((res.data.data || []).map(r => r.description || r.code).filter(Boolean)))
+          .catch(() => {}),
+        api.get(`/api/reference-master/${encodeURIComponent('Currency')}`)
+          .then(res => setCurrencies((res.data.data || []).map(r => r.description || r.code).filter(Boolean)))
+          .catch(() => {}),
+      ])
+    } finally {
+      setDropdownsLoading(false)
+    }
   }
 
   const sf = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
@@ -136,7 +165,8 @@ export default function MachineMaster() {
         setRows(r => [res.data.data, ...r])
         toast.success('Machine created successfully', 'Success')
       }
-      setForm({ ...empty }); setErrors({}); setPage(1)
+      setForm({ ...empty }); setErrors({}); setPage(1); setSelectedRow(null)
+      await fetchNextCode()
     } catch (err) {
       const msg = err.response?.data?.message || 'Save failed'
       toast.error(msg)
@@ -163,6 +193,9 @@ export default function MachineMaster() {
       await api.delete(`/api/machine-master/${deleteTarget.id}`, { loadingMessage: 'Deleting machine...' })
       setRows(r => r.filter(x => x.id !== deleteTarget.id))
       toast.success('Machine deleted successfully', 'Deleted')
+      if (selectedRow?.id === deleteTarget.id) {
+        setSelectedRow(null)
+      }
       setDeleteTarget(null)
     } catch (err) {
       const msg = err.response?.data?.message || 'Delete failed'
@@ -172,7 +205,29 @@ export default function MachineMaster() {
     }
   }
 
-  const handleClear = () => { setForm({ ...empty }); setErrors({}); setEditId(null) }
+  const handleClear = async () => {
+    setForm({ ...empty })
+    setErrors({})
+    setEditId(null)
+    setSelectedRow(null)
+    await fetchNextCode()
+  }
+
+  const handleEditClick = () => {
+    if (!selectedRow) {
+      toast.error('Please select a record from the table first')
+      return
+    }
+    handleEdit(selectedRow)
+  }
+
+  const handleDeleteClick = () => {
+    if (!selectedRow) {
+      toast.error('Please select a record from the table first')
+      return
+    }
+    setDeleteTarget(selectedRow)
+  }
 
   const filtered = rows.filter(r =>
     [r.machineCode, r.machineName, r.machineCategoryId, r.serialNo, r.model, r.country, r.vendorId]
@@ -193,7 +248,7 @@ export default function MachineMaster() {
   const fp = { form, sf, errors }
 
   const TABLE_COLS = [
-    'ID', 'MachineID', 'Name', 'SerialNo', 'Machinecategory', 'WorkHoursPerDay',
+    'MachineID', 'Name', 'SerialNo', 'Machinecategory', 'WorkHoursPerDay',
     'Model', 'Manufacture', 'Year_Of_FG', 'Country', 'Price', 'Currency',
     'Date_of_Purchase', 'Vendo_Name', 'WarantyExpDate', 'AMCExpDate',
     'Date_of_Installlation', 'Installation_Place', 'Remarks', 'User',
@@ -213,65 +268,86 @@ export default function MachineMaster() {
 
       {/* ── Form Card ── */}
       <div className="bg-white rounded border border-slate-300 shadow-sm overflow-hidden">
-        <div className="bg-[#1a6fa8] px-4 py-2">
+        <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-4 py-2">
           <h2 className="text-white text-center font-semibold text-[14px]">
             {editId !== null ? 'Edit' : 'Create'} - Machine Master Details
           </h2>
         </div>
 
-        <div className="p-3">
+        <div className="p-3 space-y-4">
           <div className="grid grid-cols-3 gap-3">
 
             {/* ── Panel 1: Machine Info ── */}
             <Panel>
-              <FR {...fp} label="Machine Code" fk="machineCode" />
+              <FR {...fp} label="Machine Code" fk="machineCode" readOnly />
               <FR {...fp} label="Machine Name" fk="machineName" required />
-              <FR {...fp} label="Serial No" fk="serialNo" />
-              <FRSelect {...fp} label="Machine Category" fk="machineCategoryId" required options={categories} placeholder="Select Machine Category Name" />
+              <FR {...fp} label="Machine Serial No" fk="serialNo" />
+              <FRSelect {...fp} label="Machine Category" fk="machineCategoryId" required options={categories} placeholder="Select Machine Category Name" loading={dropdownsLoading} />
               <FR {...fp} label="Work Hours/Day" fk="workHoursPerDay" />
               <FR {...fp} label="Model" fk="model" />
+              <FR {...fp} label="Manufacture" fk="manufacture" />
               <FR {...fp} label="Country" fk="country" />
             </Panel>
 
             {/* ── Panel 2: Purchase & Vendor ── */}
             <Panel>
-              <FR {...fp} label="Currency" fk="currency" />
-              <FRSelect {...fp} label="Vendor Name" fk="vendorId" options={vendors} placeholder="--- Select Vendor Name ---" />
+              <FRSelect {...fp} label="Currency" fk="currency" options={currencies} placeholder="Select Currency" loading={dropdownsLoading} />
+              <FR {...fp} label="Price" fk="price" type="number" />
+              <FRSelect {...fp} label="Vendor Name" fk="vendorId" options={vendors} placeholder="--- Select Vendor Name ---" loading={dropdownsLoading} />
               <FR {...fp} label="Installation Place" fk="installationPlace" />
               <FR {...fp} label="Remarks" fk="remarks" />
               <FR {...fp} label="Year_Of_FG" fk="yearOfFG" type="date" />
               <FR {...fp} label="Date of Purchase" fk="dateOfPurchase" type="date" />
             </Panel>
 
-            {/* ── Panel 3: Dates & Buttons ── */}
+            {/* ── Panel 3: Dates ── */}
             <Panel>
               <FR {...fp} label="Date of Installation" fk="dateOfInstallation" type="date" />
               <FR {...fp} label="WarantyExpDate" fk="warantyExpDate" type="date" />
               <FR {...fp} label="AMCExpDate" fk="amcExpDate" type="date" />
-
-              <div className="flex gap-2 pt-2 flex-wrap">
-                <button onClick={handleSave}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-                  <Save className="w-4 h-4" />{editId !== null ? 'Update' : 'Create'}
-                </button>
-                <button onClick={handleClear}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-                  <RotateCcw className="w-4 h-4" /> Clear
-                </button>
-                <button onClick={() => { fetchAll(); setPage(1) }}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
-                  <List className="w-4 h-4" /> Display All
-                </button>
-              </div>
             </Panel>
 
+          </div>
+
+          {/* Action Buttons Row aligned to the right */}
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 flex-wrap">
+            <button onClick={handleSave}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
+              <Save className="w-4 h-4" />{editId !== null ? 'Update' : 'Create'}
+            </button>
+            <button onClick={handleEditClick}
+              disabled={!selectedRow}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-[13px] font-semibold rounded transition-colors shadow-sm text-white ${
+                selectedRow 
+                  ? 'bg-[#0097A7] hover:bg-[#007a87]' 
+                  : 'bg-slate-300 cursor-not-allowed opacity-60'
+              }`}>
+              <Edit className="w-4 h-4" /> Edit
+            </button>
+            <button onClick={handleDeleteClick}
+              disabled={!selectedRow}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-[13px] font-semibold rounded transition-colors shadow-sm text-white ${
+                selectedRow 
+                  ? 'bg-red-500 hover:bg-red-600' 
+                  : 'bg-slate-300 cursor-not-allowed opacity-60'
+              }`}>
+              <Trash2 className="w-4 h-4" /> Delete
+            </button>
+            <button onClick={handleClear}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-500 hover:bg-slate-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
+              <RotateCcw className="w-4 h-4" /> Clear
+            </button>
+            <button onClick={() => { fetchAll(); setPage(1) }}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm">
+              <List className="w-4 h-4" /> Display All
+            </button>
           </div>
         </div>
       </div>
 
       {/* ── Table ── */}
       <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-[#1a6fa8] px-4 py-2.5">
+        <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-4 py-2.5">
           <h2 className="text-white text-center font-semibold text-[14px]">Machine Master Details</h2>
         </div>
 
@@ -304,18 +380,23 @@ export default function MachineMaster() {
               {paged.length === 0
                 ? <tr><td colSpan={TABLE_COLS.length} className="text-center py-8 text-slate-400">No records found</td></tr>
                 : paged.map((r, idx) => (
-                  <tr key={r.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
-                    <td className="px-3 py-2 text-center">{r.id}</td>
+                  <tr key={r.id} 
+                    onClick={() => setSelectedRow(r)}
+                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer ${
+                      selectedRow?.id === r.id 
+                        ? 'bg-[#0097A7]/10 font-medium' 
+                        : idx % 2 === 1 ? 'bg-slate-50/50' : ''
+                    }`}>
                     <td className="px-3 py-2 text-center font-medium text-[#0097A7]">{r.machineCode}</td>
                     <td className="px-3 py-2 text-center font-medium">{r.machineName}</td>
                     <td className="px-3 py-2 text-center">{r.serialNo}</td>
                     <td className="px-3 py-2 text-center">{r.machineCategoryId}</td>
                     <td className="px-3 py-2 text-center">{r.workHoursPerDay}</td>
                     <td className="px-3 py-2 text-center">{r.model}</td>
-                    <td className="px-3 py-2 text-center">—</td>
+                    <td className="px-3 py-2 text-center">{r.manufacture || '—'}</td>
                     <td className="px-3 py-2 text-center">{toDateStr(r.yearOfFG)}</td>
                     <td className="px-3 py-2 text-center">{r.country}</td>
-                    <td className="px-3 py-2 text-center">—</td>
+                    <td className="px-3 py-2 text-center">{r.price || '—'}</td>
                     <td className="px-3 py-2 text-center">{r.currency}</td>
                     <td className="px-3 py-2 text-center">{toDateStr(r.dateOfPurchase)}</td>
                     <td className="px-3 py-2 text-center">{r.vendorId}</td>
@@ -324,21 +405,21 @@ export default function MachineMaster() {
                     <td className="px-3 py-2 text-center">{toDateStr(r.dateOfInstallation)}</td>
                     <td className="px-3 py-2 text-center">{r.installationPlace}</td>
                     <td className="px-3 py-2 text-center">{r.remarks}</td>
-                    <td className="px-3 py-2 text-center">—</td>
+                    <td className="px-3 py-2 text-center">{r.createdBy || '—'}</td>
                     <td className="px-3 py-2 text-center">
-                      <button onClick={() => handleEdit(r)}
-                        className="px-3 py-1.5 bg-[#1a6fa8] hover:bg-[#3498db] text-white text-[12px] rounded transition-colors">
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(r); setSelectedRow(r); }}
+                        className="px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] rounded transition-colors">
                         <Edit className="w-4 h-4" />
                       </button>
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <button onClick={() => setDeleteTarget(r)}
+                      <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); setSelectedRow(r); }}
                         className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[12px] rounded transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <button onClick={() => setDetailRow(r)}
+                      <button onClick={(e) => { e.stopPropagation(); setDetailRow(r); setSelectedRow(r); }}
                         className="px-3 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] rounded transition-colors">
                         <Info className="w-4 h-4" />
                       </button>
@@ -383,13 +464,15 @@ export default function MachineMaster() {
                 ['Machine Code', detailRow.machineCode], ['Machine Name', detailRow.machineName],
                 ['Serial No', detailRow.serialNo], ['Category', detailRow.machineCategoryId],
                 ['Work Hours/Day', detailRow.workHoursPerDay], ['Model', detailRow.model],
-                ['Country', detailRow.country], ['Currency', detailRow.currency],
+                ['Manufacture', detailRow.manufacture], ['Country', detailRow.country],
+                ['Price', detailRow.price], ['Currency', detailRow.currency],
                 ['Vendor', detailRow.vendorId], ['Installation Place', detailRow.installationPlace],
                 ['Remarks', detailRow.remarks], ['Year Of FG', toDateStr(detailRow.yearOfFG)],
                 ['Date of Purchase', toDateStr(detailRow.dateOfPurchase)],
                 ['Date of Installation', toDateStr(detailRow.dateOfInstallation)],
                 ['Warranty Exp Date', toDateStr(detailRow.warantyExpDate)],
                 ['AMC Exp Date', toDateStr(detailRow.amcExpDate)],
+                ['Created By', detailRow.createdBy],
               ].map(([l, v]) => (
                 <div key={l} className="flex flex-col py-1 border-b border-slate-100">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{l}</span>

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
-import { ChevronRight, Save, Trash2, X, Plus, RotateCcw, Search, FileText, Image as ImageIcon, Upload } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ChevronRight, Save, Trash2, X, Plus, RotateCcw, Search, FileText, Image as ImageIcon } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import api from '../services/api'
 
 const Label = ({ children, required }) => (
   <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider">
@@ -9,7 +10,7 @@ const Label = ({ children, required }) => (
 )
 const Input = ({ placeholder, value, onChange, type = 'text', readOnly = false, className = "" }) => (
   <input type={type} placeholder={placeholder} value={value} onChange={onChange} readOnly={readOnly}
-    className={`w-full px-3 py-[7px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 ${readOnly ? 'bg-slate-50 cursor-not-allowed' : 'hover:border-slate-300'} ${className}`} />
+    className={`w-full px-3 py-[7px] text-sm bo* Are Mandatoryrder border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 ${readOnly ? 'bg-slate-50 cursor-not-allowed' : 'hover:border-slate-300'} ${className}`} />
 )
 const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   <div className={`relative ${className}`}>
@@ -24,74 +25,195 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   </div>
 )
 
-const STORAGE_KEY = 'velson_job_card_entries'
-
-const MODELS = ['Model A', 'Model B', 'Model C']
-const PRIORITIES = ['High', 'Medium', 'Low']
-const UNITS = ['Nos', 'Kg', 'Mtr', 'Set', 'Pair', 'Ltr']
-
-let nextJobNo = 31450
-
 export default function JobCardEntry() {
   const toast = useToast()
   const [form, setForm] = useState({
-    jobNo: String(nextJobNo),
+    jobNo: '',
     model: '', qtyV: '', currentDate: new Date().toISOString().split('T')[0],
     priority: '', requiredDate: new Date().toISOString().split('T')[0],
     note: '',
   })
-  const [lineItems, setLineItems] = useState([{ id: 1, partNo: '', partName: '', planQty: '', unit: '' }])
+  const [lineItems, setLineItems] = useState([{ id: Date.now(), partNo: '', partName: '', planQty: '', uom: '' }])
   const [savedJobs, setSavedJobs] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [partImage, setPartImage] = useState(null)
-  const fileInputRef = useRef(null)
+  const [loading, setLoading] = useState(true)
 
-  const handleImageChange = (e) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (ev) => setPartImage(ev.target.result)
-      reader.readAsDataURL(file)
+  // Master lists
+  const [vehicleTypes, setVehicleTypes] = useState([])
+  const [priorities, setPriorities] = useState([])
+  const [uoms, setUoms] = useState([])
+  const [itemMasterList, setItemMasterList] = useState([])
+  const [nextJobNo, setNextJobNo] = useState('1')
+
+  const fetchJobCards = async () => {
+    try {
+      const res = await api.get('/api/job-card')
+      setSavedJobs(res.data?.data || [])
+    } catch (err) {
+      console.error('Error fetching job cards', err)
     }
   }
-  const clearImage = () => {
-    setPartImage(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+
+  const fetchNextJobNo = async () => {
+    try {
+      const res = await api.get('/api/job-card/next-no')
+      const nextNo = res.data?.jobNo || '1'
+      setNextJobNo(nextNo)
+      setForm(f => ({ ...f, jobNo: nextNo }))
+    } catch (err) {
+      console.error('Error fetching next job number', err)
+    }
   }
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    setSavedJobs(saved)
-    if (saved.length) { const max = Math.max(...saved.map(j => parseInt(j.jobNo) || 0)); nextJobNo = max + 1 }
-    setForm(f => ({ ...f, jobNo: String(nextJobNo) }))
+    const loadAllData = async () => {
+      setLoading(true)
+      try {
+        const [jobsRes, nextRes, vehicleRes, priorityRes, uomsRes, itemsRes] = await Promise.all([
+          api.get('/api/job-card').catch(() => ({ data: { data: [] } })),
+          api.get('/api/job-card/next-no').catch(() => ({ data: { jobNo: '1' } })),
+          api.get('/api/reference-master/Vehicle_Type').catch(() => ({ data: { data: [] } })),
+          api.get('/api/reference-master/Priority').catch(() => ({ data: { data: [] } })),
+          api.get('/api/reference-master/UOM').catch(() => ({ data: { data: [] } })),
+          api.get('/api/item-master?limit=10000').catch(() => ({ data: { data: [] } }))
+        ])
+
+        setSavedJobs(jobsRes.data?.data || [])
+        const nextNo = nextRes.data?.jobNo || '1'
+        setNextJobNo(nextNo)
+        setForm(f => ({ ...f, jobNo: nextNo }))
+        setVehicleTypes((vehicleRes.data?.data || []).map(r => r.description).filter(Boolean))
+        setPriorities((priorityRes.data?.data || []).map(r => r.description).filter(Boolean))
+        setUoms((uomsRes.data?.data || []).map(r => r.description).filter(Boolean))
+        setItemMasterList(itemsRes.data?.data || [])
+      } catch (err) {
+        console.error('Error loading page data', err)
+        toast.error('Failed to load job card data')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadAllData()
   }, [])
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const addLine = () => setLineItems(prev => [...prev, { id: Date.now(), partNo: '', partName: '', planQty: '', unit: '' }])
+  const addLine = () => setLineItems(prev => [...prev, { id: Date.now(), partNo: '', partName: '', planQty: '', uom: '' }])
   const removeLine = (id) => setLineItems(prev => prev.length > 1 ? prev.filter(l => l.id !== id) : prev)
   const updateLine = (id, key, val) => setLineItems(prev => prev.map(l => l.id === id ? { ...l, [key]: val } : l))
 
-  const handleSave = () => {
-    const job = { ...form, partImage, lineItems: lineItems.filter(l => l.partNo), savedAt: new Date().toISOString(), id: Date.now() }
-    const updated = [job, ...savedJobs]
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    setSavedJobs(updated)
-    nextJobNo++
-    handleClear()
+  const handlePartNoChange = (id, partNoVal) => {
+    const item = itemMasterList.find(it => it.partNo === partNoVal)
+    if (item) {
+      const hasImg = item.hasImage || !!item.imageMimeType
+      if (hasImg) {
+        setPartImage(`/api/item-master/${item.id}/download-image`)
+      } else if (item.imagePath) {
+        setPartImage(item.imagePath.startsWith('http') || item.imagePath.startsWith('/') ? item.imagePath : `/uploads/${item.imagePath}`)
+      } else {
+        setPartImage(null)
+      }
+    } else {
+      setPartImage(null)
+    }
+
+    setLineItems(prev => prev.map(l => {
+      if (l.id === id) {
+        return {
+          ...l,
+          partNo: partNoVal,
+          partName: item ? item.partName : '',
+          uom: item ? (item.uom || item.uomName || '') : '',
+        }
+      }
+      return l
+    }))
   }
 
-  const handleDelete = (id) => {
+  const handlePartNameChange = (id, partNameVal) => {
+    const item = itemMasterList.find(it => it.partName === partNameVal)
+    if (item) {
+      const hasImg = item.hasImage || !!item.imageMimeType
+      if (hasImg) {
+        setPartImage(`/api/item-master/${item.id}/download-image`)
+      } else if (item.imagePath) {
+        setPartImage(item.imagePath.startsWith('http') || item.imagePath.startsWith('/') ? item.imagePath : `/uploads/${item.imagePath}`)
+      } else {
+        setPartImage(null)
+      }
+    } else {
+      setPartImage(null)
+    }
+
+    setLineItems(prev => prev.map(l => {
+      if (l.id === id) {
+        return {
+          ...l,
+          partName: partNameVal,
+          partNo: item ? item.partNo : '',
+          uom: item ? (item.uom || item.uomName || '') : '',
+        }
+      }
+      return l
+    }))
+  }
+
+  const handleSave = async () => {
+    if (!form.jobNo) {
+      toast.warning('Job No is required.')
+      return
+    }
+
+    try {
+      const payload = {
+        ...form,
+        partImage,
+        lineItems: lineItems.filter(l => l.partNo),
+      }
+      const res = await api.post('/api/job-card', payload)
+      if (res.data?.success) {
+        toast.success('Job Card Saved Successfully!')
+        await fetchJobCards()
+        await fetchNextJobNo()
+        handleClear()
+      } else {
+        toast.error(res.data?.message || 'Failed to save Job Card.')
+      }
+    } catch (err) {
+      console.error('Error saving Job Card', err)
+      toast.error('Error saving Job Card: ' + (err.response?.data?.message || err.message))
+    }
+  }
+
+  const handleDelete = async (id) => {
     if (!confirm('Delete this job card?')) return
-    const updated = savedJobs.filter(j => j.id !== id)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    setSavedJobs(updated)
+    try {
+      const res = await api.delete(`/api/job-card/${id}`)
+      if (res.data?.success) {
+        toast.success('Job Card Deleted Successfully!')
+        await fetchJobCards()
+        await fetchNextJobNo()
+      } else {
+        toast.error(res.data?.message || 'Failed to delete Job Card.')
+      }
+    } catch (err) {
+      console.error('Error deleting Job Card', err)
+      toast.error('Error deleting Job Card: ' + (err.response?.data?.message || err.message))
+    }
   }
 
   const handleClear = () => {
-    setForm({ jobNo: String(nextJobNo), model: '', qtyV: '', currentDate: new Date().toISOString().split('T')[0], priority: '', requiredDate: new Date().toISOString().split('T')[0], note: '' })
-    setLineItems([{ id: Date.now(), partNo: '', partName: '', planQty: '', unit: '' }])
-    clearImage()
+    setForm({
+      jobNo: String(nextJobNo),
+      model: '', qtyV: '',
+      currentDate: new Date().toISOString().split('T')[0],
+      priority: '',
+      requiredDate: new Date().toISOString().split('T')[0],
+      note: ''
+    })
+    setLineItems([{ id: Date.now(), partNo: '', partName: '', planQty: '', uom: '' }])
+    setPartImage(null)
   }
 
   const filtered = savedJobs.filter(j => {
@@ -105,7 +227,6 @@ export default function JobCardEntry() {
       <div className="px-6 py-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-bold tracking-tight">
-          {/* <span>Dashboard</span><ChevronRight size={12} /> */}
           <span>Technical</span><ChevronRight size={12} /><span className="text-[#0097A7]">Job Card Entry</span>
         </div>
 
@@ -118,7 +239,7 @@ export default function JobCardEntry() {
             </div>
             <div className="flex items-center gap-2">
               <button onClick={handleClear} className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold rounded-lg border border-slate-200 transition-all shadow-sm"><RotateCcw size={14} /> Clear</button>
-              <button className="text-slate-400 hover:text-red-600 transition-colors ml-1"><X size={20} strokeWidth={2.5} /></button>
+              <button onClick={() => window.history.back()} className="text-slate-400 hover:text-red-600 transition-colors ml-1"><X size={20} strokeWidth={2.5} /></button>
             </div>
           </div>
 
@@ -130,7 +251,7 @@ export default function JobCardEntry() {
               </div>
               <div className="col-span-3">
                 <Label>Model</Label>
-                <Select options={MODELS} value={form.model} onChange={u('model')} placeholder="Select Model..." />
+                <Select options={vehicleTypes} value={form.model} onChange={u('model')} placeholder="Select Model..." />
               </div>
               <div className="col-span-2">
                 <Label>Qty / V</Label>
@@ -144,24 +265,21 @@ export default function JobCardEntry() {
               {/* Part Image spans 3 rows on the right */}
               <div className="col-span-3 row-span-3">
                 <Label>Part Image</Label>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 {partImage ? (
                   <div className="relative bg-slate-50 border border-slate-200 rounded-xl overflow-hidden group">
                     <img src={partImage} alt="Part" className="w-full h-[200px] object-contain p-2" />
-                    <button onClick={clearImage} className="absolute top-2 right-2 bg-white/90 hover:bg-red-50 rounded-full p-1 text-slate-400 hover:text-red-600 transition-all shadow-sm"><X size={16} /></button>
-                    <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-2 right-2 bg-white/90 hover:bg-[#0097A7]/10 rounded-full p-1.5 text-slate-400 hover:text-[#0097A7] transition-all shadow-sm"><Upload size={14} /></button>
                   </div>
                 ) : (
-                  <div onClick={() => fileInputRef.current?.click()} className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center h-[200px] gap-2 text-slate-300 hover:border-[#0097A7] hover:bg-[#0097A7]/5 transition-all cursor-pointer group">
-                    <ImageIcon size={22} strokeWidth={1.5} className="group-hover:text-[#0097A7] transition-colors" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-[#0097A7]">Click to upload</span>
+                  <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center h-[200px] gap-2 text-slate-300 transition-all group">
+                    <ImageIcon size={22} strokeWidth={1.5} className="text-slate-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Part Image</span>
                   </div>
                 )}
               </div>
 
               <div className="col-span-5">
                 <Label>Priority</Label>
-                <Select options={PRIORITIES} value={form.priority} onChange={u('priority')} placeholder="Select..." />
+                <Select options={priorities} value={form.priority} onChange={u('priority')} placeholder="Select..." />
               </div>
               <div className="col-span-4">
                 <Label>Required Date</Label>
@@ -195,7 +313,7 @@ export default function JobCardEntry() {
                       <th className="px-3 py-3 border-r border-slate-200">Part No</th>
                       <th className="px-3 py-3 border-r border-slate-200">Part Name</th>
                       <th className="px-3 py-3 border-r border-slate-200 w-24">Plan Qty</th>
-                      <th className="px-3 py-3 w-20">Unit</th>
+                      <th className="px-3 py-3 w-24">UOM</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -206,22 +324,32 @@ export default function JobCardEntry() {
                         </td>
                         <td className="px-3 py-1.5 border-r border-slate-200 text-center text-slate-400 font-bold text-[12px]">{idx + 1}</td>
                         <td className="px-2 py-1.5 border-r border-slate-200">
-                          <input value={li.partNo} onChange={e => updateLine(li.id, 'partNo', e.target.value)} placeholder="Part No..."
-                            className="w-full px-2 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7]" />
+                          <select value={li.partNo} onChange={e => handlePartNoChange(li.id, e.target.value)}
+                            className="w-full px-2 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7]">
+                            <option value="">Select Part No</option>
+                            {itemMasterList.map(it => (
+                              <option key={it.id} value={it.partNo}>{it.partNo}</option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-2 py-1.5 border-r border-slate-200">
-                          <input value={li.partName} onChange={e => updateLine(li.id, 'partName', e.target.value)} placeholder="Part Name..."
-                            className="w-full px-2 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7]" />
+                          <select value={li.partName} onChange={e => handlePartNameChange(li.id, e.target.value)}
+                            className="w-full px-2 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7]">
+                            <option value="">Select Part Name</option>
+                            {itemMasterList.map(it => (
+                              <option key={it.id} value={it.partName}>{it.partName}</option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-2 py-1.5 border-r border-slate-200">
                           <input type="number" value={li.planQty} onChange={e => updateLine(li.id, 'planQty', e.target.value)} placeholder="0"
                             className="w-full px-2 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7] text-center" />
                         </td>
                         <td className="px-2 py-1.5">
-                          <select value={li.unit} onChange={e => updateLine(li.id, 'unit', e.target.value)}
+                          <select value={li.uom} onChange={e => updateLine(li.id, 'uom', e.target.value)}
                             className="w-full px-1 py-1 text-[12px] border border-slate-200 rounded bg-white focus:outline-none focus:border-[#0097A7]">
                             <option value="">--</option>
-                            {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                            {uoms.map(u => <option key={u} value={u}>{u}</option>)}
                           </select>
                         </td>
                       </tr>
@@ -255,12 +383,12 @@ export default function JobCardEntry() {
                       <th className="px-4 py-3 border-r border-slate-200">Priority</th>
                       <th className="px-4 py-3 border-r border-slate-200">Date</th>
                       <th className="px-4 py-3 border-r border-slate-200 text-center">Parts</th>
-                      <th className="px-4 py-3 text-center w-20">Actions</th>
+                      <th className="px-4 py-3 text-center w-20">Actions</th> 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filtered.length === 0 ? (
-                      <tr><td colSpan={9} className="py-16 text-center text-slate-300 italic text-sm">
+                      <tr><td colSpan={8} className="py-16 text-center text-slate-300 italic text-sm">
                         <FileText size={36} className="mx-auto mb-2 opacity-20" />No job cards found.
                       </td></tr>
                     ) : filtered.map((job, idx) => (
@@ -286,10 +414,10 @@ export default function JobCardEntry() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-4 px-1">
+            {/* <div className="flex items-center justify-between mt-4 px-1">
               <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Ready</p>
               <p className="text-[10px] text-red-500 font-bold">* Are Mandatory</p>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

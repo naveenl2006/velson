@@ -36,6 +36,9 @@ export default function WaitingForApproval() {
   const [search, setSearch] = useState('')
   const [jobs, setJobs] = useState([])
   const [selectedRow, setSelectedRow] = useState(null)
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [page, setPage] = useState(1)
+  const pageSize = 13
 
   useEffect(() => {
     // Merge with any locally approved/rejected overrides
@@ -62,7 +65,14 @@ export default function WaitingForApproval() {
     toast.warning(`Job #${jobNo} rejected.`)
   }
 
+  // Filter logic: combining search and status filter
   const filtered = jobs.filter(j => {
+    // 1. Status filter
+    if (statusFilter === 'PENDING' && (j.approved || j.rejected)) return false
+    if (statusFilter === 'APPROVED' && !j.approved) return false
+    if (statusFilter === 'REJECTED' && !j.rejected) return false
+
+    // 2. Search query filter
     if (!search) return true
     const q = search.toLowerCase()
     return String(j.jobNo).includes(q) ||
@@ -75,45 +85,32 @@ export default function WaitingForApproval() {
   const approvedCount = jobs.filter(j => j.approved).length
   const rejectedCount = jobs.filter(j => j.rejected).length
 
+  // Pagination calculation
+  const totalPages = Math.ceil(filtered.length / pageSize)
+  const pagedJobs = filtered.slice((page - 1) * pageSize, page * pageSize)
+
   return (
-    <div className="bg-[#f4f6f8] min-h-full pb-6">
-      <div className="px-6 py-6">
+    <div className="bg-[#f4f6f8] min-h-full pb-4">
+      <div className="px-4 py-4">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-bold tracking-tight">
-          {/* <span>Dashboard</span><ChevronRight size={12} /> */}
-          <span>Technical</span><ChevronRight size={12} />
+        <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-3 uppercase font-bold tracking-tight">
+          <span>Technical</span><ChevronRight size={11} />
           <span className="text-[#0097A7]">Waiting For Approval</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="mt-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2.5">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-amber-500 rounded-sm" />
-              <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-tight">
+              <h2 className="text-[12.5px] font-bold text-slate-700 uppercase tracking-tight">
                 Waiting For Approval Job List
               </h2>
             </div>
-            <button className="text-slate-400 hover:text-red-600 transition-colors"><X size={20} strokeWidth={2.5} /></button>
+            <button className="text-slate-400 hover:text-red-600 transition-colors"><X size={18} strokeWidth={2.5} /></button>
           </div>
 
-          <div className="p-4 space-y-4">
-            {/* ── Stats row ── */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <Clock size={14} className="text-amber-500" />
-                <span className="text-[11px] font-bold text-amber-700 uppercase">{pendingCount} Pending</span>
-              </div>
-              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-                <CheckCircle2 size={14} className="text-emerald-500" />
-                <span className="text-[11px] font-bold text-emerald-700 uppercase">{approvedCount} Approved</span>
-              </div>
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                <XCircle size={14} className="text-red-400" />
-                <span className="text-[11px] font-bold text-red-600 uppercase">{rejectedCount} Rejected</span>
-              </div>
-            </div>
-
+          <div className="p-3 space-y-3">
             {/* ── Search bar ── */}
             <div className="flex items-center gap-3">
               <span className="text-[11px] font-bold text-slate-600 uppercase whitespace-nowrap">Search :</span>
@@ -121,44 +118,44 @@ export default function WaitingForApproval() {
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <Input
                   value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  onChange={e => { setSearch(e.target.value); setPage(1); }}
                   placeholder="Job No / Vehicle Type / Part No / Part Name..."
                   className="pl-8 w-72"
                 />
               </div>
               {search && (
-                <button onClick={() => setSearch('')} className="text-[11px] text-slate-400 hover:text-red-500 font-bold transition-colors">Clear</button>
+                <button onClick={() => setSearch('')} className="text-[11px] text-[#0097A7] hover:text-[#007a87] font-bold transition-colors">Clear</button>
               )}
             </div>
 
             {/* ── Table ── */}
             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
-              <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
+              <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[900px]">
-                  <thead className="sticky top-0 z-10">
+                  <thead>
                     <tr className="bg-[#1565C0] text-white text-[11px] uppercase font-bold">
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-16">Job No</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-28">Vehicle Type</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-28">Part No</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400">Part Name</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-16 text-center">Qty/V</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-24 text-center">Plan Date</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-24 text-center">Required Date</th>
-                      <th className="px-3 py-2.5 border-r border-blue-400 w-32">Note</th>
-                      <th className="px-3 py-2.5 w-36 text-center">Action</th>
+                      <th className="px-4 py-2 border-r border-blue-400 w-16 bg-[#1565C0]">J.No</th>
+                      <th className="px-3 py-2 border-r border-blue-400 w-28 bg-[#1565C0]">Vehicle Type</th>
+                      <th className="px-3 py-2 border-r border-blue-400 w-28 bg-[#1565C0]">Part No</th>
+                      <th className="px-3 py-2 border-r border-blue-400 bg-[#1565C0]">Part Name</th>
+                      <th className="px-3 py-2 border-r border-blue-400 w-16 text-center bg-[#1565C0]">Qty/V</th>
+                      <th className="px-3 py-2 border-r border-blue-400 w-24 text-center bg-[#1565C0]">Plan Date</th>
+                      <th className="px-3 py-2 border-r border-blue-400 w-24 text-center bg-[#1565C0]">Required Date</th>
+                      <th className="px-3 py-2 border-r border-blue-400 w-32 bg-[#1565C0]">Note</th>
+                      <th className="px-3 py-2 w-36 text-center bg-[#1565C0]">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filtered.length === 0 ? (
+                    {pagedJobs.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-20 text-center text-slate-300">
-                          <Clock size={40} strokeWidth={1} className="mx-auto mb-2 opacity-30" />
+                        <td colSpan={9} className="py-16 text-center text-slate-300">
+                          <Clock size={36} strokeWidth={1} className="mx-auto mb-2 opacity-30" />
                           <p className="text-[12px] font-bold uppercase tracking-widest">No jobs found</p>
-                          <p className="text-[11px] text-slate-400 mt-1">Try adjusting your search</p>
+                          <p className="text-[11px] text-slate-400 mt-1">Try adjusting search or filters</p>
                         </td>
                       </tr>
                     ) : (
-                      filtered.map((j, i) => {
+                      pagedJobs.map((j, i) => {
                         const isSelected = selectedRow === j.jobNo
                         const rowBg = j.approved
                           ? 'bg-emerald-50/60'
@@ -195,13 +192,13 @@ export default function WaitingForApproval() {
                                 <div className="flex items-center justify-center gap-1.5">
                                   <button
                                     onClick={e => { e.stopPropagation(); handleApprove(j.jobNo) }}
-                                    className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg transition-all active:scale-95 shadow-sm"
+                                    className="flex items-center gap-1 px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded transition-all active:scale-95 shadow-sm"
                                   >
                                     <CheckCircle2 size={11} /> Approve
                                   </button>
                                   <button
                                     onClick={e => { e.stopPropagation(); handleReject(j.jobNo) }}
-                                    className="flex items-center gap-1 px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold rounded-lg transition-all active:scale-95 shadow-sm"
+                                    className="flex items-center gap-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold rounded transition-all active:scale-95 shadow-sm"
                                   >
                                     <XCircle size={11} /> Reject
                                   </button>
@@ -217,12 +214,95 @@ export default function WaitingForApproval() {
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                {filtered.length} of {jobs.length} jobs displayed
-              </p>
+            {/* Footer with dynamic Pagination and Status Filters */}
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-3 px-1 py-1">
+              {/* Left Side: Count & Pagination */}
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
+                  Showing {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length} records
+                </span>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-2 py-1 text-[11px] font-bold border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 transition-colors"
+                    >
+                      Prev
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setPage(n)}
+                        className={`w-6 h-6 text-[11px] rounded border font-bold transition-colors ${
+                          page === n
+                            ? 'bg-[#1565C0] text-white border-[#1565C0] shadow-sm'
+                            : 'border-slate-300 hover:bg-slate-50 text-slate-600'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="px-2 py-1 text-[11px] font-bold border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Side: Status Filter Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => { setStatusFilter('ALL'); setPage(1); }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded border transition-all active:scale-95 ${
+                    statusFilter === 'ALL'
+                      ? 'bg-slate-700 text-white border-slate-700 shadow-sm'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-300'
+                  }`}
+                >
+                  All ({jobs.length})
+                </button>
+                <button
+                  onClick={() => { setStatusFilter('PENDING'); setPage(1); }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded border transition-all active:scale-95 flex items-center gap-1 ${
+                    statusFilter === 'PENDING'
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                      : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+                  }`}
+                >
+                  <Clock size={11} />
+                  {pendingCount} Pending
+                </button>
+                <button
+                  onClick={() => { setStatusFilter('APPROVED'); setPage(1); }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded border transition-all active:scale-95 flex items-center gap-1 ${
+                    statusFilter === 'APPROVED'
+                      ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                  }`}
+                >
+                  <CheckCircle2 size={11} />
+                  {approvedCount} Approved
+                </button>
+                <button
+                  onClick={() => { setStatusFilter('REJECTED'); setPage(1); }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded border transition-all active:scale-95 flex items-center gap-1 ${
+                    statusFilter === 'REJECTED'
+                      ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                      : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
+                  }`}
+                >
+                  <XCircle size={11} />
+                  {rejectedCount} Rejected
+                </button>
+              </div>
             </div>
+
           </div>
         </div>
       </div>

@@ -176,7 +176,7 @@ export const NAV = [
   {
     id: 'technical', label: 'Technical', icon: Settings, hiddenRoles: ['user'],
     children: [
-      { id: 'drawing-upload',       label: 'Drawing Upload',       page: 'DrawingUpload' },
+      // { id: 'drawing-upload',       label: 'Drawing Upload',       page: 'DrawingUpload' },
       { id: 'job-card-entry',       label: 'Job Card Entry',       page: 'JobCardEntry' },
       { id: 'process-menu',         label: 'Process Menu',         page: 'ProcessMenu' },
       { id: 'tech-auto-job',        label: 'Auto Job Entry',       page: 'TechAutoJobEntry' },

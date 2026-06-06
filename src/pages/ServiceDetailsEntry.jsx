@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import api from '../services/api'
+import { useLoading } from '../context/LoadingContext'
 
 
 // ── Ultra-compact, premium UI primitives ──
@@ -59,6 +60,7 @@ const STANDARD_ASSEMBLIES = [
 
 export default function ServiceDetailsEntry() {
   const toast = useToast()
+  const { show: showLoader, hide: hideLoader } = useLoading()
 
   // Dynamic lists
   const [jobsList, setJobsList] = useState([])
@@ -71,6 +73,9 @@ export default function ServiceDetailsEntry() {
   const [subTypeOptions, setSubTypeOptions] = useState([])
   const [vehicleNameOptions, setVehicleNameOptions] = useState([])
   const [statusOptions, setStatusOptions] = useState([])
+
+  const [bomCreationsList, setBomCreationsList] = useState([])
+  const [assembliesList, setAssembliesList] = useState([])
 
   // Form states
   const [serviceJobNo, setServiceJobNo] = useState('')
@@ -95,6 +100,7 @@ export default function ServiceDetailsEntry() {
   // On mount: load jobs and service entries
   useEffect(() => {
     const fetchData = async () => {
+      showLoader('Loading service details data...')
       try {
         // 1. Gather all unique Booking records for Job selection
         const bookingsRes = await api.get('/api/service-booking')
@@ -144,9 +150,15 @@ export default function ServiceDetailsEntry() {
         // 4. Load service details entries
         const detailsRes = await api.get('/api/service-detail')
         setServiceDetailsList(detailsRes.data?.data || [])
+
+        // 5. Load BOM creation entries
+        const bomRes = await api.get('/api/bom-creation')
+        setBomCreationsList(bomRes.data?.data || [])
       } catch (err) {
         console.error('Failed to fetch data', err)
         toast.error('Failed to load required data.')
+      } finally {
+        hideLoader()
       }
     }
     fetchData()
@@ -154,22 +166,69 @@ export default function ServiceDetailsEntry() {
 
   // Auto-filling logic when a Service Job No is selected
   useEffect(() => {
-    if (!serviceJobNo) return
-    const matchingJob = jobsList.find(j => j.serviceJobNo === serviceJobNo)
-    if (matchingJob) {
-      setCustomerCode(matchingJob.customerCode)
-      setVehicleCount(String(matchingJob.count))
-      setCustomerName(matchingJob.customerName)
-      setBookingId(String(matchingJob.bookingId))
-      setBookingDate(matchingJob.bookingDate)
-      setSerialNo(matchingJob.serialNo)
-      setVehicleNo(matchingJob.vehicleNo)
-      setVehicleModelNo(matchingJob.vehicleModelNo)
-      setModelSubType(matchingJob.modelSubType)
-      setVehicleName(matchingJob.vehicleName)
-      toast.success(`Loaded Booking details for Job No: ${serviceJobNo}!`)
+    if (!serviceJobNo) {
+      setAssembliesList([])
+      setCheckedAssemblies([])
+      return
     }
-  }, [serviceJobNo, jobsList])
+
+    // 1. Resolve matching BOM creations & populate Assemblies checklist
+    const matchingBoms = bomCreationsList.filter(b => b.serviceJobNo === serviceJobNo)
+    const dynamicAssemblies = matchingBoms.map(bom => ({
+      id: bom.id,
+      name: bom.assemblyPartNo || 'No Assembly Part Name'
+    }))
+    setAssembliesList(dynamicAssemblies)
+
+    const editingRow = editingId !== null ? serviceDetailsList.find(s => s.id === editingId) : null
+    if (editingRow && editingRow.serviceJobNo === serviceJobNo) {
+      setCheckedAssemblies(editingRow.checkedAssemblies || [])
+    } else {
+      setCheckedAssemblies([])
+    }
+
+    // 2. Fetch details from BOM creations with booking details as base/fallback
+    const matchingJob = jobsList.find(j => j.serviceJobNo === serviceJobNo)
+    
+    let custCode = matchingJob?.customerCode || ''
+    let vehCount = matchingJob ? String(matchingJob.count) : ''
+    let custName = matchingJob?.customerName || ''
+    let bId = matchingJob ? String(matchingJob.bookingId) : ''
+    let bDate = matchingJob?.bookingDate || '2026-04-15'
+    let serNo = matchingJob?.serialNo || ''
+    let vehNo = matchingJob?.vehicleNo || ''
+    let modelNo = matchingJob?.vehicleModelNo || ''
+    let subType = matchingJob?.modelSubType || ''
+    let vehName = matchingJob?.vehicleName || ''
+
+    if (matchingBoms.length > 0) {
+      const primaryBom = matchingBoms[0]
+      if (primaryBom.customerCode) custCode = primaryBom.customerCode
+      if (primaryBom.vehicleCount !== null && primaryBom.vehicleCount !== undefined) {
+        vehCount = String(primaryBom.vehicleCount)
+      }
+      if (primaryBom.customerName) custName = primaryBom.customerName
+      if (primaryBom.vehicleSerialNo) serNo = primaryBom.vehicleSerialNo
+      if (primaryBom.model) modelNo = primaryBom.model
+    }
+
+    setCustomerCode(custCode)
+    setVehicleCount(vehCount)
+    setCustomerName(custName)
+    setBookingId(bId)
+    setBookingDate(bDate)
+    setSerialNo(serNo)
+    setVehicleNo(vehNo)
+    setVehicleModelNo(modelNo)
+    setModelSubType(subType)
+    setVehicleName(vehName)
+
+    if (matchingBoms.length > 0) {
+      toast.success(`Loaded details from BOM for Job No: ${serviceJobNo}!`)
+    } else if (matchingJob) {
+      toast.success(`Loaded Booking details for Job No: ${serviceJobNo} (No BOM found)!`)
+    }
+  }, [serviceJobNo, jobsList, bomCreationsList, editingId, serviceDetailsList])
 
   // Reactive bottom table search filter
   useEffect(() => {
@@ -199,7 +258,7 @@ export default function ServiceDetailsEntry() {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setCheckedAssemblies(STANDARD_ASSEMBLIES.map(a => a.id))
+      setCheckedAssemblies(assembliesList.map(a => a.id))
     } else {
       setCheckedAssemblies([])
     }
@@ -573,7 +632,7 @@ export default function ServiceDetailsEntry() {
                     <input 
                       type="checkbox" 
                       id="selectAllAssembly"
-                      checked={checkedAssemblies.length === STANDARD_ASSEMBLIES.length}
+                      checked={checkedAssemblies.length > 0 && checkedAssemblies.length === assembliesList.length}
                       onChange={e => handleSelectAll(e.target.checked)}
                       className="w-3.5 h-3.5 text-[#0097A7] border-slate-300 rounded focus:ring-[#0097A7] cursor-pointer"
                     />
@@ -593,31 +652,39 @@ export default function ServiceDetailsEntry() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-[12.5px] text-slate-600 font-medium">
-                      {STANDARD_ASSEMBLIES.map((a, idx) => (
-                        <tr 
-                          key={a.id} 
-                          onClick={() => handleAssemblyCheck(a.id)}
-                          className={`hover:bg-[#0097A7]/5 cursor-pointer h-9 transition-colors ${checkedAssemblies.includes(a.id) ? 'bg-[#0097A7]/10 font-bold' : ''}`}
-                        >
-                          <td className="px-3 py-1 border-r border-slate-50 text-center bg-slate-50/20">
-                            <input 
-                              type="checkbox"
-                              checked={checkedAssemblies.includes(a.id)}
-                              onChange={() => {}} // Click handled by row click handler
-                              className="w-3.5 h-3.5 border-slate-300 rounded cursor-pointer"
-                            />
-                          </td>
-                          <td className="px-3 py-1 flex items-center gap-2">
-                            {/* <span className="text-[#0097A7] font-bold text-[14px]">*</span> */}
-                            <span className="text-slate-600 font-semibold">{a.name}</span>
+                      {assembliesList.length === 0 ? (
+                        <tr>
+                          <td colSpan={2} className="px-3 py-12 text-center text-slate-400 italic">
+                            No assemblies found in BOM for this Service Job No.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        assembliesList.map((a, idx) => (
+                          <tr 
+                            key={a.id} 
+                            onClick={() => handleAssemblyCheck(a.id)}
+                            className={`hover:bg-[#0097A7]/5 cursor-pointer h-9 transition-colors ${checkedAssemblies.includes(a.id) ? 'bg-[#0097A7]/10 font-bold' : ''}`}
+                          >
+                            <td className="px-3 py-1 border-r border-slate-50 text-center bg-slate-50/20">
+                              <input 
+                                type="checkbox"
+                                checked={checkedAssemblies.includes(a.id)}
+                                onChange={() => {}} // Click handled by row click handler
+                                className="w-3.5 h-3.5 border-slate-300 rounded cursor-pointer"
+                              />
+                            </td>
+                            <td className="px-3 py-1 flex items-center gap-2">
+                              {/* <span className="text-[#0097A7] font-bold text-[14px]">*</span> */}
+                              <span className="text-slate-600 font-semibold">{a.name}</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
                 <div className="text-[12px] text-slate-400 font-bold uppercase text-right pr-2">
-                  Serviced Assemblies Selected: {checkedAssemblies.length} / {STANDARD_ASSEMBLIES.length}
+                  Serviced Assemblies Selected: {checkedAssemblies.length} / {assembliesList.length}
                 </div>
               </div>
 
@@ -717,32 +784,36 @@ export default function ServiceDetailsEntry() {
                         </td>
                       </tr>
                     ) : (
-                      filteredServiceList.map((row, idx) => (
-                        <tr 
-                          key={row.id} 
-                          onClick={() => setSelectedRowId(row.id)}
-                          className={`hover:bg-[#0097A7]/5 cursor-pointer h-9 transition-colors ${selectedRowId === row.id ? 'bg-[#0097A7]/10 font-semibold' : ''}`}
-                        >
-                          <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-slate-500 bg-slate-50/50">{idx + 1}</td>
-                          <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-[#0097A7]">{row.serviceJobNo}</td>
-                          <td className="px-3 py-1 border-r border-slate-50 text-center text-slate-500 font-semibold">{row.customerCode}</td>
-                          <td className="px-3 py-1 border-r border-slate-50 font-bold text-slate-700">{row.customerName}</td>
-                          <td className="px-3 py-1 border-r border-slate-50 text-slate-600 font-medium">{row.serialNo}</td>
-                          <td className="px-3 py-1 border-r border-slate-50 text-center font-mono text-slate-600">{row.vehicleNo}</td>
-                          <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-slate-500">{row.vehicleModelNo}</td>
-                          
-                          <td className="px-3 py-1 border-r border-slate-50 font-bold">
-                            <span className={`px-2.5 py-0.5 rounded text-[12px] uppercase font-extrabold shadow-sm ${
-                              row.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                              row.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                              {row.status}
-                            </span>
-                          </td>
-                          <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-[#0097A7] bg-slate-50/20">{(row.checkedAssemblies || []).length} / 10</td>
-                          <td className="px-3 py-1 text-slate-500 max-w-[240px] truncate">{row.remarks || '—'}</td>
-                        </tr>
-                      ))
+                      filteredServiceList.map((row, idx) => {
+                        const matchingBomCount = bomCreationsList.filter(b => b.serviceJobNo === row.serviceJobNo).length
+                        const totalCount = matchingBomCount > 0 ? matchingBomCount : 10
+                        return (
+                          <tr 
+                            key={row.id} 
+                            onClick={() => setSelectedRowId(row.id)}
+                            className={`hover:bg-[#0097A7]/5 cursor-pointer h-9 transition-colors ${selectedRowId === row.id ? 'bg-[#0097A7]/10 font-semibold' : ''}`}
+                          >
+                            <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-slate-500 bg-slate-50/50">{idx + 1}</td>
+                            <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-[#0097A7]">{row.serviceJobNo}</td>
+                            <td className="px-3 py-1 border-r border-slate-50 text-center text-slate-500 font-semibold">{row.customerCode}</td>
+                            <td className="px-3 py-1 border-r border-slate-50 font-bold text-slate-700">{row.customerName}</td>
+                            <td className="px-3 py-1 border-r border-slate-50 text-slate-600 font-medium">{row.serialNo}</td>
+                            <td className="px-3 py-1 border-r border-slate-50 text-center font-mono text-slate-600">{row.vehicleNo}</td>
+                            <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-slate-500">{row.vehicleModelNo}</td>
+                            
+                            <td className="px-3 py-1 border-r border-slate-50 font-bold">
+                              <span className={`px-2.5 py-0.5 rounded text-[12px] uppercase font-extrabold shadow-sm ${
+                                row.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                row.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {row.status}
+                              </span>
+                            </td>
+                            <td className="px-3 py-1 border-r border-slate-50 text-center font-bold text-[#0097A7] bg-slate-50/20">{(row.checkedAssemblies || []).length} / {totalCount}</td>
+                            <td className="px-3 py-1 text-slate-500 max-w-[240px] truncate">{row.remarks || '—'}</td>
+                          </tr>
+                        )
+                      })
                     )}
                   </tbody>
                 </table>
