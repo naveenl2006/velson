@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react'
-import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, ChevronDown, Search, Settings2, Image as ImageIcon, FileText, Plus, Loader2 } from 'lucide-react'
+import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, ChevronDown, Search, Settings2, Image as ImageIcon, FileText, Plus, Loader2, AlertTriangle, XCircle } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import api from '../services/api'
 
@@ -61,6 +61,13 @@ export default function ProcessMaster() {
   const [selectedItem, setSelectedItem] = useState(null)
   const [partFilter, setPartFilter] = useState('')
   const [expandedPart, setExpandedPart] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    isOpen: false,
+    id: null,
+    isDeleteAll: false,
+    errorMsg: '',
+    isDeleting: false
+  })
 
   const fetchAllProcesses = () => {
     api.get('/api/process-master', { loadingMessage: 'Loading processes...' })
@@ -199,16 +206,13 @@ export default function ProcessMaster() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const handleDelete = id => {
-    if (!window.confirm('Delete this process?')) return
-    api.delete(`/api/process-master/${id}`, { loadingMessage: 'Deleting process...' })
-      .then(() => {
-        toast.success('Process deleted.')
-        fetchAllProcesses()
-      })
-      .catch(err => {
-        const msg = err.response?.data?.message || 'Delete failed'
-        toast.error(msg)
-      })
+    setDeleteConfirm({
+      isOpen: true,
+      id,
+      isDeleteAll: false,
+      errorMsg: '',
+      isDeleting: false
+    })
   }
   const handleClear = () => {
     setForm({ ...empty })
@@ -308,23 +312,20 @@ export default function ProcessMaster() {
         <div className="bg-gradient-to-r from-[#0097A7] to-[#00BCD4] px-5 py-3 flex items-center justify-between text-white rounded-t-xl">
           <div className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-white" />
-            <span className="text-[13px] font-bold text-white uppercase tracking-wider">Process Master Details</span>
+            <span className="text-[13px] font-bold text-white uppercase tracking-wider">
+              {editId && !isAddMode ? `Edit Process (Part: ${form.PM_Part_Name})` : 'Process Master Details'}
+            </span>
           </div>
           <div className="flex items-center gap-4 text-[11px] font-bold text-white/90 uppercase tracking-wider">
             <button
               onClick={() => {
-                if (window.confirm('Are you sure you want to delete all processes? This cannot be undone.')) {
-                  api.delete('/api/process-master/all', { loadingMessage: 'Deleting all processes...' })
-                    .then(() => {
-                      setRows([])
-                      handleClear()
-                      toast.success('All processes deleted.')
-                    })
-                    .catch(err => {
-                      const msg = err.response?.data?.message || 'Delete all failed'
-                      toast.error(msg)
-                    })
-                }
+                setDeleteConfirm({
+                  isOpen: true,
+                  id: null,
+                  isDeleteAll: true,
+                  errorMsg: '',
+                  isDeleting: false
+                })
               }}
               className="flex items-center gap-1.5 hover:text-red-100 transition-colors"
             >
@@ -588,7 +589,7 @@ export default function ProcessMaster() {
                     disabled={isSaving}
                     className="flex items-center justify-center gap-1 px-2 py-2 bg-[#2ecc71] hover:bg-[#27ae60] text-white text-[11px] font-bold rounded shadow transition-colors active:scale-95 disabled:opacity-60"
                   >
-                    <Save className="w-5 h-3.5" /> Save
+                    <Save className="w-5 h-3.5" /> {editId && !isAddMode ? 'Update' : 'Save'}
                   </button>
                   <button
                     onClick={() => {
@@ -789,18 +790,44 @@ export default function ProcessMaster() {
                         <tr className="bg-slate-50/50">
                           <td colSpan={4} className="px-6 py-4">
                             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 overflow-x-auto">
-                              <h4 className="text-[11px] font-black text-[#0097A7] uppercase tracking-widest mb-3 pb-1.5 border-b border-slate-100">
-                                Process sequence for: {group.partName}
-                              </h4>
+                              <div className="flex items-center justify-between mb-3 pb-1.5 border-b border-slate-100">
+                                <h4 className="text-[11px] font-black text-[#0097A7] uppercase tracking-widest">
+                                  Process sequence for: {group.partName}
+                                </h4>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const existing = rows.filter(x => x.PM_Part_Name === group.partName)
+                                    const nextOrder = existing.length > 0
+                                      ? Math.max(...existing.map(x => Number(x.PM_Process_Order || 0))) + 1
+                                      : 1
+                                    setForm({
+                                      ...empty,
+                                      PM_Part_Name: group.partName,
+                                      PM_Process_Order: String(nextOrder)
+                                    })
+                                    setEditId(null)
+                                    setIsAddMode(true)
+                                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1 bg-[#0097A7] hover:bg-[#00838F] text-white text-[11px] font-bold rounded shadow transition-all active:scale-95"
+                                  title="Add new process for this item"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> Add Process
+                                </button>
+                              </div>
                               <table className="min-w-full text-[12px] border-collapse text-left">
                                 <thead>
                                   <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="w-8 px-2 py-2 text-center text-slate-500"></th>
+                                    <th className="w-8 px-2 py-2 text-center text-slate-500 bg-slate-50"></th>
                                     {COLS.map(h => (
                                       <th key={h} className="px-3 py-2 font-bold text-slate-600 text-[10.5px] uppercase tracking-wide border-r border-slate-200 last:border-r-0 whitespace-nowrap text-center bg-slate-50">
                                         {getHeaderDisplay(h)}
                                       </th>
                                     ))}
+                                    <th className="px-3 py-2 font-bold text-slate-600 text-[10.5px] uppercase tracking-wide whitespace-nowrap text-center bg-slate-50">
+                                      Actions
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 bg-white">
@@ -857,8 +884,32 @@ export default function ProcessMaster() {
                                         <td className="px-3 py-2 text-center border-r border-slate-100 text-slate-500 font-medium">
                                           {r.CreatedBy || 'admin'}
                                         </td>
-                                        <td className="px-3 py-2 text-center text-slate-600">
+                                        <td className="px-3 py-2 text-center border-r border-slate-100 text-slate-600">
                                           {r.Idle_Time ?? 0}
+                                        </td>
+                                        <td className="px-3 py-1.5 text-center text-slate-600 whitespace-nowrap">
+                                          <div className="flex items-center justify-center gap-1.5">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleEdit(r)
+                                              }}
+                                              className="p-1 text-[#3498db] hover:bg-[#3498db]/10 rounded-md transition-colors"
+                                              title="Edit Process"
+                                            >
+                                              <Edit className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleDelete(r.id)
+                                              }}
+                                              className="p-1 text-[#e74c3c] hover:bg-[#e74c3c]/10 rounded-md transition-colors"
+                                              title="Delete Process"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
                                         </td>
                                       </tr>
                                     )
@@ -973,6 +1024,100 @@ export default function ProcessMaster() {
               alt="Zoomed"
               className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal (Delete Theme & Error Handling) */}
+      {deleteConfirm.isOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-red-100 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header with Alert icon and Red theme */}
+            <div className="bg-gradient-to-r from-red-600 to-rose-500 px-6 py-4 flex items-center gap-3 text-white">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
+                <Trash2 className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="font-bold text-[15px] uppercase tracking-wide">
+                {deleteConfirm.isDeleteAll ? 'Danger: Delete All Records' : 'Confirm Delete'}
+              </h3>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-red-50 text-red-500 mt-0.5">
+                  <AlertTriangle className="w-6 h-6 stroke-[2]" />
+                </div>
+                <div>
+                  <h4 className="text-[14px] font-bold text-slate-800">
+                    {deleteConfirm.isDeleteAll ? 'Delete All Process Master Records?' : 'Delete Process Master Record?'}
+                  </h4>
+                  <p className="text-[12.5px] text-slate-500 leading-relaxed mt-1">
+                    {deleteConfirm.isDeleteAll
+                      ? 'Are you absolutely sure you want to clear the entire process master list? This operation is permanent and cannot be undone.'
+                      : 'Are you sure you want to delete this process master entry? This action is permanent and cannot be undone.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Error Alert Display inside Modal */}
+              {deleteConfirm.errorMsg && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+                  <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Error:</span> {deleteConfirm.errorMsg}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-6 pt-2 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirm(prev => ({ ...prev, isOpen: false }))}
+                disabled={deleteConfirm.isDeleting}
+                className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors active:scale-95 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setDeleteConfirm(prev => ({ ...prev, isDeleting: true, errorMsg: '' }))
+                  const promise = deleteConfirm.isDeleteAll
+                    ? api.delete('/api/process-master/all', { loadingMessage: 'Deleting all processes...' })
+                    : api.delete(`/api/process-master/${deleteConfirm.id}`, { loadingMessage: 'Deleting process...' })
+
+                  promise
+                    .then(() => {
+                      toast.success(deleteConfirm.isDeleteAll ? 'All processes deleted.' : 'Process deleted.')
+                      setDeleteConfirm(prev => ({ ...prev, isOpen: false }))
+                      if (deleteConfirm.isDeleteAll) {
+                        setRows([])
+                        handleClear()
+                      } else {
+                        fetchAllProcesses()
+                      }
+                    })
+                    .catch(err => {
+                      const msg = err.response?.data?.message || (deleteConfirm.isDeleteAll ? 'Delete all failed' : 'Delete failed')
+                      setDeleteConfirm(prev => ({ ...prev, isDeleting: false, errorMsg: msg }))
+                      toast.error(msg)
+                    })
+                }}
+                disabled={deleteConfirm.isDeleting}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-md transition-colors active:scale-95 disabled:opacity-60"
+              >
+                {deleteConfirm.isDeleting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" /> Confirm Delete
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

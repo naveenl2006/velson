@@ -83,6 +83,15 @@ export function ToastProvider({ children }) {
     info: (msg, title) => addToast(msg, 'info', title || 'Info'),
   }, [addToast])
 
+  useEffect(() => {
+    const handleEvent = (e) => {
+      const { message, type, title, duration } = e.detail || {}
+      addToast(message, type, title, duration)
+    }
+    window.addEventListener('app-toast', handleEvent)
+    return () => window.removeEventListener('app-toast', handleEvent)
+  }, [addToast])
+
   return (
     <ToastContext.Provider value={toast}>
       {children}

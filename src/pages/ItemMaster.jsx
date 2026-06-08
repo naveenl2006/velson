@@ -610,7 +610,7 @@ function IndexView({ onCreate, onEdit, onView, dropdowns }) {
             <table className="w-full border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-gradient-to-r from-[#0097A7] to-[#00ACC1]">
-                  <th className={thCls} style={{ width: 52  }}>ID</th>
+                  {/* <th className={thCls} style={{ width: 52  }}>ID</th> */}
                   <th className={thCls} style={{ width: 44  }}>S.No</th>
                   <th className={thCls} style={{ width: 90  }}>Part No</th>
                   <th className={thCls} style={{ width: 100 }}>O.S.No.</th>
@@ -641,7 +641,7 @@ function IndexView({ onCreate, onEdit, onView, dropdowns }) {
                       key={item.id}
                       className={idx % 2 === 0 ? 'bg-white hover:bg-[#f0fdfe] transition-colors' : 'bg-slate-50 hover:bg-[#f0fdfe] transition-colors'}
                     >
-                      <td className={tdCls + ' font-medium text-slate-800'}>{item.id}</td>
+                      {/* <td className={tdCls + ' font-medium text-slate-800'}>{item.id}</td> */}
                       <td className={tdCls}>{from + idx}</td>
                       <td className={tdCls + ' font-medium text-[#0097A7]'}>{item.partNo}</td>
                       <td className={tdCls + ' text-slate-500'}>{item.outsourcePartNo || ''}</td>

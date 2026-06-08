@@ -10,7 +10,7 @@ const Label = ({ children, required }) => (
 )
 const Input = ({ placeholder, value, onChange, type = 'text', readOnly = false, className = "" }) => (
   <input type={type} placeholder={placeholder} value={value} onChange={onChange} readOnly={readOnly}
-    className={`w-full px-3 py-[7px] text-sm bo* Are Mandatoryrder border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 ${readOnly ? 'bg-slate-50 cursor-not-allowed' : 'hover:border-slate-300'} ${className}`} />
+    className={`w-full px-3 py-[7px] text-sm border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 ${readOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white hover:border-slate-300'} ${className}`} />
 )
 const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   <div className={`relative ${className}`}>

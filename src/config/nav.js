@@ -13,8 +13,7 @@ export const NAV = [
   { id: 'dashboard-top', label: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
 
   // Admin-only: user management
-  { id: 'user-masters', label: 'User Masters', icon: UserCog, children: [], hiddenRoles: ['staff', 'user'] },
-  { id: 'users',        label: 'Users',        icon: Users,   children: [], hiddenRoles: ['staff', 'user'] },
+  { id: 'users',        label: 'Users',        icon: Users,   page: 'Users', hiddenRoles: ['staff', 'user'] },
 
   {
     id: 'masters', label: 'Masters', icon: Database, hiddenRoles: ['user'],
@@ -73,6 +72,10 @@ export const NAV = [
     children: [
       { id: 'quotation-entry',   label: 'Quotation Entry',   page: 'QuotationEntry' },
       { id: 'quotation-details', label: 'Quotation Details', page: 'QuotationDetails' },
+      // { id: 'proforma-entry',    label: 'Proforma Entry',    page: 'ProformaEntry' },
+      // { id: 'proforma-details',  label: 'Proforma Entry Details', page: 'ProformaDetails' },
+      { id: 'marketing-log',     label: 'Marketing Log',     page: 'MarketingLog' },
+      // { id: 'marketing-report',  label: 'Marketing Log Report', page: 'MarketingReport' },
     ],
   },
   {
@@ -130,6 +133,7 @@ export const NAV = [
     id: 'ccms', label: 'CCMS', icon: ClipboardList, hiddenRoles: ['user'],
     children: [
       { id: 'customer-complaint-entry', label: 'Customer Complaint Entry', page: 'CustomerComplaintEntry' },
+      { id: 'ccms-entry-details', label: 'CCMS Entry Details', page: 'CCMSEntryDetails'},
     ],
   },
   {
@@ -183,14 +187,14 @@ export const NAV = [
       { id: 'view-job-status',      label: 'View Job Status',      page: 'ViewJobStatus' },
       { id: 'waiting-for-approval', label: 'Waiting For Approval', page: 'WaitingForApproval' },
       { id: 'update-route-details', label: 'Update Route Details', page: 'UpdateRouteDetails' },
-      { id: 'rejected-job-list',    label: 'Rejected Job List',    page: 'RejectedJobList' },
+      // { id: 'rejected-job-list',    label: 'Rejected Job List',    page: 'RejectedJobList' },
       { id: 'process-completed',    label: 'Process Completed',    page: 'ProcessCompleted' },
-      { id: 'file-uploads',         label: 'File Uploads',         page: 'FileUploads' },
+      // { id: 'file-uploads',         label: 'File Uploads',         page: 'FileUploads' },
       { id: 'mr-approval',          label: 'MR Approval',          page: 'MRApproval' },
       { id: 'nc-job-created',       label: 'NC Job Created',       page: 'NCJobCreated' },
       { id: 'nc-approval',          label: 'NC Approval',          page: 'NCApproval' },
       { id: 'job-entry-closed',     label: 'Job Entry Closed',     page: 'JobEntryClosed' },
-      { id: 'job-card-cancel',      label: 'Job Card Cancel',      page: 'JobCardCancel' },
+      // { id: 'job-card-cancel',      label: 'Job Card Cancel',      page: 'JobCardCancel' },
       { id: 'ipr-approval',         label: 'PR Approval',          page: 'IPRApproval' },
       { id: 'job-qty-mismatch',     label: 'Job Qty Mismatch',     page: 'JobQtyMismatch' },
       { id: 'process-card-close',   label: 'Process Card Close',   page: 'ProcessCardClose' },

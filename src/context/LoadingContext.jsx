@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, createContext, useContext } from 'react'
 import { Loader2 } from 'lucide-react'
+import { DotmTriangle6 } from '../components/ui/dotm-triangle-6'
 import { registerLoader } from '../services/api'
 
 const LoadingContext = createContext(null)
@@ -8,10 +9,12 @@ export function LoadingProvider({ children }) {
   const [state, setState] = useState({ visible: false, message: '' })
 
   const show = useCallback((message = '') => {
+    // console.log('LoadingContext: show called with message:', message)
     setState({ visible: true, message })
   }, [])
 
   const hide = useCallback(() => {
+    // console.log('LoadingContext: hide called')
     setState({ visible: false, message: '' })
   }, [])
 
@@ -34,16 +37,31 @@ export function LoadingProvider({ children }) {
           aria-label="Loading"
         >
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl px-10 py-8 flex flex-col items-center gap-4 min-w-[180px]">
-            <Loader2
+            {/* Old spinner loader: */}
+            {/* <Loader2
               size={35}
               className="animate-spin"
               style={{ color: '#0097A7' }}
+            /> */}
+           
+            <DotmTriangle6
+              size={35}
+              dotSize={5}
+              color="#0097A7"
+              bloom={true}
+              halo={0.3}
             />
-            {state.message && (
-              <p className="text-[13px] font-semibold text-slate-600 text-center leading-snug">
-                {state.message}
-              </p>
-            )}
+            <p
+              className="text-center leading-snug"
+              style={{
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#475569',
+                marginTop: '4px',
+              }}
+            >
+              {state.message || 'Loading...'}
+            </p>
           </div>
         </div>
       )}

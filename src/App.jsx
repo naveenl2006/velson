@@ -69,6 +69,7 @@ import MainIndex from './pages/MainIndex'
 import MainIndexReport from './pages/MainIndexReport'
 import ViewModel from './pages/ViewModel'
 import CustomerComplaintEntry from './pages/CustomerComplaintEntry'
+// import CCMSEntryDetails from './pages/CCMSEntryDetails'
 import DCEntry from './pages/DCEntry'
 import MachineBreakDown from './pages/MachineBreakDown'
 import BreakDownClearence from './pages/BreakDownClearence'
@@ -112,6 +113,12 @@ import ServiceBillDetails from './pages/ServiceBillDetails'
 import ServiceLabourBillDetails from './pages/ServiceLabourBillDetails'
 import TempServiceBillDetails from './pages/TempServiceBillDetails'
 import DrawingUpload from './pages/DrawingUpload'
+import MarketingLog from './pages/MarketingLog'
+
+const ProformaEntry = () => <div className="p-8 bg-[#f4f6f8] min-h-screen text-slate-800"><h2 className="text-xl font-bold uppercase tracking-tight text-[#0097A7]">Proforma Entry</h2><p className="mt-2 text-slate-500">This page is under active development.</p></div>
+const ProformaDetails = () => <div className="p-8 bg-[#f4f6f8] min-h-screen text-slate-800"><h2 className="text-xl font-bold uppercase tracking-tight text-[#0097A7]">Proforma Entry Details</h2><p className="mt-2 text-slate-500">This page is under active development.</p></div>
+const MarketingReport = () => <div className="p-8 bg-[#f4f6f8] min-h-screen text-slate-800"><h2 className="text-xl font-bold uppercase tracking-tight text-[#0097A7]">Marketing Log Report</h2><p className="mt-2 text-slate-500">This page is under active development.</p></div>
+
 import JobCardEntry from './pages/JobCardEntry'
 import ProcessMenu from './pages/ProcessMenu'
 import TechAutoJobEntry from './pages/TechAutoJobEntry'
@@ -131,6 +138,9 @@ import { DashboardPage } from './pages/OtherPages'
 import JobQtyMismatch from './pages/JobQtyMismatch'
 import ProcessCardClose from './pages/ProcessCardClose'
 import JobQCEntry from './pages/JobQCEntry'
+
+import Users from './pages/Users/Users'
+import CCMSEntryDetails from './pages/CCMSEntryDetails'
 
 // page key → component (used to build <Route> elements)
 const PAGE_COMPONENTS = {
@@ -199,6 +209,7 @@ const PAGE_COMPONENTS = {
   MainIndexReport:             MainIndexReport,
   ViewModel:                   ViewModel,
   CustomerComplaintEntry:      CustomerComplaintEntry,
+  CCMSEntryDetails:            CCMSEntryDetails,
   DCEntry:                     DCEntry,
   MachineBreakDown:            MachineBreakDown,
   BreakDownClearence:          BreakDownClearence,
@@ -242,6 +253,10 @@ const PAGE_COMPONENTS = {
   ServiceLabourBillDetails:    ServiceLabourBillDetails,
   TempServiceBillDetails:      TempServiceBillDetails,
   DrawingUpload:               DrawingUpload,
+  MarketingLog:                MarketingLog,
+  ProformaEntry:               ProformaEntry,
+  ProformaDetails:             ProformaDetails,
+  MarketingReport:             MarketingReport,
   JobCardEntry:                JobCardEntry,
   ProcessMenu:                 ProcessMenu,
   TechAutoJobEntry:            TechAutoJobEntry,
@@ -258,6 +273,7 @@ const PAGE_COMPONENTS = {
   JobQtyMismatch:              JobQtyMismatch,
   ProcessCardClose:            ProcessCardClose,
   JobQCEntry:                  JobQCEntry,
+  Users:                       Users,
 }
 
 // Bridges legacy velson:navigate custom events to React Router navigation.
