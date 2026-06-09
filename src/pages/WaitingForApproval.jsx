@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { ChevronRight, ChevronDown, Search, X, Clock, CheckCircle2, XCircle, Eye, Ban, Loader2 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const formatDate = (dateInput) => {
   if (!dateInput) return '—';
@@ -36,6 +37,7 @@ const Input = ({ placeholder, value, onChange, className = "" }) => (
 
 export default function WaitingForApproval() {
   const toast = useToast()
+  const { auth } = useAuth()
   const [search, setSearch] = useState('')
   const [jobs, setJobs] = useState([])
   const [processes, setProcesses] = useState([])
@@ -114,6 +116,7 @@ export default function WaitingForApproval() {
       const payload = {
         status: 'Approved',
         approvedDate: new Date().toISOString(),
+        approvedBy: auth?.user?.name || 'Administrator',
         rejectedDate: null,
         cancelledDate: null,
         cancellationReason: null
@@ -133,6 +136,7 @@ export default function WaitingForApproval() {
       const payload = {
         status: 'Rejected',
         approvedDate: null,
+        approvedBy: null,
         rejectedDate: new Date().toISOString(),
         cancelledDate: null,
         cancellationReason: null
@@ -153,6 +157,7 @@ export default function WaitingForApproval() {
       const payload = {
         status: 'Cancelled',
         approvedDate: null,
+        approvedBy: null,
         rejectedDate: null,
         cancelledDate: new Date().toISOString(),
         cancellationReason: cancelReason.trim()

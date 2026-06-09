@@ -193,7 +193,7 @@ export const NAV = [
       { id: 'mr-approval',          label: 'MR Approval',          page: 'MRApproval' },
       { id: 'nc-job-created',       label: 'NC Job Created',       page: 'NCJobCreated' },
       { id: 'nc-approval',          label: 'NC Approval',          page: 'NCApproval' },
-      { id: 'job-entry-closed',     label: 'Job Entry Closed',     page: 'JobEntryClosed' },
+      // { id: 'job-entry-closed',     label: 'Job Entry Closed',     page: 'JobEntryClosed' },
       // { id: 'job-card-cancel',      label: 'Job Card Cancel',      page: 'JobCardCancel' },
       { id: 'ipr-approval',         label: 'PR Approval',          page: 'IPRApproval' },
       { id: 'job-qty-mismatch',     label: 'Job Qty Mismatch',     page: 'JobQtyMismatch' },

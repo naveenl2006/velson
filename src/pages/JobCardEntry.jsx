@@ -376,7 +376,7 @@ export default function JobCardEntry() {
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-[#fcfdfe] text-[11px] uppercase text-slate-500 font-bold border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-3 border-r border-slate-200 w-14 text-center">S.No</th>
+                      {/* <th className="px-4 py-3 border-r border-slate-200 w-14 text-center">S.No</th> */}
                       <th className="px-4 py-3 border-r border-slate-200">Job No</th>
                       <th className="px-4 py-3 border-r border-slate-200">Model</th>
                       <th className="px-4 py-3 border-r border-slate-200 text-center">Qty</th>

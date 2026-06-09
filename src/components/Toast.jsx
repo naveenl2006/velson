@@ -73,7 +73,17 @@ export function ToastProvider({ children }) {
 
   const addToast = useCallback((message, type = 'warning', title = '', duration = 3500) => {
     const id = Date.now() + Math.random()
-    setToasts(prev => [...prev, { id, message, type, title, duration }])
+    setToasts(prev => {
+      // 1. Prevent duplicate toast messages from displaying concurrently
+      if (prev.some(t => t.message === message)) {
+        return prev
+      }
+      // 2. If there is an active "Network Error" toast, suppress other error toasts
+      if (type === 'error' && prev.some(t => t.message === 'Network Error')) {
+        return prev
+      }
+      return [...prev, { id, message, type, title, duration }]
+    })
   }, [])
 
   const toast = useCallback({

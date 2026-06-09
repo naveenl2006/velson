@@ -75,8 +75,8 @@ function F2({ l1, f1, l2, f2, req1, req2, ph1, ph2, form, sf, errors }) {
 // ── Bordered panel ────────────────────────────────────────────────────────────
 function Panel({ children }) {
   return (
-    <div className="border border-blue-400 rounded overflow-hidden">
-      <div className="h-[5px] bg-[#1a6fa8]" />
+    <div className="border border-[#0097A7] rounded overflow-hidden">
+      <div className="h-[5px] bg-[#0097A7]" />
       <div className="p-3 space-y-2">{children}</div>
     </div>
   )
@@ -91,22 +91,33 @@ function DetailModal({ row, onClose }) {
           <h2 className="text-white font-bold text-[15px]">Company Details</h2>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-5 grid grid-cols-2 gap-x-6 gap-y-1.5 max-h-[70vh] overflow-y-auto">
-          {[
-            ['Company Code', row.companyCode], ['Company Name', row.companyName],
-            ['Company Type', row.companyType], ['GSTIN', row.gstin],
-            ['PAN No', row.panNo], ['City', row.city],
-            ['State', row.state], ['Country', row.country],
-            ['Pin Code', row.pinCode], ['Company Phone', row.companyPhone],
-            ['Company Email', row.companyEmail], ['Bank Name', row.bankName],
-            ['Bank Branch', row.bankBranch], ['Account Number', row.bankAccountNumber],
-            ['IFSC Code', row.bankIfscCode], ['MICR Code', row.bankMicrCode],
-          ].map(([l, v]) => (
-            <div key={l} className="flex flex-col py-1 border-b border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{l}</span>
-              <span className="text-[13px] text-slate-800 font-medium">{v || '—'}</span>
+        <div className="p-5 max-h-[70vh] overflow-y-auto">
+          {row.logoData && (
+            <div className="flex justify-center mb-4 border border-slate-105 p-2 rounded bg-slate-50 w-fit mx-auto shadow-sm animate-fadeIn">
+              <img
+                src={`/api/company-master/${row.id}/download-logo`}
+                alt={`${row.companyName} Logo`}
+                className="max-h-28 max-w-full object-contain rounded"
+              />
             </div>
-          ))}
+          )}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+            {[
+              ['Company Code', row.companyCode], ['Company Name', row.companyName],
+              ['Company Type', row.companyType], ['GSTIN', row.gstin],
+              ['PAN No', row.panNo], ['City', row.city],
+              ['State', row.state], ['Country', row.country],
+              ['Pin Code', row.pinCode], ['Company Phone', row.companyPhone],
+              ['Company Email', row.companyEmail], ['Bank Name', row.bankName],
+              ['Bank Branch', row.bankBranch], ['Account Number', row.bankAccountNumber],
+              ['IFSC Code', row.bankIfscCode], ['MICR Code', row.bankMicrCode],
+            ].map(([l, v]) => (
+              <div key={l} className="flex flex-col py-1 border-b border-slate-100">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{l}</span>
+                <span className="text-[13px] text-slate-800 font-medium">{v || '—'}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="px-6 pb-5 flex justify-end">
           <button onClick={onClose} className="px-5 py-2 text-sm font-semibold text-white bg-[#0097A7] hover:bg-[#007a87] rounded-lg transition-colors">Close</button>
@@ -130,6 +141,7 @@ export default function CompanyMaster() {
   const [form, setForm] = useState({ ...emptyForm })
   const [errors, setErrors] = useState({})
   const [editId, setEditId] = useState(null)
+  const [logoPreview, setLogoPreview] = useState(null)
   const [search, setSearch] = useState('')
   const [pageSize, setPageSize] = useState(5)
   const [page, setPage] = useState(1)
@@ -169,7 +181,23 @@ export default function CompanyMaster() {
 
   useEffect(() => { fetchAll(); fetchNextCode(); fetchCompanyTypes() }, [fetchAll, fetchNextCode, fetchCompanyTypes])
 
-  const sf = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
+  const sf = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }))
+    setErrors(e => ({ ...e, [k]: '' }))
+    if (k === 'logo') {
+      if (v) {
+        if (logoPreview && !logoPreview.startsWith('/api')) {
+          URL.revokeObjectURL(logoPreview)
+        }
+        setLogoPreview(URL.createObjectURL(v))
+      } else {
+        if (logoPreview && !logoPreview.startsWith('/api')) {
+          URL.revokeObjectURL(logoPreview)
+        }
+        setLogoPreview(null)
+      }
+    }
+  }
 
   const validate = () => {
     const errs = {}
@@ -187,13 +215,21 @@ export default function CompanyMaster() {
       Object.entries(form).forEach(([k, v]) => { if (k !== 'logo') fd.append(k, v ?? '') })
       if (form.logo) fd.append('logo', form.logo)
       if (editId !== null) {
-        await api.put(`/api/company-master/${editId}`, fd)
+        await api.put(`/api/company-master/${editId}`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
         toast.success('Company updated successfully.')
       } else {
-        await api.post('/api/company-master', fd)
+        await api.post('/api/company-master', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
         toast.success('Company created successfully.')
       }
       setForm({ ...emptyForm }); setErrors({}); setEditId(null); setPage(1)
+      if (logoPreview && !logoPreview.startsWith('/api')) {
+        URL.revokeObjectURL(logoPreview)
+      }
+      setLogoPreview(null)
       if (fileRef.current) fileRef.current.value = ''
       await fetchAll(); await fetchNextCode()
     } catch (err) {
@@ -207,6 +243,14 @@ export default function CompanyMaster() {
     const f = { ...emptyForm }
     Object.keys(emptyForm).forEach(k => { if (k !== 'logo') f[k] = row[k] ?? '' })
     setForm(f); setErrors({}); setEditId(row.id)
+    if (logoPreview && !logoPreview.startsWith('/api')) {
+      URL.revokeObjectURL(logoPreview)
+    }
+    if (row.logoData) {
+      setLogoPreview(`/api/company-master/${row.id}/download-logo`)
+    } else {
+      setLogoPreview(null)
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -217,7 +261,14 @@ export default function CompanyMaster() {
       await api.delete(`/api/company-master/${confirmDelete}`)
       toast.success('Company deleted.')
       setConfirmDelete(null)
-      if (editId === confirmDelete) { setForm({ ...emptyForm }); setEditId(null) }
+      if (editId === confirmDelete) {
+        setForm({ ...emptyForm })
+        if (logoPreview && !logoPreview.startsWith('/api')) {
+          URL.revokeObjectURL(logoPreview)
+        }
+        setLogoPreview(null)
+        setEditId(null)
+      }
       await fetchAll()
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to delete.')
@@ -228,6 +279,10 @@ export default function CompanyMaster() {
 
   const handleClear = async () => {
     setForm({ ...emptyForm }); setErrors({}); setEditId(null)
+    if (logoPreview && !logoPreview.startsWith('/api')) {
+      URL.revokeObjectURL(logoPreview)
+    }
+    setLogoPreview(null)
     if (fileRef.current) fileRef.current.value = ''
     await fetchNextCode()
   }
@@ -265,7 +320,7 @@ export default function CompanyMaster() {
 
       {/* ── Form Card ── */}
       <div className="bg-white rounded border border-slate-300 shadow-sm overflow-hidden">
-        <div className="bg-[#1a6fa8] px-4 py-2">
+        <div className="bg-[#0097A7] px-4 py-2">
           <h2 className="text-white text-center font-semibold text-[14px]">New Company Master Details Entry</h2>
         </div>
 
@@ -278,7 +333,7 @@ export default function CompanyMaster() {
               <F {...fp} label="Company Name" fk="companyName" required />
               <div>
                 <label className="block text-[12.5px] font-semibold text-slate-600 mb-0.5">
-                  <span className="text-red-500">*</span>CompanyType
+                  CompanyType
                 </label>
                 <select value={form.companyType} onChange={e => sf('companyType', e.target.value)}
                   className={inp(errors.companyType)}>
@@ -287,48 +342,48 @@ export default function CompanyMaster() {
                 </select>
                 {errors.companyType && <p className="text-[11px] text-red-500 mt-0.5">{errors.companyType}</p>}
               </div>
-              <F2 {...fp} l1="Door Number" f1="doorNumber" req1 l2="Street" f2="street" req2 />
-              <F {...fp} label="Place" fk="place" required />
-              <F {...fp} label="Post" fk="post" required />
-              <F {...fp} label="City" fk="city" required />
-              <F {...fp} label="Taluk" fk="taluk" required />
-              <F2 {...fp} l1="District" f1="district" req1 l2="District Code" f2="districtCode" req2 />
-              <F2 {...fp} l1="State" f1="state" req1 l2="State Code" f2="stateCode" req2 />
-              <F2 {...fp} l1="Country" f1="country" req1 l2="PinCode" f2="pinCode" req2 />
-              <F {...fp} label="Address" fk="address" required />
+              <F2 {...fp} l1="Door Number" f1="doorNumber" l2="Street" f2="street" />
+              <F {...fp} label="Place" fk="place" />
+              <F {...fp} label="Post" fk="post" />
+              <F {...fp} label="City" fk="city" />
+              <F {...fp} label="Taluk" fk="taluk" />
+              <F2 {...fp} l1="District" f1="district" l2="District Code" f2="districtCode" />
+              <F2 {...fp} l1="State" f1="state" l2="State Code" f2="stateCode" />
+              <F2 {...fp} l1="Country" f1="country" l2="PinCode" f2="pinCode" />
+              <F {...fp} label="Address" fk="address" />
             </Panel>
 
             {/* ── Panel 2: Tax & Contacts ── */}
             <Panel>
-              <F {...fp} label="GSTIN" fk="gstin" required placeholder="GSTIN" />
-              <F {...fp} label="PanNo" fk="panNo" required placeholder="PanNo" />
-              <F2 {...fp} l1="Company Phone Number" f1="companyPhone" req1 ph1="Company Phone Number"
-                l2="Company EMail Id" f2="companyEmail" req2 ph2="Company EMail Id" />
-              <F {...fp} label="Company Website URL" fk="companyWebsite" required placeholder="Company Website URL" />
-              <F2 {...fp} l1="Marketing Phone Number" f1="marketingPhone" req1 ph1="Marketing Phone Number"
-                l2="Marketing EMail Id" f2="marketingEmail" req2 ph2="Marketing EMail Id" />
-              <F {...fp} label="Marketing Website URL" fk="marketingWebsite" required placeholder="Marketing Website URL" />
-              <F2 {...fp} l1="Purchase Phone Number" f1="purchasePhone" req1 ph1="Purchase Phone Number"
-                l2="Purchase EMail Id" f2="purchaseEmail" req2 ph2="Purchase EMail Id" />
-              <F {...fp} label="Purchase Website URL" fk="purchaseWebsite" required placeholder="Purchase Website URL" />
-              <F2 {...fp} l1="Sales Phone Number" f1="salesPhone" req1 ph1="Sales Phone Number"
-                l2="Sales EMail Id" f2="salesEmail" req2 ph2="Sales EMail Id" />
-              <F {...fp} label="Sales Website URL" fk="salesWebsite" required placeholder="Sales Website URL" />
-              <F2 {...fp} l1="Service Phone Number" f1="servicePhone" req1 ph1="Service Phone Number"
-                l2="Service EMail Id" f2="serviceEmail" req2 ph2="Service EMail Id" />
-              <F {...fp} label="Service Website URL" fk="serviceWebsite" required placeholder="Service Website URL" />
+              <F {...fp} label="GSTIN" fk="gstin" placeholder="GSTIN" />
+              <F {...fp} label="PanNo" fk="panNo" placeholder="PanNo" />
+              <F2 {...fp} l1="Company Phone Number" f1="companyPhone" ph1="Company Phone Number"
+                l2="Company EMail Id" f2="companyEmail" ph2="Company EMail Id" />
+              <F {...fp} label="Company Website URL" fk="companyWebsite" placeholder="Company Website URL" />
+              <F2 {...fp} l1="Marketing Phone Number" f1="marketingPhone" ph1="Marketing Phone Number"
+                l2="Marketing EMail Id" f2="marketingEmail" ph2="Marketing EMail Id" />
+              <F {...fp} label="Marketing Website URL" fk="marketingWebsite" placeholder="Marketing Website URL" />
+              <F2 {...fp} l1="Purchase Phone Number" f1="purchasePhone" ph1="Purchase Phone Number"
+                l2="Purchase EMail Id" f2="purchaseEmail" ph2="Purchase EMail Id" />
+              <F {...fp} label="Purchase Website URL" fk="purchaseWebsite" placeholder="Purchase Website URL" />
+              <F2 {...fp} l1="Sales Phone Number" f1="salesPhone" ph1="Sales Phone Number"
+                l2="Sales EMail Id" f2="salesEmail" ph2="Sales EMail Id" />
+              <F {...fp} label="Sales Website URL" fk="salesWebsite" placeholder="Sales Website URL" />
+              <F2 {...fp} l1="Service Phone Number" f1="servicePhone" ph1="Service Phone Number"
+                l2="Service EMail Id" f2="serviceEmail" ph2="Service EMail Id" />
+              <F {...fp} label="Service Website URL" fk="serviceWebsite" placeholder="Service Website URL" />
             </Panel>
 
             {/* ── Panel 3: Bank ── */}
             <Panel>
-              <F {...fp} label="Bank Name" fk="bankName" required placeholder="Bank Name" />
-              <F2 {...fp} l1="Bank Branch" f1="bankBranch" req1 l2="Bank Account Type" f2="bankAccountType" req2 />
-              <F {...fp} label="Bank Account Name" fk="bankAccountName" required placeholder="Bank Account Name" />
-              <F {...fp} label="Bank Account Number" fk="bankAccountNumber" required placeholder="Bank Account Number" />
-              <F2 {...fp} l1="Bank IFSCCode" f1="bankIfscCode" req1 l2="Bank MICRCode" f2="bankMicrCode" req2 />
-              <F2 {...fp} l1="Bank District" f1="bankDistrict" req1 l2="Bank State" f2="bankState" req2 />
-              <F2 {...fp} l1="Bank PinCode" f1="bankPinCode" req1 l2="Bank Country" f2="bankCountry" req2 />
-              <F {...fp} label="Bank Address" fk="bankAddress" required placeholder="Bank Address" />
+              <F {...fp} label="Bank Name" fk="bankName" placeholder="Bank Name" />
+              <F2 {...fp} l1="Bank Branch" f1="bankBranch" l2="Bank Account Type" f2="bankAccountType" />
+              <F {...fp} label="Bank Account Name" fk="bankAccountName" placeholder="Bank Account Name" />
+              <F {...fp} label="Bank Account Number" fk="bankAccountNumber" placeholder="Bank Account Number" />
+              <F2 {...fp} l1="Bank IFSCCode" f1="bankIfscCode" l2="Bank MICRCode" f2="bankMicrCode" />
+              <F2 {...fp} l1="Bank District" f1="bankDistrict" l2="Bank State" f2="bankState" />
+              <F2 {...fp} l1="Bank PinCode" f1="bankPinCode" l2="Bank Country" f2="bankCountry" />
+              <F {...fp} label="Bank Address" fk="bankAddress" placeholder="Bank Address" />
 
               {/* Logo Upload */}
               <div>
@@ -341,6 +396,28 @@ export default function CompanyMaster() {
                   className="w-full text-[12px] border border-slate-300 rounded px-2 py-1 file:mr-2 file:py-0.5 file:px-2 file:text-[11px] file:border-0 file:bg-slate-100 file:rounded cursor-pointer bg-white"
                 />
               </div>
+
+              {/* Logo Preview */}
+              {logoPreview && (
+                <div className="mt-2 border border-slate-200 rounded p-2 bg-slate-50 relative group w-fit shadow-sm animate-fadeIn">
+                  <img
+                    src={logoPreview}
+                    alt="Logo Preview"
+                    className="max-h-24 max-w-full object-contain rounded"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sf('logo', null)
+                      if (fileRef.current) fileRef.current.value = ''
+                    }}
+                    className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 shadow transition-colors flex items-center justify-center w-5 h-5"
+                    title="Remove Logo"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="flex gap-2 pt-1">
@@ -387,24 +464,35 @@ export default function CompanyMaster() {
         </div>
 
         {tableLoading ? (
-          <TableSkeleton rows={5} cols={['6%', '8%', '20%', '10%', '12%', '12%', '16%', '8%', '8%']} />
+          <TableSkeleton rows={5} cols={['5%', '8%', '8%', '18%', '10%', '10%', '10%', '13%', '6%', '6%', '6%']} />
         ) : (
         <div className="overflow-x-auto w-full">
           <table className="min-w-full text-[13px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                {['S.No', 'Code', 'Company Name', 'Type', 'City', 'State', 'GSTIN', 'Edit', 'Delete', 'Details'].map(h => (
+                {['S.No', 'Code', 'Logo', 'Company Name', 'Type', 'City', 'State', 'GSTIN', 'Edit', 'Delete', 'Details'].map(h => (
                   <th key={h} className="text-center px-3 py-2.5 font-semibold text-slate-600 text-[12px] uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {paged.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-8 text-slate-400">No records found</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-slate-400">No records found</td></tr>
               ) : paged.map((row, idx) => (
                 <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
                   <td className="px-3 py-2 text-center">{(page - 1) * pageSize + idx + 1}</td>
                   <td className="px-3 py-2 text-center font-medium text-[#0097A7]">{row.companyCode}</td>
+                  <td className="px-3 py-2 text-center">
+                    {row.logoData ? (
+                      <img
+                        src={`/api/company-master/${row.id}/download-logo`}
+                        alt="logo"
+                        className="w-8 h-8 rounded-full border border-slate-200 object-cover mx-auto"
+                      />
+                    ) : (
+                      <span className="text-slate-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-center font-medium">{row.companyName}</td>
                   <td className="px-3 py-2 text-center">{row.companyType}</td>
                   <td className="px-3 py-2 text-center">{row.city}</td>

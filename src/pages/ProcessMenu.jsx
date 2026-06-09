@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronRight, Save, Trash2, X, RotateCcw, Search, FileText, CheckSquare, Square, Image as ImageIcon, Plus, Upload } from 'lucide-react'
+import { ChevronRight, Save, Trash2, X, RotateCcw, Search, FileText, CheckSquare, Square, Image as ImageIcon, Upload } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import api from '../services/api'
 
 const Label = ({ children, required }) => (
   <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider">
     {required && <span className="text-red-500 mr-0.5">*</span>}{children}
   </label>
 )
-const Input = ({ placeholder, value, onChange, type = 'text', readOnly = false, className = "" }) => (
-  <input type={type} placeholder={placeholder} value={value} onChange={onChange} readOnly={readOnly}
+const Input = ({ placeholder, value, onChange, type = 'text', readOnly = false, className = "", ...props }) => (
+  <input type={type} placeholder={placeholder} value={value} onChange={onChange} readOnly={readOnly} {...props}
     className={`w-full px-3 py-[7px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 ${readOnly ? 'bg-slate-50 cursor-not-allowed' : 'hover:border-slate-300'} ${className}`} />
 )
 const Select = ({ options, placeholder, value, onChange, className = "" }) => (
@@ -24,26 +25,91 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   </div>
 )
 
+const SearchableSelect = ({ options, placeholder, value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState(value || '')
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    setSearch(value || '')
+  }, [value])
+
+  useEffect(() => {
+    const clickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false)
+        setSearch(value || '')
+      }
+    }
+    document.addEventListener('mousedown', clickOutside)
+    return () => document.removeEventListener('mousedown', clickOutside)
+  }, [value])
+
+  const filtered = options.filter(o => 
+    (o.label || o.value || '').toLowerCase().includes(search.toLowerCase())
+  )
+
+  const handleSelect = (val) => {
+    onChange({ target: { value: val } })
+    setIsOpen(false)
+  }
+
+  return (
+    <div ref={containerRef} className="relative flex-1">
+      <div className="relative">
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setIsOpen(true)
+            onChange({ target: { value: e.target.value } })
+          }}
+          onFocus={() => setIsOpen(true)}
+          className="w-full px-3 py-[7px] pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200 hover:border-slate-300"
+        />
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="absolute inset-y-0 right-0 px-2 flex items-center text-slate-400 hover:text-slate-600"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-slate-400 italic">No matches found</div>
+          ) : (
+            filtered.map(o => (
+              <div
+                key={o.value}
+                onClick={() => handleSelect(o.value)}
+                className={`px-3 py-2 text-sm cursor-pointer hover:bg-[#0097A7]/10 transition-colors ${o.value === value ? 'bg-[#0097A7]/5 font-semibold text-[#0097A7]' : 'text-slate-700'}`}
+              >
+                {o.label || o.value}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const STORAGE_KEY = 'velson_process_menu'
-const ITEMS = [
-  'VE-70071 — CENTER SLIDER SENSING PLATE',
-  'VE-70073 — CENTER SLIDER SENSING PLATE 2',
-  'VE-70074 — CENTER SLIDER SENSING SHAFT 35MM',
-  'VE-70075 — CENTER SLIDER SENSING SHAFT 48MM',
-  'VE-70076 — CENTER SLIDER SENSING SHAFT 85MM',
-  'VE-70077 — CENTER SLIDER SENSING BAR 50MM',
-  'VE-70078 — ELECTRICAL CONTROL BOX BOTTOM BUSH',
-  'VE-70079 — CENTER SLIDER SENSING BAR 150MM',
-  'VE-70080 — COMMON WIRE SUPPORT PIECE 16MM',
-]
-const PROCESSES = ['CNC Turning', 'CNC Milling', 'Grinding', 'Drilling', 'Welding', 'Heat Treatment', 'Surface Finishing', 'Assembly', 'Inspection', 'Outsource']
-const TEAMS = ['Team Alpha', 'Team Beta', 'Night Shift', 'Day Shift', 'QC Unit']
+
+
 
 export default function ProcessMenu() {
   const toast = useToast()
   const [form, setForm] = useState({
-    jobNo: '', barcode: '', itemName: '',
-    planeDate: new Date().toISOString().split('T')[0],
+    jobNo: '', itemName: '',
+    planDate: new Date().toISOString().split('T')[0],
   })
   const [processes, setProcesses] = useState([])
   const [selectAll, setSelectAll] = useState(false)
@@ -52,10 +118,7 @@ export default function ProcessMenu() {
   const [activeTab, setActiveTab] = useState('check')
   const [drawingList, setDrawingList] = useState([])
 
-  // Bottom bar state
-  const [processName, setProcessName] = useState('')
-  const [team, setTeam] = useState('')
-  const [isOutsource, setIsOutsource] = useState(false)
+
   const [partImage, setPartImage] = useState(null)
   const imgInputRef = useRef(null)
 
@@ -69,25 +132,192 @@ export default function ProcessMenu() {
   }
   const clearImage = () => { setPartImage(null); if (imgInputRef.current) imgInputRef.current.value = '' }
 
+  const [jobCardsList, setJobCardsList] = useState([])
+  const [processMasters, setProcessMasters] = useState([])
+
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
     setSavedRecords(saved)
+
+    const fetchJobCards = async () => {
+      try {
+        const res = await api.get('/api/job-card')
+        if (res.data?.success && res.data.data) {
+          setJobCardsList(res.data.data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch job cards:', err)
+      }
+    }
+    const fetchProcessMasters = async () => {
+      try {
+        const res = await api.get('/api/process-master')
+        if (res.data?.success && res.data.data) {
+          setProcessMasters(res.data.data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch process masters:', err)
+      }
+    }
+    fetchJobCards()
+    fetchProcessMasters()
   }, [])
 
+  useEffect(() => {
+    if (form.jobNo && jobCardsList.length > 0) {
+      const matched = jobCardsList.find(jc => jc.jobNo === form.jobNo)
+      if (matched) {
+        const updates = {}
+        if (matched.currentDate) {
+          updates.planDate = matched.currentDate
+        }
+        if (matched.lineItems && matched.lineItems.length > 0) {
+          updates.itemName = `${matched.lineItems[0].partNo} — ${matched.lineItems[0].partName}`
+        }
+        setForm(f => ({ ...f, ...updates }))
+      }
+    }
+  }, [form.jobNo, jobCardsList])
+
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  const loadProcessesForItem = (itemNameValue) => {
+    if (!itemNameValue) {
+      setProcesses([])
+      return
+    }
+    const partName = itemNameValue.includes(' — ')
+      ? itemNameValue.split(' — ')[1].trim().toLowerCase()
+      : itemNameValue.trim().toLowerCase()
+
+    const matchedMasterList = processMasters.filter(pm =>
+      pm.PM_Part_Name && pm.PM_Part_Name.trim().toLowerCase() === partName
+    )
+
+    if (matchedMasterList.length > 0) {
+      const sorted = [...matchedMasterList].sort((a, b) => {
+        const ordA = parseInt(a.PM_Process_Order, 10) || 0
+        const ordB = parseInt(b.PM_Process_Order, 10) || 0
+        return ordA - ordB
+      })
+
+      const mapped = sorted.map((pm, i) => ({
+        id: pm.id || (Date.now() + i),
+        sno: i + 1,
+        name: pm.PM_Process_Name,
+        processOrder: pm.PM_Process_Order || '',
+        teamId: pm.TeamId || '',
+        machineName: pm.Machine_Name || '',
+        days: pm.PM_Days || '0',
+        hours: pm.PM_Hours || '0',
+        minutes: pm.Minutes || '0',
+        settingTime: pm.Setting_Time || '0',
+        cycleTime: pm.Cycle_Time || '0',
+        handlingTime: pm.Handling_Time || '0',
+        createdBy: pm.CreatedBy || '',
+        idleTime: pm.Idle_Time || '0',
+      }))
+      setProcesses(mapped)
+    } else {
+      setProcesses([])
+    }
+    setSelectedIds(new Set())
+    setSelectAll(false)
+  }
+
+  useEffect(() => {
+    loadProcessesForItem(form.itemName)
+  }, [form.itemName, processMasters])
+
+  useEffect(() => {
+    const fetchItemMasterFiles = async () => {
+      if (!form.itemName) {
+        setPartImage(null)
+        setDrawingList([])
+        return
+      }
+      const partNo = form.itemName.includes(' — ')
+        ? form.itemName.split(' — ')[0].trim()
+        : form.itemName.trim()
+
+      if (!partNo) {
+        setPartImage(null)
+        setDrawingList([])
+        return
+      }
+
+      try {
+        const res = await api.get(`/api/item-master?search=${encodeURIComponent(partNo)}`)
+        if (res.data?.success && res.data.data && res.data.data.length > 0) {
+          const matched = res.data.data.find(item => item.partNo === partNo)
+          if (matched) {
+            const detailRes = await api.get(`/api/item-master/${matched.id}`)
+            if (detailRes.data?.success && detailRes.data.data) {
+              const fullItem = detailRes.data.data
+
+              if (fullItem.hasImage || fullItem.imageMimeType) {
+                const imgRes = await api.get(`/api/item-master/${fullItem.id}/download-image`, { responseType: 'blob' })
+                const imgBlob = new Blob([imgRes.data], { type: fullItem.imageMimeType || 'image/jpeg' })
+                setPartImage(URL.createObjectURL(imgBlob))
+              } else {
+                setPartImage(null)
+              }
+
+              let drawings = []
+              if (fullItem.hasPdf || fullItem.pdfMimeType) {
+                drawings.push({
+                  name: fullItem.pdfPath || `${fullItem.partNo}_Drawing.pdf`,
+                  url: `/api/item-master/${fullItem.id}/download-pdf`
+                })
+              }
+              setDrawingList(drawings)
+            }
+          } else {
+            setPartImage(null)
+            setDrawingList([])
+          }
+        } else {
+          setPartImage(null)
+          setDrawingList([])
+        }
+      } catch (err) {
+        console.error('Failed to load item master details:', err)
+        setPartImage(null)
+        setDrawingList([])
+      }
+    }
+    fetchItemMasterFiles()
+  }, [form.itemName])
+
+  const handleViewDrawing = async (url) => {
+    try {
+      const res = await api.get(url, { responseType: 'blob' })
+      const blob = new Blob([res.data], { type: 'application/pdf' })
+      const blobUrl = URL.createObjectURL(blob)
+      window.open(blobUrl, '_blank')
+    } catch (err) {
+      console.error('Failed to open drawing:', err)
+      toast.error('Could not open the drawing PDF.')
+    }
+  }
 
   // When job number is entered, simulate loading processes
   const handleLoadJob = () => {
     if (!form.jobNo) { toast.warning('Please enter a Job No.'); return }
-    const demoProcesses = PROCESSES.slice(0, Math.floor(Math.random() * 5) + 3).map((p, i) => ({
-      id: Date.now() + i, name: p, sequence: i + 1,
-      machine: 'MCH-' + String(100 + i).padStart(3, '0'),
-      cycleTime: Math.floor(Math.random() * 60) + 5,
-      status: Math.random() > 0.5 ? 'Completed' : 'Pending',
-      checked: false,
-    }))
-    setProcesses(demoProcesses)
-    setDrawingList(['DWG-' + form.jobNo + '-01.pdf', 'DWG-' + form.jobNo + '-02.pdf'])
+    const matched = jobCardsList.find(jc => jc.jobNo === form.jobNo)
+    if (matched) {
+      const updates = {}
+      if (matched.currentDate) {
+        updates.planDate = matched.currentDate
+      }
+      if (matched.lineItems && matched.lineItems.length > 0) {
+        updates.itemName = `${matched.lineItems[0].partNo} — ${matched.lineItems[0].partName}`
+      }
+      setForm(f => ({ ...f, ...updates }))
+      if (matched.lineItems && matched.lineItems.length > 0) {
+        loadProcessesForItem(`${matched.lineItems[0].partNo} — ${matched.lineItems[0].partName}`)
+      }
+    }
     setSelectedIds(new Set())
     setSelectAll(false)
   }
@@ -111,15 +341,28 @@ export default function ProcessMenu() {
 
   const handleSave = () => {
     if (!form.jobNo || !form.itemName) { toast.warning('Please fill Job No and Item Name.'); return }
+    const checkedProcesses = processes.filter(p => selectedIds.has(p.id))
+    if (checkedProcesses.length === 0) {
+      toast.warning('Please select at least one process to save.')
+      return
+    }
+
     const record = {
-      ...form, processes, processName, team, isOutsource,
-      id: Date.now(), savedAt: new Date().toISOString(),
+      ...form,
+      processes: checkedProcesses,
+      id: Date.now(),
+      savedAt: new Date().toISOString(),
     }
     const updated = [record, ...savedRecords]
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
     setSavedRecords(updated)
+    
+    // Remove only the saved/checked processes from the view
+    setProcesses(prev => prev.filter(p => !selectedIds.has(p.id)))
+    setSelectedIds(new Set())
+    setSelectAll(false)
+
     toast.success('Process Menu saved successfully!')
-    handleClear()
   }
 
   const handleDeleteAll = () => {
@@ -130,26 +373,14 @@ export default function ProcessMenu() {
     toast.success(selectedIds.size + ' process(es) removed.')
   }
 
-  const handleOutsourceAdd = () => {
-    if (!processName) { toast.warning('Please select a Process Name.'); return }
-    const newProc = {
-      id: Date.now(), name: processName, sequence: processes.length + 1,
-      machine: 'OUTSRC', cycleTime: 0,
-      status: 'Pending', checked: false, outsource: true, team,
-    }
-    setProcesses(prev => [...prev, newProc])
-    toast.success('Outsource process added.')
-  }
+
 
   const handleClear = () => {
-    setForm({ jobNo: '', barcode: '', itemName: '', planeDate: new Date().toISOString().split('T')[0] })
+    setForm({ jobNo: '', itemName: '', planDate: new Date().toISOString().split('T')[0] })
     setProcesses([])
     setSelectedIds(new Set())
     setSelectAll(false)
     setDrawingList([])
-    setProcessName('')
-    setTeam('')
-    setIsOutsource(false)
     clearImage()
   }
 
@@ -178,33 +409,49 @@ export default function ProcessMenu() {
           <div className="p-5">
             {/* ── Top Form Row ── */}
             <div className="grid grid-cols-12 gap-4 items-end">
-              <div className="col-span-2">
+              <div className="col-span-3">
                 <Label required>Job No</Label>
-                <div className="flex gap-1">
-                  <Input value={form.jobNo} onChange={u('jobNo')} placeholder="Enter Job No..." />
-                  <button onClick={handleLoadJob} className="px-2 py-[7px] bg-[#0097A7] hover:bg-[#007a87] text-white rounded-lg transition-all active:scale-95" title="Load Job">
+                <div className="flex gap-1 items-center">
+                  <SearchableSelect
+                    options={jobCardsList.map(jc => ({
+                      value: jc.jobNo,
+                      label: jc.jobNo
+                    }))}
+                    value={form.jobNo}
+                    onChange={u('jobNo')}
+                    placeholder="Enter or select Job No..."
+                  />
+                  <button onClick={handleLoadJob} className="px-2 py-[7px] bg-[#0097A7] hover:bg-[#007a87] text-white rounded-lg transition-all active:scale-95 flex-shrink-0" title="Load Job">
                     <Search size={14} />
                   </button>
                 </div>
               </div>
-              <div className="col-span-2">
-                <Label>Barcode</Label>
-                <Input value={form.barcode} onChange={u('barcode')} placeholder="Scan barcode..." />
-              </div>
               <div className="col-span-3">
                 <Label required>Item Name</Label>
-                <Select options={ITEMS} value={form.itemName} onChange={u('itemName')} placeholder="Select Item..." />
+                <Select
+                  options={
+                    (() => {
+                      const matched = jobCardsList.find(jc => jc.jobNo === form.jobNo)
+                      return matched && matched.lineItems
+                        ? matched.lineItems.map(item => `${item.partNo} — ${item.partName}`)
+                        : []
+                    })()
+                  }
+                  value={form.itemName}
+                  onChange={u('itemName')}
+                  placeholder="Select Item..."
+                />
               </div>
               <div className="col-span-2">
-                <Label>Plane Date</Label>
-                <Input type="date" value={form.planeDate} onChange={u('planeDate')} />
+                <Label>Plan Date</Label>
+                <Input type="date" value={form.planDate} onChange={u('planDate')} />
               </div>
-              <div className="col-span-3 flex items-end gap-2 justify-end">
+              <div className="col-span-4 flex items-end gap-2 justify-end">
                 <button onClick={handleSave} className="flex items-center gap-1.5 px-4 py-[7px] bg-[#0097A7] hover:bg-[#007a87] text-white text-[12px] font-bold rounded-lg transition-all shadow-md active:scale-95"><Save size={14} /> Save</button>
                 <button onClick={handleSelectAll} className="flex items-center gap-1.5 px-3 py-[7px] bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold rounded-lg border border-slate-200 transition-all shadow-sm">
                   {selectAll ? <CheckSquare size={14} className="text-[#0097A7]" /> : <Square size={14} />} Select All
                 </button>
-                <button onClick={handleDeleteAll} className="flex items-center gap-1.5 px-3 py-[7px] bg-white hover:bg-red-50 text-red-600 text-[12px] font-bold rounded-lg border border-red-200 transition-all shadow-sm"><Trash2 size={14} /> Delete All</button>
+                <button onClick={handleDeleteAll} className="flex items-center gap-1.5 px-3 py-[7px] bg-white hover:bg-red-50 text-red-600 text-[12px] font-bold rounded-lg border border-red-200 transition-all shadow-sm"><Trash2 size={14} /> Delete</button>
               </div>
             </div>
 
@@ -229,38 +476,65 @@ export default function ProcessMenu() {
                     </div>
                   ) : (
                     <table className="w-full text-left border-collapse">
-                      <thead className="bg-[#e3f2fd] text-[11px] uppercase text-slate-600 font-bold border-b border-slate-200">
+                      <colgroup>
+                        <col style={{ width: '3%' }} />   {/* checkbox */}
+                        <col style={{ width: '4%' }} />   {/* S.No */}
+                        <col style={{ width: '14%' }} />  {/* Process Name */}
+                        <col style={{ width: '5%' }} />   {/* Process Order */}
+                        <col style={{ width: '6%' }} />   {/* Team */}
+                        <col style={{ width: '12%' }} />  {/* Machine Name */}
+                        <col style={{ width: '5%' }} />   {/* Days */}
+                        <col style={{ width: '5%' }} />   {/* Hours */}
+                        <col style={{ width: '5%' }} />   {/* Minutes */}
+                        <col style={{ width: '6%' }} />   {/* Setting Time */}
+                        <col style={{ width: '6%' }} />   {/* Cycle Time */}
+                        <col style={{ width: '7%' }} />   {/* Handling Time */}
+                        <col style={{ width: '8%' }} />   {/* Created By */}
+                        <col style={{ width: '5%' }} />   {/* Idle Time */}
+                      </colgroup>
+                      <thead className="bg-[#e3f2fd] border-b border-slate-200">
                         <tr>
-                          <th className="px-3 py-3 border-r border-slate-200 w-10 text-center">
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-center">
                             <button onClick={handleSelectAll}>
-                              {selectAll ? <CheckSquare size={14} className="text-[#0097A7]" /> : <Square size={14} className="text-slate-400" />}
+                              {selectAll ? <CheckSquare size={13} className="text-[#0097A7]" /> : <Square size={13} className="text-slate-400" />}
                             </button>
                           </th>
-                          <th className="px-3 py-3 border-r border-slate-200 w-12 text-center">Seq</th>
-                          <th className="px-3 py-3 border-r border-slate-200">Process Name</th>
-                          <th className="px-3 py-3 border-r border-slate-200">Machine</th>
-                          <th className="px-3 py-3 border-r border-slate-200 w-24 text-center">Cycle Time</th>
-                          <th className="px-3 py-3 w-24 text-center">Status</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">S.No</th>
+                          <th className="px-2 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold leading-tight">Process Name</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Order</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Team</th>
+                          <th className="px-2 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold leading-tight">Machine Name</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Days</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Hours</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Mins</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Setting<br/>Time</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Cycle<br/>Time</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Handling<br/>Time</th>
+                          <th className="px-1 py-2.5 border-r border-slate-200 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Created<br/>By</th>
+                          <th className="px-1 py-2.5 text-[9px] uppercase text-slate-600 font-bold text-center leading-tight">Idle<br/>Time</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {processes.map(p => (
-                          <tr key={p.id} className={`hover:bg-slate-50 transition-colors h-10 ${selectedIds.has(p.id) ? 'bg-[#0097A7]/5' : ''}`}>
-                            <td className="px-3 py-1.5 border-r border-slate-200 text-center">
+                          <tr key={p.id} className={`hover:bg-slate-50 transition-colors ${selectedIds.has(p.id) ? 'bg-[#0097A7]/5' : ''}`}>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center">
                               <button onClick={() => toggleSelect(p.id)}>
-                                {selectedIds.has(p.id) ? <CheckSquare size={14} className="text-[#0097A7]" /> : <Square size={14} className="text-slate-300" />}
+                                {selectedIds.has(p.id) ? <CheckSquare size={13} className="text-[#0097A7]" /> : <Square size={13} className="text-slate-300" />}
                               </button>
                             </td>
-                            <td className="px-3 py-1.5 border-r border-slate-200 text-center text-slate-400 font-bold text-[12px]">{p.sequence}</td>
-                            <td className="px-3 py-1.5 border-r border-slate-200 text-[12px] font-semibold text-slate-700">
-                              {p.name}
-                              {p.outsource && <span className="ml-2 text-[9px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-bold uppercase">Outsource</span>}
-                            </td>
-                            <td className="px-3 py-1.5 border-r border-slate-200 text-[12px] text-slate-500 font-mono">{p.machine}</td>
-                            <td className="px-3 py-1.5 border-r border-slate-200 text-center text-[12px] text-slate-600">{p.cycleTime}s</td>
-                            <td className="px-3 py-1.5 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${p.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{p.status}</span>
-                            </td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-500 font-bold">{p.sno}</td>
+                            <td className="px-2 py-1.5 border-r border-slate-200 text-[11px] font-semibold text-slate-700 truncate">{p.name}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-500">{p.processOrder}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-500">{p.teamId || '—'}</td>
+                            <td className="px-2 py-1.5 border-r border-slate-200 text-[11px] text-slate-600 truncate">{p.machineName || '—'}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-600">{p.days}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-600">{p.hours}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-600">{p.minutes}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-600">{p.settingTime}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-600">{p.cycleTime}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-600">{p.handlingTime}</td>
+                            <td className="px-1 py-1.5 border-r border-slate-200 text-center text-[11px] text-slate-500">{p.createdBy || '—'}</td>
+                            <td className="px-1 py-1.5 text-center text-[11px] text-slate-600">{p.idleTime}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -300,9 +574,9 @@ export default function ProcessMenu() {
                     ) : (
                       <div className="divide-y divide-slate-100">
                         {drawingList.map((d, i) => (
-                          <div key={i} className="px-3 py-2.5 flex items-center gap-2 hover:bg-slate-50 transition-colors cursor-pointer group">
+                          <div key={i} onClick={() => handleViewDrawing(d.url)} className="px-3 py-2.5 flex items-center gap-2 hover:bg-slate-50 transition-colors cursor-pointer group">
                             <FileText size={14} className="text-[#0097A7] flex-shrink-0" />
-                            <span className="text-[11px] font-semibold text-slate-600 group-hover:text-[#0097A7] truncate">{d}</span>
+                            <span className="text-[11px] font-semibold text-slate-600 group-hover:text-[#0097A7] truncate">{d.name}</span>
                           </div>
                         ))}
                       </div>
@@ -312,30 +586,6 @@ export default function ProcessMenu() {
               </div>
             </div>
 
-            {/* ── Bottom Bar: Process / Team / Outsource ── */}
-            <div className="mt-5 flex items-center gap-4 bg-[#e3f2fd] p-3 rounded-lg border border-sky-200">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-slate-700 uppercase whitespace-nowrap">Process Name :</span>
-                <Select options={PROCESSES} value={processName} onChange={e => setProcessName(e.target.value)} placeholder="Select..." className="w-44" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-slate-700 uppercase whitespace-nowrap">Team :</span>
-                <Select options={TEAMS} value={team} onChange={e => setTeam(e.target.value)} placeholder="Select..." className="w-40" />
-              </div>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input type="checkbox" checked={isOutsource} onChange={e => setIsOutsource(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7]" />
-                <span className="text-[11px] font-bold text-slate-700 uppercase">Outsources</span>
-              </label>
-              <button onClick={handleOutsourceAdd} className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[11px] font-bold rounded-lg transition-all shadow-sm active:scale-95 ml-auto">
-                <Plus size={13} /> Outsource Add
-              </button>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between mt-4 px-1">
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Ready</p>
-              <p className="text-[10px] text-red-500 font-bold">* Are Mandatory</p>
-            </div>
           </div>
         </div>
       </div>
