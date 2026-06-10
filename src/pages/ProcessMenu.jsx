@@ -181,53 +181,68 @@ export default function ProcessMenu() {
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const loadProcessesForItem = (itemNameValue) => {
-    if (!itemNameValue) {
+  const loadProcessesForItem = async (itemNameValue) => {
+    if (!itemNameValue || !form.jobNo) {
       setProcesses([])
       return
     }
-    const partName = itemNameValue.includes(' — ')
-      ? itemNameValue.split(' — ')[1].trim().toLowerCase()
-      : itemNameValue.trim().toLowerCase()
+    try {
+      const res = await api.get(`/api/job-process-menu?jobNo=${encodeURIComponent(form.jobNo)}`)
+      if (res.data?.success && res.data.data) {
+        const partName = itemNameValue.includes(' — ')
+          ? itemNameValue.split(' — ')[1].trim().toLowerCase()
+          : itemNameValue.trim().toLowerCase()
 
-    const matchedMasterList = processMasters.filter(pm =>
-      pm.PM_Part_Name && pm.PM_Part_Name.trim().toLowerCase() === partName
-    )
+        const matchedList = res.data.data.filter(pm =>
+          pm.partName && pm.partName.trim().toLowerCase() === partName
+        )
 
-    if (matchedMasterList.length > 0) {
-      const sorted = [...matchedMasterList].sort((a, b) => {
-        const ordA = parseInt(a.PM_Process_Order, 10) || 0
-        const ordB = parseInt(b.PM_Process_Order, 10) || 0
-        return ordA - ordB
-      })
+        const sorted = [...matchedList].sort((a, b) => {
+          const ordA = parseInt(a.processOrder, 10) || 0
+          const ordB = parseInt(b.processOrder, 10) || 0
+          return ordA - ordB
+        })
 
-      const mapped = sorted.map((pm, i) => ({
-        id: pm.id || (Date.now() + i),
-        sno: i + 1,
-        name: pm.PM_Process_Name,
-        processOrder: pm.PM_Process_Order || '',
-        teamId: pm.TeamId || '',
-        machineName: pm.Machine_Name || '',
-        days: pm.PM_Days || '0',
-        hours: pm.PM_Hours || '0',
-        minutes: pm.Minutes || '0',
-        settingTime: pm.Setting_Time || '0',
-        cycleTime: pm.Cycle_Time || '0',
-        handlingTime: pm.Handling_Time || '0',
-        createdBy: pm.CreatedBy || '',
-        idleTime: pm.Idle_Time || '0',
-      }))
-      setProcesses(mapped)
-    } else {
+        const mapped = sorted.map((pm, i) => ({
+          id: pm.id,
+          sno: i + 1,
+          name: pm.processName,
+          processOrder: pm.processOrder || '',
+          teamId: pm.teamId || '',
+          machineName: pm.machineName || '',
+          days: pm.days || '0',
+          hours: pm.hours || '0',
+          minutes: pm.minutes || '0',
+          settingTime: pm.settingTime || '0',
+          cycleTime: pm.cycleTime || '0',
+          handlingTime: pm.handlingTime || '0',
+          createdBy: pm.createdBy || '',
+          idleTime: pm.idleTime || '0',
+          isActive: pm.isActive
+        }))
+
+        setProcesses(mapped)
+        const activeIds = new Set(mapped.filter(p => p.isActive).map(p => p.id))
+        setSelectedIds(activeIds)
+        setSelectAll(activeIds.size === mapped.length && mapped.length > 0)
+      } else {
+        setProcesses([])
+        setSelectedIds(new Set())
+        setSelectAll(false)
+      }
+    } catch (err) {
+      console.error('Failed to load job processes:', err)
       setProcesses([])
+      setSelectedIds(new Set())
+      setSelectAll(false)
     }
-    setSelectedIds(new Set())
-    setSelectAll(false)
   }
 
   useEffect(() => {
-    loadProcessesForItem(form.itemName)
-  }, [form.itemName, processMasters])
+    if (form.itemName && form.jobNo) {
+      loadProcessesForItem(form.itemName)
+    }
+  }, [form.itemName, form.jobNo])
 
   useEffect(() => {
     const fetchItemMasterFiles = async () => {
@@ -339,38 +354,47 @@ export default function ProcessMenu() {
     setSelectAll(!selectAll)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.jobNo || !form.itemName) { toast.warning('Please fill Job No and Item Name.'); return }
-    const checkedProcesses = processes.filter(p => selectedIds.has(p.id))
-    if (checkedProcesses.length === 0) {
-      toast.warning('Please select at least one process to save.')
-      return
-    }
 
-    const record = {
-      ...form,
-      processes: checkedProcesses,
-      id: Date.now(),
-      savedAt: new Date().toISOString(),
-    }
-    const updated = [record, ...savedRecords]
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    setSavedRecords(updated)
-    
-    // Remove only the saved/checked processes from the view
-    setProcesses(prev => prev.filter(p => !selectedIds.has(p.id)))
-    setSelectedIds(new Set())
-    setSelectAll(false)
+    const partNo = form.itemName.includes(' — ') ? form.itemName.split(' — ')[0].trim() : '';
 
-    toast.success('Process Menu saved successfully!')
+    const processesPayload = processes.map(p => ({
+      processName: p.name,
+      processOrder: p.processOrder,
+      isActive: selectedIds.has(p.id)
+    }))
+
+    try {
+      const res = await api.put('/api/job-process-menu', {
+        jobNo: form.jobNo,
+        partNo,
+        processes: processesPayload
+      })
+
+      if (res.data?.success) {
+        toast.success('Process Menu saved successfully!')
+        loadProcessesForItem(form.itemName)
+      } else {
+        toast.error(res.data?.message || 'Failed to save process menu.')
+      }
+    } catch (err) {
+      console.error('Failed to save job processes:', err)
+      toast.error('Error: ' + (err.response?.data?.message || err.message))
+    }
   }
 
   const handleDeleteAll = () => {
-    if (selectedIds.size === 0) { toast.warning('Please select processes to delete.'); return }
-    setProcesses(prev => prev.filter(p => !selectedIds.has(p.id)))
-    setSelectedIds(new Set())
+    if (selectedIds.size === 0) { toast.warning('Please select processes to deselect.'); return }
+    const nextSelected = new Set(selectedIds)
+    processes.forEach(p => {
+      if (selectedIds.has(p.id)) {
+        nextSelected.delete(p.id)
+      }
+    })
+    setSelectedIds(nextSelected)
     setSelectAll(false)
-    toast.success(selectedIds.size + ' process(es) removed.')
+    toast.success(selectedIds.size + ' process(es) deselected. Click Save to record changes.')
   }
 
 

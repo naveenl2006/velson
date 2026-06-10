@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, Save, Trash2, X, Plus, RotateCcw, Search, FileText, Image as ImageIcon } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import api from '../services/api'
@@ -25,6 +25,29 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
   </div>
 )
 
+const parseNoteMetadata = (noteStr) => {
+  if (!noteStr) return { isSelfStock: false, customersText: '', cleanNote: '' }
+  
+  if (noteStr.startsWith('[Self Stock In]')) {
+    return {
+      isSelfStock: true,
+      customersText: '',
+      cleanNote: noteStr.replace('[Self Stock In]', '').trim()
+    }
+  }
+  
+  const custMatch = noteStr.match(/^\[Customers:\s*([^\]]+)\]/)
+  if (custMatch) {
+    return {
+      isSelfStock: false,
+      customersText: custMatch[1],
+      cleanNote: noteStr.replace(custMatch[0], '').trim()
+    }
+  }
+  
+  return { isSelfStock: false, customersText: '', cleanNote: noteStr }
+}
+
 export default function JobCardEntry() {
   const toast = useToast()
   const [form, setForm] = useState({
@@ -38,6 +61,14 @@ export default function JobCardEntry() {
   const [searchTerm, setSearchTerm] = useState('')
   const [partImage, setPartImage] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Customer states
+  const [customers, setCustomers] = useState([])
+  const [selfStockIn, setSelfStockIn] = useState(false)
+  const [selectedCustomers, setSelectedCustomers] = useState([])
+  const [custSearchTerm, setCustSearchTerm] = useState('')
+  const [isCustDropdownOpen, setIsCustDropdownOpen] = useState(false)
+  const customerDropdownRef = useRef(null)
 
   // Master lists
   const [vehicleTypes, setVehicleTypes] = useState([])
@@ -70,13 +101,14 @@ export default function JobCardEntry() {
     const loadAllData = async () => {
       setLoading(true)
       try {
-        const [jobsRes, nextRes, vehicleRes, priorityRes, uomsRes, itemsRes] = await Promise.all([
+        const [jobsRes, nextRes, vehicleRes, priorityRes, uomsRes, itemsRes, custRes] = await Promise.all([
           api.get('/api/job-card').catch(() => ({ data: { data: [] } })),
           api.get('/api/job-card/next-no').catch(() => ({ data: { jobNo: '1' } })),
           api.get('/api/reference-master/Vehicle_Type').catch(() => ({ data: { data: [] } })),
           api.get('/api/reference-master/Priority').catch(() => ({ data: { data: [] } })),
           api.get('/api/reference-master/UOM').catch(() => ({ data: { data: [] } })),
-          api.get('/api/item-master?limit=10000').catch(() => ({ data: { data: [] } }))
+          api.get('/api/item-master?limit=10000').catch(() => ({ data: { data: [] } })),
+          api.get('/api/customer-master').catch(() => ({ data: { data: [] } }))
         ])
 
         setSavedJobs(jobsRes.data?.data || [])
@@ -87,6 +119,7 @@ export default function JobCardEntry() {
         setPriorities((priorityRes.data?.data || []).map(r => r.description).filter(Boolean))
         setUoms((uomsRes.data?.data || []).map(r => r.description).filter(Boolean))
         setItemMasterList(itemsRes.data?.data || [])
+        setCustomers(custRes.data?.data || [])
       } catch (err) {
         console.error('Error loading page data', err)
         toast.error('Failed to load job card data')
@@ -95,6 +128,16 @@ export default function JobCardEntry() {
       }
     }
     loadAllData()
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+        setIsCustDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -165,11 +208,18 @@ export default function JobCardEntry() {
       return
     }
 
+    if (!selfStockIn && selectedCustomers.length === 0) {
+      toast.warning('Please select at least one customer or check "Self Stock In".')
+      return
+    }
+
     try {
       const payload = {
         ...form,
         partImage,
         lineItems: lineItems.filter(l => l.partNo),
+        selfStockIn,
+        selectedCustomers,
       }
       const res = await api.post('/api/job-card', payload)
       if (res.data?.success) {
@@ -214,6 +264,10 @@ export default function JobCardEntry() {
     })
     setLineItems([{ id: Date.now(), partNo: '', partName: '', planQty: '', uom: '' }])
     setPartImage(null)
+    setSelfStockIn(false)
+    setSelectedCustomers([])
+    setCustSearchTerm('')
+    setIsCustDropdownOpen(false)
   }
 
   const filtered = savedJobs.filter(j => {
@@ -277,14 +331,151 @@ export default function JobCardEntry() {
                 )}
               </div>
 
-              <div className="col-span-5">
+              <div className="col-span-3">
                 <Label>Priority</Label>
                 <Select options={priorities} value={form.priority} onChange={u('priority')} placeholder="Select..." />
               </div>
-              <div className="col-span-4">
+              <div className="col-span-3">
                 <Label>Required Date</Label>
                 <Input type="date" value={form.requiredDate} onChange={u('requiredDate')} />
               </div>
+              <div className="col-span-3 flex items-center pt-5 mt-3 pl-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={selfStockIn}
+                    onChange={e => setSelfStockIn(e.target.checked)}
+                    className="w-3.5 h-4.5 accent-[#0097A7] rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7]/20 transition-all duration-200 cursor-pointer group-hover:scale-105"
+                  />
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider group-hover:text-slate-700 transition-colors">Self Stock In</span>
+                </label>
+              </div>
+
+              {/* Customer Select Component */}
+              {!selfStockIn && (
+                <div ref={customerDropdownRef} className="col-span-9 bg-slate-50 p-4 border border-slate-200 rounded-xl relative transition-all duration-300 shadow-sm hover:shadow-md">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                      Select Customer(s) <span className="text-red-500">*</span>
+                    </span>
+                    {selectedCustomers.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCustomers([])}
+                        className="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-wider transition-colors"
+                      >
+                        Clear All ({selectedCustomers.length})
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Suggestion input box */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <Search size={16} className="text-slate-400" />
+                    </div>
+                    <input
+                      type="text"
+                      value={custSearchTerm}
+                      onChange={e => {
+                        setCustSearchTerm(e.target.value)
+                        setIsCustDropdownOpen(true)
+                      }}
+                      onFocus={() => setIsCustDropdownOpen(true)}
+                      placeholder="Search and select customers from master table..."
+                      className="w-full pl-10 pr-10 py-[7px] text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0097A7]/25 focus:border-[#0097A7] transition-all duration-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsCustDropdownOpen(!isCustDropdownOpen)}
+                      className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+                    >
+                      <svg className={`w-4 h-4 transition-transform duration-200 ${isCustDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {/* Checklist Dropdown */}
+                    {isCustDropdownOpen && (
+                      <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto z-30 transition-all duration-200 animate-in fade-in slide-in-from-top-1">
+                        {customers.filter(c => {
+                          const q = custSearchTerm.toLowerCase().trim()
+                          if (!q) return true
+                          return (
+                            c.customerName?.toLowerCase().includes(q) ||
+                            c.cCode?.toLowerCase().includes(q)
+                          )
+                        }).length === 0 ? (
+                          <div className="px-4 py-3 text-xs text-slate-400 italic text-center">
+                            No customers found matching "{custSearchTerm}"
+                          </div>
+                        ) : (
+                          customers
+                            .filter(c => {
+                              const q = custSearchTerm.toLowerCase().trim()
+                              if (!q) return true
+                              return (
+                                c.customerName?.toLowerCase().includes(q) ||
+                                c.cCode?.toLowerCase().includes(q)
+                              )
+                            })
+                            .map(c => {
+                              const isSelected = selectedCustomers.some(sc => sc.id === c.id)
+                              return (
+                                <div
+                                  key={c.id}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setSelectedCustomers(selectedCustomers.filter(sc => sc.id !== c.id))
+                                    } else {
+                                      setSelectedCustomers([...selectedCustomers, c])
+                                    }
+                                  }}
+                                  className={`flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-[#0097A7]/10 hover:text-slate-800 transition-colors cursor-pointer border-b border-slate-50 last:border-0 ${isSelected ? 'bg-slate-50' : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => {}} // Controlled by onClick on parent container
+                                    className="w-4 h-4 accent-[#0097A7] rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7]/20 transition cursor-pointer"
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold text-slate-800 text-[13px]">{c.customerName}</span>
+                                    {c.cCode && <span className="text-[10px] text-slate-400 font-mono font-bold uppercase">{c.cCode}</span>}
+                                  </div>
+                                </div>
+                              )
+                            })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Selected Chips */}
+                  {selectedCustomers.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {selectedCustomers.map(c => (
+                        <div
+                          key={c.id}
+                          className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-0.5 bg-[#0097A7]/10 hover:bg-[#0097A7]/20 text-[#0097A7] rounded-full text-[11px] font-bold transition-all border border-[#0097A7]/20 group animate-fadeIn"
+                        >
+                          <span>{c.customerName}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedCustomers(selectedCustomers.filter(sc => sc.id !== c.id))
+                            }}
+                            className="p-0.5 rounded-full hover:bg-[#0097A7]/20 text-[#0097A7] transition-all"
+                          >
+                            <X size={10} strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="col-span-9 bg-[#e8f5e9] p-3 rounded-lg border border-green-200 flex items-center gap-4">
                 <div className="w-16 text-[11px] font-bold text-green-800 uppercase shrink-0">Note</div>
@@ -379,6 +570,7 @@ export default function JobCardEntry() {
                       {/* <th className="px-4 py-3 border-r border-slate-200 w-14 text-center">S.No</th> */}
                       <th className="px-4 py-3 border-r border-slate-200">Job No</th>
                       <th className="px-4 py-3 border-r border-slate-200">Model</th>
+                      <th className="px-4 py-3 border-r border-slate-200">Customer / Stock-In</th>
                       <th className="px-4 py-3 border-r border-slate-200 text-center">Qty</th>
                       <th className="px-4 py-3 border-r border-slate-200">Priority</th>
                       <th className="px-4 py-3 border-r border-slate-200">Date</th>
@@ -388,14 +580,53 @@ export default function JobCardEntry() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filtered.length === 0 ? (
-                      <tr><td colSpan={8} className="py-16 text-center text-slate-300 italic text-sm">
+                      <tr><td colSpan={9} className="py-16 text-center text-slate-300 italic text-sm">
                         <FileText size={36} className="mx-auto mb-2 opacity-20" />No job cards found.
                       </td></tr>
                     ) : filtered.map((job, idx) => (
                       <tr key={job.id} className="hover:bg-slate-50 transition-colors h-11">
-                        <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-400 font-bold text-[12px]">{idx + 1}</td>
-                        <td className="px-4 py-2 border-r border-slate-200 font-bold text-[#0097A7] text-[12px]">{job.jobNo}</td>
+                        {/* <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-400 font-bold text-[12px]">{idx + 1}</td> */}
+                        <td className="px-5 py-2 border-r border-slate-200 font-bold text-[#0097A7] text-[12px]">{job.jobNo}</td>
                         <td className="px-4 py-2 border-r border-slate-200 text-slate-600 text-[12px]">{job.model || '—'}</td>
+                        <td className="px-4 py-2 border-r border-slate-200 text-[12px]">
+                          {(() => {
+                            if (job.selfStockIn) {
+                              return <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Self Stock In</span>
+                            }
+                            if (job.selectedCustomers) {
+                              let custArr = []
+                              try {
+                                custArr = typeof job.selectedCustomers === 'string'
+                                  ? JSON.parse(job.selectedCustomers)
+                                  : job.selectedCustomers
+                              } catch (e) {
+                                console.error(e)
+                              }
+                              if (Array.isArray(custArr) && custArr.length > 0) {
+                                const custStr = custArr.map(c => `${c.customerName} (${c.cCode || 'N/A'})`).join(', ')
+                                return (
+                                  <div className="max-w-[200px] truncate" title={custStr}>
+                                    <span className="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded-full mr-1">Cust</span>
+                                    <span className="text-slate-600 font-medium">{custStr}</span>
+                                  </div>
+                                )
+                              }
+                            }
+                            // Fallback to note parsing for older entries
+                            const { isSelfStock, customersText } = parseNoteMetadata(job.note)
+                            if (isSelfStock) {
+                              return <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Self Stock In</span>
+                            } else if (customersText) {
+                              return (
+                                <div className="max-w-[200px] truncate" title={customersText}>
+                                  <span className="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded-full mr-1">Cust</span>
+                                  <span className="text-slate-600 font-medium">{customersText}</span>
+                                </div>
+                              )
+                            }
+                            return <span className="text-slate-400">—</span>
+                          })()}
+                        </td>
                         <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-600 text-[12px]">{job.qtyV || '—'}</td>
                         <td className="px-4 py-2 border-r border-slate-200 text-[12px]">
                           {job.priority ? <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${job.priority === 'High' ? 'bg-red-100 text-red-700' : job.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{job.priority}</span> : '—'}

@@ -15,8 +15,7 @@ const emptyForm = {
 }
 
 const inp = (err) =>
-  `w-full border rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 transition-colors bg-white ${
-    err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'
+  `w-full border rounded px-2 py-1 text-[13px] focus:outline-none focus:ring-1 transition-colors bg-white ${err ? 'border-red-400 focus:ring-red-300' : 'border-slate-300 focus:ring-[#0097A7] focus:border-[#0097A7]'
   }`
 const lbl = 'text-[12.5px] font-semibold text-slate-600 whitespace-nowrap w-36 shrink-0'
 
@@ -55,8 +54,9 @@ function FS({ label, fk, opts, required, placeholder, form, sf, errors }) {
 function Panel({ children }) {
   return (
     <div className="border border-[#1a6fa8] rounded overflow-hidden">
-      <div className="h-[5px] bg-[#1a6fa8]" />
-      <div className="p-3 space-y-2">{children}</div>
+      <div className="h-[5px] bg-[#0097A7]" />
+      <div className="p-3 h-full flex flex-col justify-evenly gap-2">
+        {children}</div>
     </div>
   )
 }
@@ -155,7 +155,7 @@ export default function EmployeeMaster() {
 
   const fetchDepartments = useCallback(async () => {
     try {
-      const res = await axios.get('/api/reference-master/Department')
+      const res = await api.get('/api/reference-master/Department')
       setDepartments((res.data.data || []).map(d => d.description))
     } catch {
       setDepartments([])
@@ -164,7 +164,7 @@ export default function EmployeeMaster() {
 
   const fetchDesignations = useCallback(async () => {
     try {
-      const res = await axios.get('/api/reference-master/Designation')
+      const res = await api.get('/api/reference-master/Designation')
       setDesignations((res.data.data || []).map(d => d.description))
     } catch {
       setDesignations([])
@@ -173,7 +173,7 @@ export default function EmployeeMaster() {
 
   const fetchContractors = useCallback(async () => {
     try {
-      const res = await axios.get('/api/contractor-master')
+      const res = await api.get('/api/contractor-master')
       setContractors((res.data.data || []).map(c => c.contractName))
     } catch {
       setContractors([])
@@ -220,21 +220,21 @@ export default function EmployeeMaster() {
   const handleEdit = row => {
     const toDateStr = (v) => v ? new Date(v).toISOString().slice(0, 10) : ''
     setForm({
-      empCode:        row.empCode || '',
-      empName:        row.empName || '',
-      address:        row.address || '',
-      contactNo:      row.contactNo || '',
-      adharNo:        row.adharNo || '',
-      joinDate:       toDateStr(row.joinDate),
-      relevingDate:   toDateStr(row.relevingDate),
-      department:     row.department || '',
-      designation:    row.designation || '',
+      empCode: row.empCode || '',
+      empName: row.empName || '',
+      address: row.address || '',
+      contactNo: row.contactNo || '',
+      adharNo: row.adharNo || '',
+      joinDate: toDateStr(row.joinDate),
+      relevingDate: toDateStr(row.relevingDate),
+      department: row.department || '',
+      designation: row.designation || '',
       contractPerson: row.contractPerson || '',
-      companyName:    row.companyName || '',
-      team:           row.team || '',
-      emailId:        row.emailId || '',
-      repPerson:      row.repPerson || '',
-      status:         row.status || 'Active',
+      companyName: row.companyName || '',
+      team: row.team || '',
+      emailId: row.emailId || '',
+      repPerson: row.repPerson || '',
+      status: row.status || 'Active',
     })
     setErrors({}); setEditId(row.id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -325,30 +325,30 @@ export default function EmployeeMaster() {
             opts={companies.length ? companies : ['VELSON INDUSTRIES PVT LTD', 'VELSON SERVICES LLP']}
             required placeholder="---Select Company Name---" />
 
-          {/* Buttons */}
-          <div className="flex items-center gap-2 pt-1">
-            <button onClick={handleSave} disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {editId !== null ? 'Update' : 'Create'}
-            </button>
-            <button onClick={handleClear} disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60">
-              <RotateCcw className="w-4 h-4" /> Clear
-            </button>
-            <button onClick={() => { fetchAll(); setPage(1) }} disabled={tableLoading}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60">
-              {tableLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <List className="w-4 h-4" />}
-              Display All
-            </button>
-          </div>
         </Panel>
 
+      </div>
+      {/* Buttons */}
+      <div className="flex items-center gap-2 pt-1 justify-end">
+        <button onClick={handleSave} disabled={saving}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-[#27ae60] hover:bg-[#229954] text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {editId !== null ? 'Update' : 'Create'}
+        </button>
+        <button onClick={handleClear} disabled={saving}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60">
+          <RotateCcw className="w-4 h-4" /> Clear
+        </button>
+        <button onClick={() => { fetchAll(); setPage(1) }} disabled={tableLoading}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white text-[13px] font-semibold rounded transition-colors shadow-sm disabled:opacity-60">
+          {tableLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <List className="w-4 h-4" />}
+          Display All
+        </button>
       </div>
 
       {/* ── Table ── */}
       <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-[#1a6fa8] px-4 py-2.5">
+        <div className="bg-[#0097A7] px-4 py-2.5">
           <h2 className="text-white text-center font-semibold text-[14px]">Employee Master Details</h2>
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
@@ -368,67 +368,67 @@ export default function EmployeeMaster() {
         </div>
 
         {tableLoading ? (
-          <TableSkeleton rows={5} cols={['5%','7%','12%','10%','8%','8%','8%','8%','7%','7%','7%','8%','7%','7%','7%']} />
+          <TableSkeleton rows={5} cols={['5%', '7%', '12%', '10%', '8%', '8%', '8%', '8%', '7%', '7%', '7%', '8%', '7%', '7%', '7%']} />
         ) : (
-        <div className="overflow-x-auto w-full">
-          <table className="min-w-full text-[12px]">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                {['ID','Code','EmployeeName','Address','ContactNo','AdharNo','JoinDate','RelevingDate',
-                  'Department','Designation','Team','EmailID','ContractName','CreatedBy','CreatedDate',
-                  'Status','Edit','Delete','Details'].map(h => (
-                  <th key={h} className="text-center px-2 py-2.5 font-semibold text-slate-600 text-[11px] uppercase tracking-wide whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paged.length === 0 ? (
-                <tr><td colSpan={19} className="text-center py-8 text-slate-400">No records found</td></tr>
-              ) : paged.map((row, idx) => (
-                <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
-                  <td className="px-2 py-2 text-center">{row.id}</td>
-                  <td className="px-2 py-2 text-center font-medium text-[#0097A7]">{row.empCode}</td>
-                  <td className="px-2 py-2 text-center font-medium">{row.empName}</td>
-                  <td className="px-2 py-2 text-center">{row.address}</td>
-                  <td className="px-2 py-2 text-center">{row.contactNo}</td>
-                  <td className="px-2 py-2 text-center">{row.adharNo}</td>
-                  <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(row.joinDate)}</td>
-                  <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(row.relevingDate)}</td>
-                  <td className="px-2 py-2 text-center">{row.department}</td>
-                  <td className="px-2 py-2 text-center">{row.designation}</td>
-                  <td className="px-2 py-2 text-center">{row.team}</td>
-                  <td className="px-2 py-2 text-center">{row.emailId}</td>
-                  <td className="px-2 py-2 text-center">{row.contractPerson}</td>
-                  <td className="px-2 py-2 text-center">{row.createdBy}</td>
-                  <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(row.createdAt)}</td>
-                  <td className="px-2 py-2 text-center">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${row.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-2 py-2 text-center">
-                    <button onClick={() => handleEdit(row)}
-                      className="px-2.5 py-1.5 bg-[--color-main] hover:bg-[#3498db] text-white rounded transition-colors">
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
-                  <td className="px-2 py-2 text-center">
-                    <button onClick={() => setConfirmDelete(row.id)} disabled={deleting}
-                      className="px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded transition-colors disabled:opacity-60">
-                      {deleting && confirmDelete === row.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                    </button>
-                  </td>
-                  <td className="px-2 py-2 text-center">
-                    <button onClick={() => setDetailRow(row)}
-                      className="px-2.5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white rounded transition-colors">
-                      <Info className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-full text-[12px]">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  {['Code', 'EmployeeName', 'Address', 'ContactNo', 'AdharNo', 'JoinDate', 'RelevingDate',
+                    'Department', 'Designation', 'Team', 'EmailID', 'ContractName', 'CreatedBy', 'CreatedDate',
+                    'Status', 'Edit', 'Delete', 'Details'].map(h => (
+                      <th key={h} className="text-center px-2 py-2.5 font-semibold text-slate-600 text-[11px] uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paged.length === 0 ? (
+                  <tr><td colSpan={19} className="text-center py-8 text-slate-400">No records found</td></tr>
+                ) : paged.map((row, idx) => (
+                  <tr key={row.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
+                    {/* <td className="px-2 py-2 text-center">{row.id}</td> */}
+                    <td className="px-2 py-2 text-center font-medium text-[#0097A7]">{row.empCode}</td>
+                    <td className="px-2 py-2 text-center font-medium">{row.empName}</td>
+                    <td className="px-2 py-2 text-center">{row.address}</td>
+                    <td className="px-2 py-2 text-center">{row.contactNo}</td>
+                    <td className="px-2 py-2 text-center">{row.adharNo}</td>
+                    <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(row.joinDate)}</td>
+                    <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(row.relevingDate)}</td>
+                    <td className="px-2 py-2 text-center">{row.department}</td>
+                    <td className="px-2 py-2 text-center">{row.designation}</td>
+                    <td className="px-2 py-2 text-center">{row.team}</td>
+                    <td className="px-2 py-2 text-center">{row.emailId}</td>
+                    <td className="px-2 py-2 text-center">{row.contractPerson}</td>
+                    <td className="px-2 py-2 text-center">{row.createdBy}</td>
+                    <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(row.createdAt)}</td>
+                    <td className="px-2 py-2 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${row.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <button onClick={() => handleEdit(row)}
+                        className="px-2.5 py-1.5 bg-[--color-main] hover:bg-[#3498db] text-white rounded transition-colors">
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <button onClick={() => setConfirmDelete(row.id)} disabled={deleting}
+                        className="px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded transition-colors disabled:opacity-60">
+                        {deleting && confirmDelete === row.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <button onClick={() => setDetailRow(row)}
+                        className="px-2.5 py-1.5 bg-[#0097A7] hover:bg-[#007a87] text-white rounded transition-colors">
+                        <Info className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
@@ -442,9 +442,9 @@ export default function EmployeeMaster() {
               n === '...'
                 ? <span key={`e${i}`} className="px-2 text-slate-400 text-[12px]">…</span>
                 : <button key={n} onClick={() => setPage(n)}
-                    className={`w-8 h-8 text-[12px] rounded border transition-colors ${page === n ? 'bg-[#0097A7] text-white border-[#0097A7]' : 'border-slate-300 hover:bg-slate-100 text-slate-600'}`}>
-                    {n}
-                  </button>
+                  className={`w-8 h-8 text-[12px] rounded border transition-colors ${page === n ? 'bg-[#0097A7] text-white border-[#0097A7]' : 'border-slate-300 hover:bg-slate-100 text-slate-600'}`}>
+                  {n}
+                </button>
             )}
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
               className="px-3 py-1.5 text-[12px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 transition-colors">Next</button>

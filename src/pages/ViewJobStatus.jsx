@@ -105,12 +105,14 @@ const printJobProcessDetails = (job, processMasters = []) => {
 
   // Build the HTML for the workflow/sub-process tables
   const workflowHtml = parts.map((partDetail) => {
-    const partProcesses = processMasters
-      .filter(pm => {
-        if (!pm.PM_Part_Name || !partDetail.productName) return false
-        return pm.PM_Part_Name.trim().toLowerCase() === partDetail.productName.trim().toLowerCase()
-      })
-      .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
+    const partProcesses = partDetail.processMenus && partDetail.processMenus.length > 0
+      ? partDetail.processMenus
+      : processMasters
+          .filter(pm => {
+            if (!pm.PM_Part_Name || !partDetail.productName) return false
+            return pm.PM_Part_Name.trim().toLowerCase() === partDetail.productName.trim().toLowerCase()
+          })
+          .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
 
     if (partProcesses.length === 0) {
       return `
@@ -462,9 +464,11 @@ const getPartStage = (productName, lineItems, procMasters) => {
 const PartProcessDonut = ({ partDetail, processMasters }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
-  const partProcesses = processMasters
-    .filter(pm => pm.PM_Part_Name === partDetail.productName)
-    .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
+  const partProcesses = partDetail.processMenus && partDetail.processMenus.length > 0
+    ? partDetail.processMenus
+    : processMasters
+        .filter(pm => pm.PM_Part_Name === partDetail.productName)
+        .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
 
   let completedCount = 0
   let qcCount = 0
@@ -790,8 +794,31 @@ export default function ViewJobStatus() {
 
           Object.entries(partMap).forEach(([partName, items]) => {
             const firstItem = items[0]
-            const completedPct = getCompletedPct(partName, items, procList)
-            const stage = getPartStage(partName, items, procList)
+            const activeJobProcesses = jc.processMenus && jc.processMenus.length > 0
+              ? jc.processMenus
+                  .filter(pm => pm.isActive && pm.partName?.toLowerCase() === partName.toLowerCase())
+                  .map(pm => ({
+                    id: pm.id,
+                    PM_Part_Name: pm.partName,
+                    PM_Process_Name: pm.processName,
+                    PM_Process_Name1: pm.processName1 || '',
+                    PM_Process_Order: pm.processOrder,
+                    TeamId: pm.teamId || '',
+                    Machine_Code: pm.machineCode || '',
+                    Machine_Name: pm.machineName || '',
+                    PM_Days: pm.days || '',
+                    PM_Hours: pm.hours || '',
+                    Minutes: pm.minutes || '',
+                    Setting_Time: pm.settingTime || '',
+                    Cycle_Time: pm.cycleTime || '',
+                    Handling_Time: pm.handlingTime || '',
+                    Idle_Time: pm.idleTime || '',
+                    CreatedBy: pm.createdBy || 'Admin'
+                  }))
+              : procList.filter(pm => pm.PM_Part_Name && pm.PM_Part_Name.toLowerCase() === partName.toLowerCase());
+
+            const completedPct = getCompletedPct(partName, items, activeJobProcesses)
+            const stage = getPartStage(partName, items, activeJobProcesses)
 
             partsList.push({
               partNo: firstItem.partNo || '',
@@ -799,7 +826,8 @@ export default function ViewJobStatus() {
               completedPct,
               qty: firstItem.planQty || 0,
               stage,
-              lineItems: items
+              lineItems: items,
+              processMenus: activeJobProcesses
             })
           })
         }
@@ -940,9 +968,11 @@ export default function ViewJobStatus() {
     const partNo = partDetail ? partDetail.partNo : jobRow.partNo
     const lineItems = partDetail ? partDetail.lineItems : jobRow.lineItems || []
 
-    const partProcesses = processMasters
-      .filter(pm => pm.PM_Part_Name === partName)
-      .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
+    const partProcesses = partDetail && partDetail.processMenus && partDetail.processMenus.length > 0
+      ? partDetail.processMenus
+      : processMasters
+          .filter(pm => pm.PM_Part_Name === partName)
+          .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
 
     const pIdx = partProcesses.findIndex(pm => pm.id === processMaster.id)
 
@@ -1374,9 +1404,11 @@ export default function ViewJobStatus() {
                                             </thead>
                                             <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
                                               {(() => {
-                                                const partProcesses = processMasters
-                                                  .filter(pm => pm.PM_Part_Name === partDetail.productName)
-                                                  .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
+                                                const partProcesses = partDetail.processMenus && partDetail.processMenus.length > 0
+                                                  ? partDetail.processMenus
+                                                  : processMasters
+                                                      .filter(pm => pm.PM_Part_Name === partDetail.productName)
+                                                      .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
 
                                                 return partProcesses.map((pm, pIdx) => {
                                                   const savedLi = partDetail.lineItems.find(li => li.processName === pm.PM_Process_Name)
@@ -1670,9 +1702,12 @@ export default function ViewJobStatus() {
 
         // Calculate process status breakdown counts for this part
         const partProcesses = partDetail
-          ? processMasters
-            .filter(pm => pm.PM_Part_Name === partDetail.productName)
-            .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
+          ? (partDetail.processMenus && partDetail.processMenus.length > 0
+            ? partDetail.processMenus
+            : processMasters
+                .filter(pm => pm.PM_Part_Name === partDetail.productName)
+                .sort((a, b) => (Number(a.PM_Process_Order) || 0) - (Number(b.PM_Process_Order) || 0))
+            )
           : []
 
 
