@@ -55,9 +55,9 @@ export default function Layout({ children }) {
     <div className="flex h-screen bg-[#f4f6f8] overflow-hidden">
 
       {/* ── Sidebar ─────────────────────────────── */}
-      <aside className="w-[210px] flex-shrink-0 bg-[#2c3e50] flex flex-col overflow-y-auto scrollbar-thin">
+      <aside className="w-[210px] flex-shrink-0 bg-[#1e242e] flex flex-col overflow-y-auto scrollbar-thin">
         {/* Brand */}
-        <div className="sticky top-0 px-4 py-[8.9px] bg-[#1a252f] border-b border-white/10 flex-shrink-0">
+        <div className="sticky top-0 px-4 py-[8.9px] bg-[#1e242e] border-b border-white/10 flex-shrink-0">
           <p className="text-white font-extrabold text-[13px] tracking-wide leading-tight">VELSON</p>
           <p className="text-white/40 text-[9px] font-medium tracking-widest uppercase">ERP WEB APPLICATION</p>
         </div>
@@ -129,7 +129,7 @@ export default function Layout({ children }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Header */}
-        <header className="h-[46px] bg-[#2c3e50] flex items-center justify-between px-6 flex-shrink-0 shadow-md z-10">
+        <header className="h-[46px] bg-[#1e242e] flex items-center justify-between px-6 flex-shrink-0 shadow-md z-10">
           <span className="text-white font-bold text-[13px] tracking-wider uppercase select-none">
             VELSON - ERP WEB APPLICATION
           </span>

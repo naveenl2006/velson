@@ -11,7 +11,7 @@ const DigitReel = ({ value }) => {
       {digits.map((digit, idx) => {
         const isNum = !isNaN(parseInt(digit));
         if (!isNum) {
-          return <span key={idx} className="font-black text-slate-800 px-0.5">{digit}</span>;
+          return <span key={idx} className="font-black px-0.5">{digit}</span>;
         }
         
         const numVal = parseInt(digit);
@@ -19,7 +19,7 @@ const DigitReel = ({ value }) => {
         return (
           <div
             key={idx}
-            className="relative inline-block overflow-hidden font-black text-slate-800"
+            className="relative inline-block overflow-hidden font-black"
             style={{ height: '1.2em', width: '0.6em', lineHeight: '1.2em' }}
           >
             <div
@@ -33,7 +33,7 @@ const DigitReel = ({ value }) => {
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
                 <div
                   key={n}
-                  className="flex items-center justify-center font-black text-slate-800"
+                  className="flex items-center justify-center font-black"
                   style={{ height: '10%' }}
                 >
                   {n}
@@ -65,12 +65,34 @@ export const PieChart = ({
   // Calculate total value of all slices
   const totalVal = data.reduce((sum, item) => sum + item.value, 0);
 
+  const [animationProgress, setAnimationProgress] = React.useState(0);
+
+  React.useEffect(() => {
+    let startTimestamp = null;
+    const duration = 2000; // 2 seconds
+
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easedProgress = progress * (2 - progress); // easeOutQuad
+
+      setAnimationProgress(easedProgress);
+
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+
+    const frameId = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [data]);
+
   // Pre-calculate segments to avoid state accumulation issues inside children
   let currentAngle = -Math.PI / 2; // start at 12 o'clock
 
   const slices = data.map((item, index) => {
     const value = item.value || 0;
-    const percent = totalVal > 0 ? value / totalVal : 0;
+    const percent = (totalVal > 0 ? value / totalVal : 0) * animationProgress;
     
     const angleStart = currentAngle;
     // For slices that represent almost 100%, offset slightly to ensure SVG renders properly
@@ -111,11 +133,12 @@ export const PieChart = ({
         onHoverChange,
         innerRadius,
         size,
-        totalVal
+        totalVal,
+        animationProgress
       }}
     >
       <div 
-        className="relative flex items-center justify-center animate-in fade-in zoom-in duration-300"
+        className="relative flex items-center justify-center animate-pie-chart"
         style={{ width: size, height: size }}
       >
         <svg 
@@ -213,7 +236,7 @@ export const PieCenter = ({ defaultLabel = 'Total' }) => {
   const context = useContext(PieChartContext);
   if (!context) return null;
 
-  const { slices, hoveredIndex, size, totalVal } = context;
+  const { slices, hoveredIndex, size, totalVal, animationProgress = 1 } = context;
 
   let label = defaultLabel;
   let subLabel = `${totalVal}`;
@@ -222,6 +245,8 @@ export const PieCenter = ({ defaultLabel = 'Total' }) => {
     const active = slices[hoveredIndex];
     label = active.label;
     subLabel = `${active.value}`;
+  } else {
+    subLabel = `${Math.floor(totalVal * animationProgress)}`;
   }
 
   // Calculate inner container size based on innerRadius to prevent text overflow
@@ -232,10 +257,10 @@ export const PieCenter = ({ defaultLabel = 'Total' }) => {
   const isMedium = size > 150;
   
   const valueClass = isLarge 
-    ? "text-5xl font-black text-slate-800 tracking-tight" 
+    ? "text-5xl font-black text-white tracking-tight" 
     : isMedium 
-      ? "text-3xl font-black text-slate-800" 
-      : "text-xl font-black text-slate-800";
+      ? "text-3xl font-black text-white" 
+      : "text-xl font-black text-white";
       
   const labelClass = isLarge 
     ? "text-[12px] font-bold text-slate-400 tracking-widest mt-1.5 uppercase" 
@@ -339,4 +364,4 @@ export const LegendLabel = () => {
       {item.label}
     </span>
   );
-};
+};
