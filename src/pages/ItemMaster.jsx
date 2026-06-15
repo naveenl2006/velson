@@ -8,7 +8,6 @@ import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { SpinnerLoader } from '../components/LocalLoader'
 
-// ── API helper ─────────────────────────────────────────────────────
 const api = {
   get: (url) => fetch(url).then(r => r.json()),
   post: (url, data) => fetch(url, {
@@ -24,7 +23,7 @@ const api = {
   del: (url) => fetch(url, { method: 'DELETE' }).then(r => r.json()),
 }
 
-// ── Shared UI primitives ─────────────────────────────────────────
+
 const Label = ({ children, required }) => (
   <label className="block text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wider">
     {required && <span className="text-red-500 mr-0.5">*</span>}
@@ -251,7 +250,7 @@ const SectionCard = ({ title, children, icon, className = '', bodyClassName = 's
   </div>
 )
 
-const Row = ({ children }) => <div className="grid grid-cols-2 gap-2.5">{children}</div>
+const Row = ({ children }) => <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">{children}</div>
 
 const ActionBtn = ({ icon: Icon, label, onClick, variant = 'teal', disabled }) => {
   const styles = {
@@ -330,14 +329,36 @@ function useDropdowns() {
   return { dropdowns, dropdownsLoading: loading, refetch: fetchAll }
 }
 
+const RAW_MATERIALS = [
+  "VRM-3000011-8X1250X6300 PLATE",
+  "VRM-3000012-8X1500X6300 PLATE",
+  "VRM-3000013-8X2000X6300 PLATE",
+  "VRM-3000014-12X1250X6300 PLATE",
+  "VRM-3000015-12X1500X6300 PLATE",
+  "VRM-3000016-12X2000X6300 PLATE",
+  "VRM-3000017-16X1250X6300 PLATE",
+  "VRM-3000018-16X1500X6300 PLATE",
+  "VRM-3000019-16X2000X6300 PLATE",
+  "VRM-3007005-115 X 92 MM PIPE",
+  "VRM-3007006-128 X 112 MM PIPE",
+  "VRM-3007007-133 X 118 MM PIPE",
+  "VRM-3007009-220 X 202 MM PIPE",
+  "VRM-3007010-322 X 306 MM PIPE",
+  "VRM-3007011-115 X 102 MM PIPE",
+  "VRM-3007012-178 X 165 MM PIPE",
+  "VRM-3007013-124 X 112 MM PIPE"
+]
+const rawMaterialOpts = RAW_MATERIALS.map(m => ({ value: m, label: m }))
+
 // ── Empty form ────────────────────────────────────────────────────
 const emptyForm = {
   groupId: '', partNo: '', outsourcePartNo: '', partName: '',
   modelId: '', brand: '', description: '', size: '', weight: '',
   unitId: '', hsnCode: '', purchaseRate: '', marginPercent: '', rate: '',
-  currencyId: '', taxId: '', subGroupId: '', storeId: '', routeCardNo: '',
-  rackNo: '', location: '', itemTypeId: '', qcTypeId: '',
-  materialGradeId: '', materialTypeId: '', rawMaterialId: '',
+  currencyId: '', taxId: '', subGroupId: '', storeId: '',
+  rackNo: '', location: '', remark: '', itemTypeId: '', qcTypeId: '',
+  barcodeType: '',
+  materialGradeId: '', materialTypeId: '', rawMaterial: '', rawMaterialId: '',
   rmLength: '', rawMaterialWt: '', fgMaterialWt: '',
   reorderLevel: '', minStock: '',
 }
@@ -353,199 +374,6 @@ const REQUIRED = [
 
 const MOCK_MODE = false
 
-// ── Mock data (mirrors production DB rows visible in screenshots) ──
-const MOCK_ITEMS = [
-  {
-    id: 2203, partNo: 'VE-70071', outsourcePartNo: 'VOS4321240',
-    partName: 'Center Slider Sensing plate',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 350.00, marginPercent: 20.00, rate: 420.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 20, minStock: 10, currentStock: 49,
-    status: 'A', remarks: '', routeCardNo: '',
-    hasImage: true, hasPdf: false,
-    createdAt: '2020-09-11T11:31:48', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T14:43:56', updatedBy: 'SATHISH',
-  },
-  {
-    id: 2205, partNo: 'VE-70073', outsourcePartNo: 'VOS4321390',
-    partName: 'Center Slider Sensing plate 2',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 450.00, marginPercent: 20.00, rate: 540.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 0, minStock: 0, currentStock: 0,
-    status: 'A', remarks: '', routeCardNo: '',
-    hasImage: true, hasPdf: false,
-    createdAt: '2020-09-11T11:31:48', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T14:43:56', updatedBy: 'SATHISH',
-  },
-  {
-    id: 2206, partNo: 'VE-70074', outsourcePartNo: 'VOS4321391',
-    partName: 'Center Slider Sensing Shaft 35MM',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '35MM', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 280.00, marginPercent: 15.00, rate: 322.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 0, minStock: 0, currentStock: 0,
-    status: 'A', remarks: '', routeCardNo: 'MM383-11.pdf',
-    hasImage: true, hasPdf: true,
-    createdAt: '2020-09-12T09:15:00', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T10:00:00', updatedBy: 'RAVI KUMAR',
-  },
-  {
-    id: 2207, partNo: 'VE-70075', outsourcePartNo: '',
-    partName: 'Center Slider Sensing Shaft 48MM',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '48MM', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 310.00, marginPercent: 15.00, rate: 356.50,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 0, minStock: 0, currentStock: 0,
-    status: 'A', remarks: '', routeCardNo: 'MM383-10.pdf',
-    hasImage: true, hasPdf: true,
-    createdAt: '2020-09-12T09:30:00', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T10:05:00', updatedBy: 'RAVI KUMAR',
-  },
-  {
-    id: 2208, partNo: 'VE-70076', outsourcePartNo: '',
-    partName: 'Center Slider Sensing Shaft 85MM',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '85MM', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 360.00, marginPercent: 15.00, rate: 414.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 0, minStock: 0, currentStock: 0,
-    status: 'A', remarks: '', routeCardNo: 'MM383-9.pdf',
-    hasImage: true, hasPdf: true,
-    createdAt: '2020-09-12T10:00:00', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T10:10:00', updatedBy: 'RAVI KUMAR',
-  },
-  {
-    id: 2209, partNo: 'VE-70077', outsourcePartNo: '',
-    partName: 'CENTER SLIDER SENSING BAR 50MM',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '50MM', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 180.00, marginPercent: 15.00, rate: 207.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 0, minStock: 0, currentStock: 0,
-    status: 'A', remarks: '', routeCardNo: '',
-    hasImage: false, hasPdf: false,
-    createdAt: '2020-09-13T08:00:00', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T10:15:00', updatedBy: 'SATHISH',
-  },
-  {
-    id: 2210, partNo: 'VE-70078', outsourcePartNo: '',
-    partName: 'ELECTRICAL CONTROL BOX BOTTOM BUSH',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 120.00, marginPercent: 20.00, rate: 144.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 0, minStock: 0, currentStock: 0,
-    status: 'A', remarks: '', routeCardNo: 'CM05.pdf',
-    hasImage: true, hasPdf: true,
-    createdAt: '2020-09-13T09:00:00', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T11:00:00', updatedBy: 'SATHISH',
-  },
-  {
-    id: 2211, partNo: 'VE-70079', outsourcePartNo: '',
-    partName: 'CENTER SLIDER SENSING BAR 150MM',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '150MM', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 220.00, marginPercent: 15.00, rate: 253.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 0, minStock: 0, currentStock: 0,
-    status: 'A', remarks: '', routeCardNo: '',
-    hasImage: false, hasPdf: false,
-    createdAt: '2020-09-13T10:00:00', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T11:30:00', updatedBy: 'SATHISH',
-  },
-  {
-    id: 2212, partNo: 'VE-70080', outsourcePartNo: '',
-    partName: 'COMMON WIRE SUPPORT PIECE 16MM',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '16MM', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 95.00, marginPercent: 20.00, rate: 114.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 0, minStock: 0, currentStock: 0,
-    status: 'A', remarks: '', routeCardNo: '',
-    hasImage: false, hasPdf: false,
-    createdAt: '2020-09-14T08:30:00', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T12:00:00', updatedBy: 'SATHISH',
-  },
-  {
-    id: 2231, partNo: 'VE-70041', outsourcePartNo: '',
-    partName: 'V2 I 90° sensor clamp',
-    groupId: 1, groupName: 'ELECTRICAL-SENSING CLAMP',
-    modelId: 1, modelName: 'AUTO JOB', brand: '', description: '', size: '', weight: 0.00,
-    unitId: 1, uomName: 'No', hsnCode: '',
-    purchaseRate: 500.00, marginPercent: 20.00, rate: 600.00,
-    currencyId: 1, currencyName: 'CNRY', taxId: 1, taxPercent: 18,
-    subGroupId: 1, subGroupName: 'Production',
-    storeId: 1, storeName: 'STORE 1-MAINSTORE', rackNo: '', location: '',
-    itemTypeId: 1, itemTypeName: 'Child Part', qcTypeId: 1, qcTypeName: 'Inspection',
-    materialGradeId: null, materialGradeName: '', materialTypeId: null, materialTypeName: '',
-    rawMaterialId: null, rmLength: '', rawMaterialWt: 0.00, fgMaterialWt: 0.00,
-    reorderLevel: 10, minStock: 5, currentStock: 52,
-    status: 'A', remarks: '', routeCardNo: 'MM383-1.pdf',
-    hasImage: true, hasPdf: true,
-    createdAt: '2020-08-20T09:00:00', createdBy: 'ADMIN',
-    updatedAt: '2025-11-07T14:05:10', updatedBy: 'SATHISH',
-  },
-]
 
 // ── Mock uploads (per item id, mirrors ImagePdf details screen) ────
 const MOCK_UPLOADS = {
@@ -714,7 +542,7 @@ function IndexView({ onCreate, onEdit, onView, dropdowns }) {
 
   return (
     <div className="bg-[#f4f6f8] min-h-full">
-      <div className="px-4 py-4">
+      <div className="max-w-[1600px] mx-auto px-4 py-4">
 
         {/* ── Top action bar ── */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -1099,6 +927,11 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
   const setVal = k => val => setForm(f => ({ ...f, [k]: val }))
 
+  const isPartNameDuplicate = form.partName && partNames.some(name => {
+    const isSelf = editItem && name.toLowerCase() === editItem.partName?.trim().toLowerCase();
+    return !isSelf && name.toLowerCase() === form.partName.trim().toLowerCase();
+  });
+
   const hasNegError = (val) => val && parseFloat(val) < 0
 
   const handlePurchaseRateChange = (e) => {
@@ -1234,16 +1067,20 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
   }
 
   return (
-    <div className="bg-[#f4f6f8] min-h-full">
-      <div className="px-5 pt-3 pb-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-2.5">
-          <span className="hover:text-[#0097A7] cursor-pointer transition-colors" onClick={onBack}>Item Masters</span>
-          <ChevronRight className="w-3 h-3" />
-          <span className="text-[#0097A7] font-semibold">{editItem ? 'Edit Item Master' : 'New Item Master'}</span>
+    <div className="flex flex-col bg-[#f4f6f8] w-full min-h-screen">
+      <div className="w-full max-w-[1600px] mx-auto flex flex-col flex-1">
+        {/* ── Breadcrumb ── */}
+        <div className="flex-shrink-0 px-5 pt-3 pb-1">
+          <div className="flex items-center gap-2 text-[12px] text-slate-400">
+            <span className="hover:text-[#0097A7] cursor-pointer transition-colors" onClick={onBack}>Item Masters</span>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-[#0097A7] font-semibold">{editItem ? 'Edit Item Master' : 'New Item Master'}</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        {/* ── Form body ── */}
+        <div className="w-full px-5 pb-4 flex-1">
+          <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
 
           {/* ── COLUMN 1: Item Information ── */}
           <SectionCard
@@ -1252,11 +1089,13 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
             className="h-full flex flex-col"
             bodyClassName="flex-1 flex flex-col justify-between"
           >
+            {/* Row 1: Item Group — full width */}
+            <div>
+              <Label required>Item Group</Label>
+              <AutocompleteSelect options={opts.itemGroups} placeholder="---Select Group---" value={form.groupId} onChange={setVal('groupId')} loading={dropdownsLoading} />
+            </div>
+            {/* Row 2: Part Number + OutSource Part No */}
             <Row>
-              <div>
-                <Label required>Item Group</Label>
-                <AutocompleteSelect options={opts.itemGroups} placeholder="---Select Group---" value={form.groupId} onChange={setVal('groupId')} loading={dropdownsLoading} />
-              </div>
               <div>
                 <Label required>Part Number</Label>
                 {partNoGenerating ? (
@@ -1276,18 +1115,6 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
                   <p className="text-[9px] text-[#0097A7] mt-0">Auto-generated from item group prefix</p>
                 )}
               </div>
-            </Row>
-            <Row>
-              <div>
-                <Label required>Part Name</Label>
-                <AutocompleteSelect
-                  options={partNames.map(name => ({ value: name, label: name }))}
-                  placeholder="---Select Part Name---"
-                  value={form.partName}
-                  onChange={setVal('partName')}
-                  allowCustom
-                />
-              </div>
               <div>
                 <Label>OutSource Part No</Label>
                 <div className="flex gap-2">
@@ -1296,6 +1123,22 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
                 </div>
               </div>
             </Row>
+            {/* Row 3: Part Name — full width */}
+            <div>
+              <Label required>Part Name</Label>
+              <AutocompleteSelect
+                options={partNames.map(name => ({ value: name, label: name }))}
+                placeholder="---Select Part Name---"
+                value={form.partName}
+                onChange={setVal('partName')}
+                allowCustom
+              />
+              {isPartNameDuplicate ? (
+                <p className="text-[11px] text-amber-600 mt-1 font-medium">
+                  The part name is already registered.
+                </p>
+              ) : null}
+            </div>
             <Row>
               <div>
                 <Label>Model</Label>
@@ -1371,7 +1214,7 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
           </SectionCard>
 
           {/* ── COLUMN 2: Store & Raw Material ── */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <SectionCard title="Store & Classification" icon={<Store className="w-4 h-4" />}>
               <Row>
                 <div>
@@ -1401,20 +1244,13 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
               </Row>
               <Row>
                 <div>
-                  <Label>Route Card No</Label>
-                  <Input placeholder="Route Card No" value={form.routeCardNo} onChange={u('routeCardNo')} />
+                  <Label>Location</Label>
+                  <Input placeholder="Location" value={form.location} onChange={u('location')} />
                 </div>
                 <div>
                   <Label>Rack Number</Label>
                   <Input placeholder="Rack Number" value={form.rackNo} onChange={u('rackNo')} />
                 </div>
-              </Row>
-              <Row>
-                <div>
-                  <Label>Location</Label>
-                  <Input placeholder="Location" value={form.location} onChange={u('location')} />
-                </div>
-                <div />
               </Row>
               <Row>
                 <div>
@@ -1426,9 +1262,47 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
                   <AutocompleteSelect options={opts.qcTypes} placeholder="---Select QC Type---" value={form.qcTypeId} onChange={setVal('qcTypeId')} loading={dropdownsLoading} dropdownAlign="top" />
                 </div>
               </Row>
+              {/* Barcode Type — full width */}
+              <div>
+                <Label>Barcode Type</Label>
+                <Select
+                  options={[
+                    { value: 'Single', label: 'Single' },
+                    { value: 'Multiple', label: 'Multiple' },
+                  ]}
+                  placeholder="---Select Barcode Type---"
+                  value={form.barcodeType}
+                  onChange={u('barcodeType')}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label>Remark</Label>
+                <Input placeholder="Remark" value={form.remark} onChange={u('remark')} />
+              </div>
             </SectionCard>
 
             <SectionCard title="Raw Material Selection" icon={<Settings className="w-4 h-4" />}>
+              {/* Row 1: Raw Material | RM. Weight */}
+              <Row>
+                <div>
+                  <Label>Raw Material</Label>
+                  <AutocompleteSelect
+                    options={rawMaterialOpts}
+                    placeholder="---Select Raw Material---"
+                    value={form.rawMaterial}
+                    onChange={setVal('rawMaterial')}
+                    allowCustom
+                  />
+                </div>
+                <div>
+                  <Label>RM. Weight</Label>
+                  <Input placeholder="RM. Weight" value={form.rawMaterialWt} onChange={u('rawMaterialWt')} type="number" hasError={hasNegError(form.rawMaterialWt)} />
+                  {hasNegError(form.rawMaterialWt) && (
+                    <p className="text-[10px] text-red-500 mt-0.5 font-medium">Value cannot be negative</p>
+                  )}
+                </div>
+              </Row>
+              {/* Row 2: Material Grade | Material Type */}
               <Row>
                 <div>
                   <Label>Material Grade</Label>
@@ -1439,20 +1313,12 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
                   <AutocompleteSelect options={opts.materialTypes} placeholder="---Select---" value={form.materialTypeId} onChange={setVal('materialTypeId')} loading={dropdownsLoading} />
                 </div>
               </Row>
+              {/* Row 3: Length | FG. Weight */}
               <Row>
                 <div>
                   <Label>Length</Label>
                   <Input placeholder="Length (e.g. 6m)" value={form.rmLength} onChange={u('rmLength')} />
                 </div>
-                <div>
-                  <Label>RM. Weight</Label>
-                  <Input placeholder="RM. Weight" value={form.rawMaterialWt} onChange={u('rawMaterialWt')} type="number" hasError={hasNegError(form.rawMaterialWt)} />
-                  {hasNegError(form.rawMaterialWt) && (
-                    <p className="text-[10px] text-red-500 mt-0.5 font-medium">Value cannot be negative</p>
-                  )}
-                </div>
-              </Row>
-              <Row>
                 <div>
                   <Label>FG. Weight</Label>
                   <Input placeholder="FG. Weight" value={form.fgMaterialWt} onChange={u('fgMaterialWt')} type="number" hasError={hasNegError(form.fgMaterialWt)} />
@@ -1460,16 +1326,16 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
                     <p className="text-[10px] text-red-500 mt-0.5 font-medium">Value cannot be negative</p>
                   )}
                 </div>
-                <div />
               </Row>
             </SectionCard>
           </div>
 
           {/* ── COLUMN 3: Uploads & Actions ── */}
-          <div className="space-y-4">
+          <div className="space-y-6 lg:col-span-2 2xl:col-span-1">
             <SectionCard title="Attachments & Actions" icon={<Paperclip className="w-4 h-4" />}>
-              {/* ── Image upload + preview ── */}
-              <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-1 gap-4 mb-4">
+                {/* ── Image upload + preview ── */}
+                <div>
                 <Label>Upload Image</Label>
                 {imagePreview ? (
                   <div className="border border-[#0097A7] rounded-lg overflow-hidden">
@@ -1545,10 +1411,11 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
                   </label>
                 )}
               </div>
+            </div>
 
               <div className="border-t border-slate-100 pt-4 mt-2">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Actions</p>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-2 gap-2.5">
                   <button
                     onClick={handleSubmit}
                     disabled={saving}
@@ -1598,9 +1465,8 @@ function CreateView({ onBack, editItem, dropdowns, dropdownsLoading, refetchDrop
           </div>
         </div>
       </div>
-
-
     </div>
+  </div>
   )
 }
 
@@ -1633,12 +1499,12 @@ function PreviewView({ item, dropdowns, onBack, onCreate, onViewUploads, onEdit 
     { label: 'Store Name -> R.C.No.', value: `${item.storeName || resolve(dropdowns.stores, item.storeId)} -> ${item.routeCardNo || '—'}` },
     { label: 'Rack Number', value: item.rackNo || '—' },
     { label: 'Location', value: item.location || '—' },
-    { label: 'Remarks', value: item.remarks || '—' },
     { label: 'Item Type', value: item.itemTypeName || resolve(dropdowns.itemTypes, item.itemTypeId) },
     { label: 'QC Type', value: item.qcTypeName || resolve(dropdowns.qcTypes, item.qcTypeId) },
+    { label: 'Remarks', value: item.remark || '—' },
     { label: 'Material Grade', value: item.materialGradeName || resolve(dropdowns.materialGrades, item.materialGradeId) },
     { label: 'Material Type', value: item.materialTypeName || resolve(dropdowns.materialTypes, item.materialTypeId) },
-    { label: 'Raw Material', value: item.rawMaterialId || '—' },
+    { label: 'Raw Material', value: item.rawMaterial || item.rawMaterialId || '—' },
     { label: 'Length', value: item.rmLength || '—' },
     { label: 'RM. Weight', value: item.rawMaterialWt != null ? item.rawMaterialWt : '—' },
     { label: 'FG. Weight', value: item.fgMaterialWt != null ? item.fgMaterialWt : '—' },
@@ -1890,6 +1756,7 @@ export default function ItemMaster() {
         onBack={goIndex}
         onCreate={goCreate}
         onViewUploads={() => setView('image-pdf-details')}
+        onEdit={goEdit}
       />
     )
   }

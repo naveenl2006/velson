@@ -673,7 +673,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-full bg-[#d0d4de] text-slate-100 p-4 flex flex-col gap-4 select-none animate-dashboard">
+    <div className="min-h-full bg-[#20242d] text-slate-100 p-4 flex flex-col gap-4 select-none animate-dashboard">
 
       {/* ── HEADER & TOOLBAR ────────────────────────────────────────────────── */}
       <div className="flex justify-between items-center bg-[#1e242e] p-3 rounded-xl border border-slate-800 shadow-md">

@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, Fragment, useRef } from 'react'
 import { X, Save, RotateCcw, List, Edit, Trash2, Info, ChevronRight, ChevronDown, Search, Settings2, Image as ImageIcon, FileText, Plus, Loader2, AlertTriangle, XCircle } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import api from '../services/api'
@@ -6,7 +6,7 @@ import api from '../services/api'
 const PAGE_SIZES = [4, 10, 25, 50]
 
 const empty = {
-  PM_Part_Name: '', PM_Process_Name: '', PM_Process_Name1: '',
+  PM_Part_No: '', PM_Part_Name: '', PM_Process_Name: '', PM_Process_Name1: '',
   PM_Process_Order: '1', TeamId: '', Machine_Code: '', Machine_Name: '',
   PM_Days: '', PM_Hours: '', Minutes: '',
   Setting_Time: '', Cycle_Time: '', Handling_Time: '', Idle_Time: '',
@@ -68,6 +68,59 @@ export default function ProcessMaster() {
     errorMsg: '',
     isDeleting: false
   })
+  const [isPartNoDropdownOpen, setIsPartNoDropdownOpen] = useState(false)
+  const [partNoHighlightedIndex, setPartNoHighlightedIndex] = useState(-1)
+  const partNoDropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (partNoDropdownRef.current && !partNoDropdownRef.current.contains(e.target)) {
+        setIsPartNoDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
+  const filteredPartItems = partItems.filter(item =>
+    (item.partNo || '').toLowerCase().includes((form.PM_Part_No || '').toLowerCase())
+  )
+
+  const handlePartNoKeyDown = (e) => {
+    if (!isPartNoDropdownOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+        setIsPartNoDropdownOpen(true)
+        return
+      }
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setPartNoHighlightedIndex(prev =>
+        prev < filteredPartItems.length - 1 ? prev + 1 : 0
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setPartNoHighlightedIndex(prev =>
+        prev > 0 ? prev - 1 : filteredPartItems.length - 1
+      )
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (partNoHighlightedIndex >= 0 && partNoHighlightedIndex < filteredPartItems.length) {
+        const selected = filteredPartItems[partNoHighlightedIndex]
+        sf('PM_Part_No', selected.partNo)
+        setIsPartNoDropdownOpen(false)
+      } else {
+        const matched = partItems.find(item => (item.partNo || '').toLowerCase() === (form.PM_Part_No || '').toLowerCase())
+        if (matched) {
+          sf('PM_Part_No', matched.partNo)
+        }
+        setIsPartNoDropdownOpen(false)
+      }
+    } else if (e.key === 'Escape') {
+      setIsPartNoDropdownOpen(false)
+    }
+  }
 
   const fetchAllProcesses = () => {
     api.get('/api/process-master', { loadingMessage: 'Loading processes...' })
@@ -127,7 +180,21 @@ export default function ProcessMaster() {
   }, [form.PM_Part_Name, partItems])
 
   const sf = (k, v) => {
-    if (k === 'PM_Part_Name') {
+    if (k === 'PM_Part_No') {
+      // Auto-populate Part Name from the selected Part No
+      const item = partItems.find(i => i.partNo === v)
+      const partName = item ? item.partName : ''
+      const existing = rows.filter(r => r.PM_Part_Name === partName)
+      const nextOrder = existing.length > 0
+        ? Math.max(...existing.map(r => Number(r.PM_Process_Order || 0))) + 1
+        : 1
+      setForm(f => ({
+        ...f,
+        PM_Part_No: v,
+        PM_Part_Name: partName,
+        PM_Process_Order: String(nextOrder)
+      }))
+    } else if (k === 'PM_Part_Name') {
       const existing = rows.filter(r => r.PM_Part_Name === v)
       const nextOrder = existing.length > 0
         ? Math.max(...existing.map(r => Number(r.PM_Process_Order || 0))) + 1
@@ -163,6 +230,7 @@ export default function ProcessMaster() {
             setRows(updatedRows)
 
             const currentPartName = form.PM_Part_Name
+            const currentPartNo = form.PM_Part_No
             const existing = updatedRows.filter(r => r.PM_Part_Name === currentPartName)
             const nextOrder = existing.length > 0
               ? Math.max(...existing.map(r => Number(r.PM_Process_Order || 0))) + 1
@@ -170,6 +238,7 @@ export default function ProcessMaster() {
 
             setForm({
               ...empty,
+              PM_Part_No: currentPartNo,
               PM_Part_Name: currentPartName,
               PM_Process_Order: String(nextOrder)
             })
@@ -189,7 +258,13 @@ export default function ProcessMaster() {
       })
   }
 
-  const handleEdit = r => { setForm({ ...r }); setEditId(r.id); setIsAddMode(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const handleEdit = r => {
+    const matchedItem = partItems.find(i => i.partName === r.PM_Part_Name)
+    setForm({ ...r, PM_Part_No: matchedItem ? matchedItem.partNo : '' })
+    setEditId(r.id)
+    setIsAddMode(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const handleAdd = r => {
     const existing = rows.filter(x => x.PM_Part_Name === r.PM_Part_Name)
     const nextOrder = existing.length > 0
@@ -380,51 +455,86 @@ export default function ProcessMaster() {
 
         {/* Card Body (Side-by-side Fields Grid) */}
         <div className="p-6">
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-stretch w-full">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-0 items-stretch w-full">
 
             {/* Column 1 (Left Form Inputs) */}
-            <div className="flex-1 max-w-[340px] w-full space-y-3">
+            <div className="flex-1 min-w-0 lg:pr-6 space-y-3">
 
-              {/* Part Name */}
+              {/* Part No */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                  <span className="text-rose-500 mr-0.5">*</span>Part No
+                </label>
+                <div className="relative" ref={partNoDropdownRef}>
+                  <input
+                    type="text"
+                    value={form.PM_Part_No}
+                    onChange={e => {
+                      sf('PM_Part_No', e.target.value)
+                      setIsPartNoDropdownOpen(true)
+                      setPartNoHighlightedIndex(-1)
+                    }}
+                    onFocus={() => {
+                      setIsPartNoDropdownOpen(true)
+                      setPartNoHighlightedIndex(-1)
+                    }}
+                    onKeyDown={handlePartNoKeyDown}
+                    placeholder="Enter Part No..."
+                    className={`${inp(false)} pr-8`}
+                  />
+                  <div
+                    onClick={() => setIsPartNoDropdownOpen(o => !o)}
+                    className="absolute inset-y-0 right-2 flex items-center cursor-pointer px-1"
+                  >
+                    <ChevronDown className={`w-4 h-4 text-slate-400 hover:text-[#0097A7] transition-all duration-200 ${isPartNoDropdownOpen ? 'rotate-180 text-[#0097A7]' : ''}`} />
+                  </div>
+                  {isPartNoDropdownOpen && filteredPartItems.length > 0 && (
+                    <div className="absolute left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredPartItems.map((item, idx) => (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            sf('PM_Part_No', item.partNo)
+                            setIsPartNoDropdownOpen(false)
+                          }}
+                          onMouseEnter={() => setPartNoHighlightedIndex(idx)}
+                          className={`px-3 py-2 text-[13px] cursor-pointer border-b border-slate-100 last:border-0 text-left transition-colors ${
+                            partNoHighlightedIndex === idx
+                              ? 'bg-[#0097A7] text-white font-medium'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className={`${partNoHighlightedIndex === idx ? 'text-white' : 'text-slate-800'} font-semibold`}>
+                            {item.partNo}
+                          </span>
+                          {item.partName && (
+                            <span className={`${partNoHighlightedIndex === idx ? 'text-white/80' : 'text-slate-400'} text-[11px] ml-2 block lg:inline`}>
+                              — {item.partName}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {isPartNoDropdownOpen && filteredPartItems.length === 0 && (
+                    <div className="absolute left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs text-slate-400 italic text-center">
+                      No matching parts.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Part Name — auto-generated from Part No */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
                   <span className="text-rose-500 mr-0.5">*</span>Part Name
                 </label>
-                <select
+                <input
                   value={form.PM_Part_Name}
-                  onChange={e => sf('PM_Part_Name', e.target.value)}
-                  disabled={isPartNameLocked}
-                  className={isPartNameLocked ? roClass : inp(false)}
-                >
-                  <option value="">---Select Part Name---</option>
-                  {partItems.map(i => <option key={i.id} value={i.partName}>{i.partName}</option>)}
-                </select>
-
-                {/* {selectedItem && (
-                  <div className="mt-2 p-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 space-y-1 shadow-inner">
-                    <div className="flex justify-between">
-                      <span className="font-semibold text-slate-400">PART NO:</span>
-                      <span className="font-bold text-[#0097A7]">{selectedItem.partNo}</span>
-                    </div>
-                    {selectedItem.size && (
-                      <div className="flex justify-between">
-                        <span className="font-semibold text-slate-400">SIZE:</span>
-                        <span className="font-medium text-slate-700">{selectedItem.size}</span>
-                      </div>
-                    )}
-                    {selectedItem.uom && (
-                      <div className="flex justify-between">
-                        <span className="font-semibold text-slate-400">UOM:</span>
-                        <span className="font-medium text-slate-700">{selectedItem.uom}</span>
-                      </div>
-                    )}
-                    {selectedItem.description && (
-                      <div className="pt-1 border-t border-slate-100 text-[10px] text-slate-500 italic line-clamp-2">
-                        {selectedItem.description}
-                      </div>
-                    )}
-                  </div>
-                )} */}
+                  readOnly
+                  placeholder="Auto-filled from Part No"
+                  className={`${inp(false)} bg-slate-50 cursor-not-allowed text-slate-500`}
+                />
               </div>
 
               {/* Process Name */}
@@ -504,7 +614,7 @@ export default function ProcessMaster() {
             </div>
 
             {/* Column 2 (Time Inputs — 2-column grid) */}
-            <div className="flex-1 max-w-[340px] w-full">
+            <div className="flex-1 min-w-0 lg:px-6 lg:border-l lg:border-slate-200">
               <span className="block text-[11px] font-bold text-slate-500 mb-2.5 uppercase tracking-wider">Time & Duration</span>
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
 
@@ -562,9 +672,9 @@ export default function ProcessMaster() {
             </div>
 
             {/* Column 3 (Right Blueprint Image + Action Buttons) */}
-            <div className="w-[280px] shrink-0 flex flex-col pl-6 border-l border-slate-100">
+            <div className="flex-1 min-w-0 flex flex-col lg:pl-6 lg:border-l lg:border-slate-200">
               <span className="block text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-wider">Image</span>
-              <div className="h-[180px] border border-slate-200 rounded-xl bg-slate-50/50 flex items-center justify-center p-3 relative group overflow-hidden shadow-inner">
+              <div className="h-[240px] border border-slate-200 rounded-xl bg-slate-50/50 flex items-center justify-center p-3 relative group overflow-hidden shadow-inner">
                 {uploadsLoading ? (
                   <Loader2 className="w-6 h-6 text-[#0097A7] animate-spin" />
                 ) : latestImage ? (

@@ -27,7 +27,7 @@ const Select = ({ options, placeholder, value, onChange, className = "" }) => (
 
 const parseNoteMetadata = (noteStr) => {
   if (!noteStr) return { isSelfStock: false, customersText: '', cleanNote: '' }
-  
+
   if (noteStr.startsWith('[Self Stock In]')) {
     return {
       isSelfStock: true,
@@ -35,7 +35,7 @@ const parseNoteMetadata = (noteStr) => {
       cleanNote: noteStr.replace('[Self Stock In]', '').trim()
     }
   }
-  
+
   const custMatch = noteStr.match(/^\[Customers:\s*([^\]]+)\]/)
   if (custMatch) {
     return {
@@ -44,7 +44,7 @@ const parseNoteMetadata = (noteStr) => {
       cleanNote: noteStr.replace(custMatch[0], '').trim()
     }
   }
-  
+
   return { isSelfStock: false, customersText: '', cleanNote: noteStr }
 }
 
@@ -141,6 +141,27 @@ export default function JobCardEntry() {
   }, [])
 
   const u = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  const handleMouseDown = (e) => {
+    const el = e.currentTarget
+    el.isDown = true
+    el.startX = e.pageX - el.offsetLeft
+    el.scrollLeftVal = el.scrollLeft
+  }
+  const handleMouseLeave = (e) => {
+    e.currentTarget.isDown = false
+  }
+  const handleMouseUp = (e) => {
+    e.currentTarget.isDown = false
+  }
+  const handleMouseMove = (e) => {
+    const el = e.currentTarget
+    if (!el.isDown) return
+    e.preventDefault()
+    const x = e.pageX - el.offsetLeft
+    const walk = (x - el.startX) * 1.5
+    el.scrollLeft = el.scrollLeftVal - walk
+  }
 
   const addLine = () => setLineItems(prev => [...prev, { id: Date.now(), partNo: '', partName: '', planQty: '', uom: '' }])
   const removeLine = (id) => setLineItems(prev => prev.length > 1 ? prev.filter(l => l.id !== id) : prev)
@@ -254,14 +275,14 @@ export default function JobCardEntry() {
   }
 
   const handleClear = () => {
-    setForm({
-      jobNo: String(nextJobNo),
+    setForm(f => ({
+      ...f,
       model: '', qtyV: '',
       currentDate: new Date().toISOString().split('T')[0],
       priority: '',
       requiredDate: new Date().toISOString().split('T')[0],
       note: ''
-    })
+    }))
     setLineItems([{ id: Date.now(), partNo: '', partName: '', planQty: '', uom: '' }])
     setPartImage(null)
     setSelfStockIn(false)
@@ -271,6 +292,20 @@ export default function JobCardEntry() {
   }
 
   const filtered = savedJobs.filter(j => {
+    // Filter by selected Part No / Part Name in the entry form
+    const selectedPartNos = lineItems.map(l => l.partNo).filter(Boolean)
+    const selectedPartNames = lineItems.map(l => l.partName).filter(Boolean)
+
+    let matchesParts = true
+    if (selectedPartNos.length > 0 || selectedPartNames.length > 0) {
+      matchesParts = j.lineItems?.some(li => 
+        (li.partNo && selectedPartNos.includes(li.partNo)) ||
+        (li.partName && selectedPartNames.includes(li.partName))
+      ) || false
+    }
+
+    if (!matchesParts) return false
+
     if (!searchTerm) return true
     const q = searchTerm.toLowerCase()
     return j.jobNo?.toLowerCase().includes(q) || j.model?.toLowerCase().includes(q)
@@ -278,13 +313,26 @@ export default function JobCardEntry() {
 
   return (
     <div className="bg-[#f4f6f8] min-h-full pb-10">
+      <style>{`
+        .custom-horizontal-scroll::-webkit-scrollbar {
+          display: block !important;
+          height: 4px !important;
+        }
+        .custom-horizontal-scroll::-webkit-scrollbar-thumb {
+          background: #cbd5e1 !important;
+          border-radius: 2px !important;
+        }
+        .custom-horizontal-scroll::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+      `}</style>
       <div className="px-6 py-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-5 uppercase font-bold tracking-tight">
           <span>Technical</span><ChevronRight size={12} /><span className="text-[#0097A7]">Job Card Entry</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -368,7 +416,7 @@ export default function JobCardEntry() {
                       </button>
                     )}
                   </div>
-                  
+
                   {/* Suggestion input box */}
                   <div className="relative">
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -394,7 +442,7 @@ export default function JobCardEntry() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-                    
+
                     {/* Checklist Dropdown */}
                     {isCustDropdownOpen && (
                       <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto z-30 transition-all duration-200 animate-in fade-in slide-in-from-top-1">
@@ -436,7 +484,7 @@ export default function JobCardEntry() {
                                   <input
                                     type="checkbox"
                                     checked={isSelected}
-                                    onChange={() => {}} // Controlled by onClick on parent container
+                                    onChange={() => { }} // Controlled by onClick on parent container
                                     className="w-4 h-4 accent-[#0097A7] rounded border-slate-300 text-[#0097A7] focus:ring-[#0097A7]/20 transition cursor-pointer"
                                   />
                                   <div className="flex flex-col">
@@ -450,7 +498,7 @@ export default function JobCardEntry() {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Selected Chips */}
                   {selectedCustomers.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-3">
@@ -556,6 +604,11 @@ export default function JobCardEntry() {
                 <div className="flex items-center gap-3">
                   <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest border-l-4 border-[#0097A7] pl-3">Saved Job Cards</h3>
                   <span className="bg-[#0097A7]/10 text-[#0097A7] px-2 py-0.5 rounded text-[10px] font-bold">{filtered.length} Records</span>
+                  {lineItems.some(l => l.partNo || l.partName) && (
+                    <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                      Filtered by Selected Part(s)
+                    </span>
+                  )}
                 </div>
                 <div className="relative w-64">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -564,84 +617,167 @@ export default function JobCardEntry() {
                 </div>
               </div>
               <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-[#fcfdfe] text-[11px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                    <tr>
-                      {/* <th className="px-4 py-3 border-r border-slate-200 w-14 text-center">S.No</th> */}
-                      <th className="px-4 py-3 border-r border-slate-200">Job No</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Model</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Customer / Stock-In</th>
-                      <th className="px-4 py-3 border-r border-slate-200 text-center">Qty</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Priority</th>
-                      <th className="px-4 py-3 border-r border-slate-200">Date</th>
-                      <th className="px-4 py-3 border-r border-slate-200 text-center">Parts</th>
-                      <th className="px-4 py-3 text-center w-20">Actions</th> 
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filtered.length === 0 ? (
-                      <tr><td colSpan={9} className="py-16 text-center text-slate-300 italic text-sm">
-                        <FileText size={36} className="mx-auto mb-2 opacity-20" />No job cards found.
-                      </td></tr>
-                    ) : filtered.map((job, idx) => (
-                      <tr key={job.id} className="hover:bg-slate-50 transition-colors h-11">
-                        {/* <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-400 font-bold text-[12px]">{idx + 1}</td> */}
-                        <td className="px-5 py-2 border-r border-slate-200 font-bold text-[#0097A7] text-[12px]">{job.jobNo}</td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-slate-600 text-[12px]">{job.model || '—'}</td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-[12px]">
-                          {(() => {
-                            if (job.selfStockIn) {
-                              return <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Self Stock In</span>
-                            }
-                            if (job.selectedCustomers) {
-                              let custArr = []
-                              try {
-                                custArr = typeof job.selectedCustomers === 'string'
-                                  ? JSON.parse(job.selectedCustomers)
-                                  : job.selectedCustomers
-                              } catch (e) {
-                                console.error(e)
-                              }
-                              if (Array.isArray(custArr) && custArr.length > 0) {
-                                const custStr = custArr.map(c => `${c.customerName} (${c.cCode || 'N/A'})`).join(', ')
-                                return (
-                                  <div className="max-w-[200px] truncate" title={custStr}>
-                                    <span className="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded-full mr-1">Cust</span>
-                                    <span className="text-slate-600 font-medium">{custStr}</span>
-                                  </div>
-                                )
-                              }
-                            }
-                            // Fallback to note parsing for older entries
-                            const { isSelfStock, customersText } = parseNoteMetadata(job.note)
-                            if (isSelfStock) {
-                              return <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Self Stock In</span>
-                            } else if (customersText) {
-                              return (
-                                <div className="max-w-[200px] truncate" title={customersText}>
-                                  <span className="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded-full mr-1">Cust</span>
-                                  <span className="text-slate-600 font-medium">{customersText}</span>
-                                </div>
-                              )
-                            }
-                            return <span className="text-slate-400">—</span>
-                          })()}
-                        </td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-600 text-[12px]">{job.qtyV || '—'}</td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-[12px]">
-                          {job.priority ? <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${job.priority === 'High' ? 'bg-red-100 text-red-700' : job.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{job.priority}</span> : '—'}
-                        </td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-slate-500 text-[12px]">{job.currentDate}</td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-center text-[12px]">
-                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">{job.lineItems?.length || 0}</span>
-                        </td>
-                        <td className="px-4 py-2 text-center">
-                          <button onClick={() => handleDelete(job.id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-all"><Trash2 size={14} /></button>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+
+                    {/* Header */}
+                    <thead>
+                      <tr className="text-[11px] uppercase tracking-wider text-slate-500 border-b bg-slate-50">
+                        <th className="px-4 py-3 font-semibold">Job No</th>
+                        <th className="px-4 py-3 font-semibold">Model</th>
+                        <th className="px-4 py-3 font-semibold">Customer/Stock-In</th>
+                        <th className="px-4 py-3 font-semibold text-center">Qty</th>
+                        <th className="px-4 py-3 font-semibold">Priority</th>
+                        <th className="px-4 py-3 font-semibold">Date</th>
+                        <th className="px-4 py-3 font-semibold text-center">Parts</th>
+                        <th className="px-4 py-3 font-semibold text-center">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+
+                    {/* Body */}
+                    <tbody className="divide-y divide-slate-100">
+                      {filtered.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-14 text-center text-slate-400 italic">
+                            No job cards found
+                          </td>
+                        </tr>
+                      ) : (
+                        filtered.map((job) => (
+                          <tr
+                            key={job.id}
+                            className="hover:bg-slate-50 transition-colors"
+                          >
+                            <td className="px-4 py-3 font-semibold text-[#0097A7]">
+                              {job.jobNo}
+                            </td>
+
+                            <td className="px-4 py-3 text-slate-600">
+                              {job.model || "—"}
+                            </td>
+
+                            <td className="px-4 py-3 text-slate-600 w-[450px] max-w-[450px]">
+                              {job.selfStockIn ? (
+                                <span className="text-xs font-semibold text-yellow-600 px-2 py-1 rounded-full">
+                                  Self Stock In
+                                </span>
+                              ) : (
+                                (() => {
+                                  let list = [];
+
+                                  try {
+                                    list =
+                                      typeof job.selectedCustomers === "string"
+                                        ? JSON.parse(job.selectedCustomers)
+                                        : job.selectedCustomers || [];
+                                  } catch {
+                                    list = [];
+                                  }
+
+                                  if (!list.length) return <span className="text-slate-400">—</span>;
+
+                                  // const colors = [
+                                  //   "bg-blue-100 text-blue-700",
+                                  //   "bg-emerald-100 text-emerald-700",
+                                  //   "bg-amber-100 text-amber-700",
+                                  //   "bg-purple-100 text-purple-700",
+                                  //   "bg-pink-100 text-pink-700",
+                                  // ];
+
+                                  const colors = [
+                                    "text-blue-700",
+                                    "text-emerald-700",
+                                    "text-amber-700",
+                                    "text-purple-700",
+                                    "text-pink-700",
+                                  ];
+                                  // Partition the list into 3 rows
+                                  const rows = [[], [], []];
+                                  list.forEach((c, i) => {
+                                    rows[i % 3].push({ data: c, originalIndex: i });
+                                  });
+
+                                  return (
+                                    <div
+                                      onMouseDown={handleMouseDown}
+                                      onMouseLeave={handleMouseLeave}
+                                      onMouseUp={handleMouseUp}
+                                      onMouseMove={handleMouseMove}
+                                      className="flex flex-col gap-1 overflow-x-auto overflow-y-hidden max-w-[450px] pb-1 cursor-grab active:cursor-grabbing select-none custom-horizontal-scroll"
+                                    >
+                                      {rows.map((rowItems, rowIndex) => {
+                                        if (rowItems.length === 0) return null;
+                                        return (
+                                          <div key={rowIndex} className="flex gap-1 shrink-0">
+                                            {rowItems.map(({ data: c, originalIndex: i }) => (
+                                              <span
+                                                key={c.id || i}
+                                                className={`
+                                                inline-flex
+                                                items-center
+                                                rounded-full
+                                                px-1
+                                                font-semibold
+                                                text-[11px]
+                                                shrink-0
+                                                ${colors[i % colors.length]}
+                                                `}
+                                                whitespace-nowrap
+                                                title={c.customerName}
+                                              >
+                                                {c.customerName}
+                                                {c.cCode && (
+                                                  <span className="ml-1 text-[10px] opacity-70">
+                                                    ({c.cCode})
+                                                  </span>
+                                                )}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()
+                              )}
+                            </td>
+
+                            <td className="px-4 py-3 text-center text-slate-600">
+                              {job.qtyV || "—"}
+                            </td>
+
+                            <td className="px-4 py-3">
+                              {job.priority ? (
+                                <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+                                  {job.priority}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+
+                            <td className="px-4 py-3 text-slate-500">
+                              {job.currentDate}
+                            </td>
+
+                            <td className="px-4 py-3 text-center text-slate-600">
+                              {job.lineItems?.length || 0}
+                            </td>
+
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => handleDelete(job.id)}
+                                className="text-slate-400 hover:text-red-600 transition"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
